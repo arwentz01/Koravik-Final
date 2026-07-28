@@ -81,18 +81,21 @@ final class OutboxWorker
     private function markFailed(string $eventId, string $message, int $attempts): void
     {
         $dead = $attempts >= 5;
+        $delay = min(300, 2 ** max(1, $attempts));
+        $availableAt = gmdate('Y-m-d H:i:s', time() + $delay);
         $statement = $this->database->pdo()->prepare(
             'UPDATE platform_outbox
              SET status = :status,
-                 available_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL :delay SECOND),
+                 available_at = :available_at,
                  locked_at = NULL,
                  last_error = :last_error
              WHERE id = :id'
         );
-        $statement->bindValue(':status', $dead ? 'dead' : 'retry');
-        $statement->bindValue(':delay', min(300, 2 ** max(1, $attempts)), PDO::PARAM_INT);
-        $statement->bindValue(':last_error', mb_substr($message, 0, 500));
-        $statement->bindValue(':id', $eventId);
-        $statement->execute();
+        $statement->execute([
+            'status' => $dead ? 'dead' : 'retry',
+            'available_at' => $availableAt,
+            'last_error' => mb_substr($message, 0, 500),
+            'id' => $eventId,
+        ]);
     }
 }
