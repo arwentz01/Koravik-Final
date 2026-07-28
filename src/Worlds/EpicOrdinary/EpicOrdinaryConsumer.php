@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Koravik\Worlds\EpicOrdinary;
 
 use Koravik\Platform\Database\Database;
+use Koravik\Platform\Events\EventConsumer;
 use PDO;
 
-final class EpicOrdinaryConsumer
+final class EpicOrdinaryConsumer implements EventConsumer
 {
     public function __construct(private readonly Database $database)
     {
@@ -20,19 +21,13 @@ final class EpicOrdinaryConsumer
         }
 
         $this->database->transaction(function (PDO $pdo) use ($event): void {
-            $duplicate = $pdo->prepare(
-                'SELECT event_id FROM world_event_receipts WHERE event_id = :event_id LIMIT 1'
-            );
+            $duplicate = $pdo->prepare('SELECT event_id FROM world_event_receipts WHERE event_id = :event_id LIMIT 1');
             $duplicate->execute(['event_id' => $event['id']]);
             if ($duplicate->fetch()) {
                 return;
             }
 
-            $installation = $pdo->prepare(
-                'SELECT id FROM world_installations
-                 WHERE account_id = :account_id AND world_key = "epic-ordinary" AND status = "active"
-                 LIMIT 1 FOR UPDATE'
-            );
+            $installation = $pdo->prepare('SELECT id FROM world_installations WHERE account_id = :account_id AND world_key = "epic-ordinary" AND status = "active" LIMIT 1 FOR UPDATE');
             $installation->execute(['account_id' => $event['account_id']]);
             $installationId = $installation->fetchColumn();
             if (!$installationId) {
@@ -40,11 +35,7 @@ final class EpicOrdinaryConsumer
             }
 
             $payload = json_decode((string) $event['payload_json'], true, 512, JSON_THROW_ON_ERROR);
-            $state = $pdo->prepare(
-                'INSERT INTO world_state (installation_id, state_key, state_json, updated_at)
-                 VALUES (:installation_id, "caretaker.encouragement", :state_json, UTC_TIMESTAMP())
-                 ON DUPLICATE KEY UPDATE state_json = VALUES(state_json), updated_at = VALUES(updated_at)'
-            );
+            $state = $pdo->prepare('INSERT INTO world_state (installation_id, state_key, state_json, updated_at) VALUES (:installation_id, "caretaker.encouragement", :state_json, UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE state_json = VALUES(state_json), updated_at = VALUES(updated_at)');
             $state->execute([
                 'installation_id' => $installationId,
                 'state_json' => json_encode([
@@ -54,11 +45,7 @@ final class EpicOrdinaryConsumer
                 ], JSON_THROW_ON_ERROR),
             ]);
 
-            $reaction = $pdo->prepare(
-                'INSERT INTO world_reactions
-                 (id, installation_id, source_event_id, title, message, explanation, created_at)
-                 VALUES (:id, :installation_id, :source_event_id, :title, :message, :explanation, UTC_TIMESTAMP())'
-            );
+            $reaction = $pdo->prepare('INSERT INTO world_reactions (id, installation_id, source_event_id, title, message, explanation, created_at) VALUES (:id, :installation_id, :source_event_id, :title, :message, :explanation, UTC_TIMESTAMP())');
             $reaction->execute([
                 'id' => self::uuid(),
                 'installation_id' => $installationId,
@@ -68,14 +55,8 @@ final class EpicOrdinaryConsumer
                 'explanation' => 'Epic Ordinary responded because you completed the Quest “' . (string) ($payload['title'] ?? 'Untitled') . '.”',
             ]);
 
-            $receipt = $pdo->prepare(
-                'INSERT INTO world_event_receipts (event_id, installation_id, consumed_at)
-                 VALUES (:event_id, :installation_id, UTC_TIMESTAMP())'
-            );
-            $receipt->execute([
-                'event_id' => $event['id'],
-                'installation_id' => $installationId,
-            ]);
+            $receipt = $pdo->prepare('INSERT INTO world_event_receipts (event_id, installation_id, consumed_at) VALUES (:event_id, :installation_id, UTC_TIMESTAMP())');
+            $receipt->execute(['event_id' => $event['id'], 'installation_id' => $installationId]);
         });
     }
 
