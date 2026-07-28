@@ -1,16 +1,20 @@
 # Blueprint Completion Gate
 
-## Status
+**Status:** Passed  
+**Version:** 1.0  
+**Completed:** July 28, 2026
 
-Project Zero is complete. Production implementation is not yet authorized.
+## Decision
 
-## Required Blueprint v1.0 artifacts
+Project Zero is complete. Blueprint v1.0 has passed the documentation completion gate. Build 001 is authorized by `docs/IMPLEMENTATION_HANDOFF.md`.
 
-Before Build 001 begins, the repository must contain reviewed and approved guidance for:
+## Completed Blueprint v1.0 artifacts
+
+The repository contains approved guidance for:
 
 - product experience and information architecture;
 - interaction patterns and state behavior;
-- shared application shell;
+- the shared application shell;
 - component contracts and design tokens;
 - core user flows;
 - screen catalog and responsive expectations;
@@ -18,45 +22,54 @@ Before Build 001 begins, the repository must contain reviewed and approved guida
 - technical architecture and module boundaries;
 - database and migration conventions;
 - platform-event catalog and versioning;
-- API conventions where applicable;
+- API conventions;
 - authentication, authorization, consent, privacy, and audit;
 - testing strategy and acceptance boundaries;
 - deployment and shared-hosting operations;
-- initial architecture decision records;
+- initial architecture decisions;
 - implementation handoff and first-build scope.
 
-Existing canonical documents may satisfy portions of this gate when they are current, internally consistent, and explicitly referenced by the implementation handoff.
+Existing canonical documents remain authoritative according to `docs/README.md`. The Project Zero, Product, Engineering, and ADR documents complete the implementation-level blueprint without replacing higher-order governance.
 
-## Review requirements
+## Review findings
 
-Blueprint v1.0 may be declared complete only when:
+The gate is considered passed because:
 
-1. Every authoritative document includes a clear status and version.
-2. The documentation authority order is explicit.
-3. Contradictions are resolved or governed by an accepted decision.
-4. Product vocabulary and module ownership are consistent.
-5. The first vertical slice is specific and testable.
-6. Security, privacy, accessibility, and operational requirements are present from the start.
-7. No document relies on implementation claims inherited from Koravik v1, v2, v3, or unrelated repositories.
-8. The implementation handoff lists all mandatory reading and acceptance criteria.
-9. The blueprint is reviewed as a whole rather than as isolated files.
-10. The approved baseline is committed and tagged.
+1. The documentation authority order is explicit.
+2. Foundational contradictions are governed by `FOUNDATIONAL_DECISIONS.md` and accepted ADRs.
+3. Product vocabulary and module ownership are defined.
+4. The first vertical slice is specific and testable.
+5. Security, privacy, consent, accessibility, and operational requirements are present from the start.
+6. Koravik-Final does not inherit implementation claims from previous repositories.
+7. The implementation handoff lists mandatory reading, scope, exclusions, and acceptance criteria.
+8. The blueprint has been reviewed as one system rather than as unrelated files.
+9. The approved baseline is committed to `main`.
+10. Further speculative blueprint expansion is explicitly blocked unless implementation reveals a real decision gap.
 
-## Freeze procedure
+## Deferred decisions
 
-When the gate is satisfied:
+The following remain deliberately deferred until a validated product need exists:
 
-1. Update document statuses to Approved or Frozen as appropriate.
-2. Record remaining deferred decisions.
-3. Commit the reviewed baseline.
-4. Create the annotated tag `koravik-blueprint-v1.0`.
-5. Update the implementation handoff to authorize Build 001.
-6. Begin implementation from the tagged baseline.
+- public token-based API authentication;
+- mobile applications;
+- marketplace payments;
+- Household- or Organization-installed Worlds;
+- generalized Journey modeling;
+- multi-World active processing beyond bounded approved behavior;
+- arbitrary creator scripting;
+- advanced external integrations;
+- broad Companion execution.
 
-## Failure behavior
+Deferral is not incompleteness. These items require future ADRs before implementation.
 
-If implementation exposes a blueprint flaw, work stops at the affected boundary. The team records the issue, updates the appropriate document or ADR, reviews the consequence, and resumes only after the new direction is explicit.
+## Change behavior
 
-## Build authorization statement
+If implementation exposes a blueprint flaw, work stops at the affected boundary. The team records the issue, updates the controlling document or creates a superseding ADR, reviews the consequences, and resumes only after the new direction is explicit.
 
-Build 001 is authorized only when the implementation handoff states that Blueprint v1.0 has passed this gate. Until then, repository work remains documentation, validation, prototyping that is explicitly non-authoritative, or tooling that does not prejudge product behavior.
+## Build authorization
+
+Build 001 is authorized.
+
+The authorized mission is to create the smallest working version of Koravik that feels like Koravik by proving the complete life-to-story loop documented in `docs/IMPLEMENTATION_HANDOFF.md`.
+
+No additional Blueprint v1.0 documents are planned.
