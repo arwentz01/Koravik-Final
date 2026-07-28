@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Koravik\Platform\Events;
 
 use Koravik\Platform\Database\Database;
-use Koravik\Worlds\EpicOrdinary\EpicOrdinaryConsumer;
 use PDO;
 use Throwable;
 
@@ -13,7 +12,7 @@ final class OutboxWorker
 {
     public function __construct(
         private readonly Database $database,
-        private readonly EpicOrdinaryConsumer $consumer,
+        private readonly EventConsumer $consumer,
     ) {
     }
 
@@ -85,10 +84,7 @@ final class OutboxWorker
         $availableAt = gmdate('Y-m-d H:i:s', time() + $delay);
         $statement = $this->database->pdo()->prepare(
             'UPDATE platform_outbox
-             SET status = :status,
-                 available_at = :available_at,
-                 locked_at = NULL,
-                 last_error = :last_error
+             SET status = :status, available_at = :available_at, locked_at = NULL, last_error = :last_error
              WHERE id = :id'
         );
         $statement->execute([
