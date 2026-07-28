@@ -25,7 +25,14 @@ final class EpicOrdinaryConsumer implements EventConsumer
             $duplicate->execute(['event_id' => $event['id']]);
             if ($duplicate->fetch()) return;
 
-            $installation = $pdo->prepare('SELECT id FROM world_installations WHERE account_id = :account_id AND world_key = "epic-ordinary" AND status = "active" LIMIT 1 FOR UPDATE');
+            $installation = $pdo->prepare(
+                'SELECT i.id
+                 FROM world_installations i
+                 JOIN world_fact_permissions p ON p.installation_id = i.id
+                    AND p.fact_key = "quest.completed" AND p.granted = 1
+                 WHERE i.account_id = :account_id AND i.world_key = "epic-ordinary" AND i.status = "active"
+                 LIMIT 1 FOR UPDATE'
+            );
             $installation->execute(['account_id' => $event['account_id']]);
             $installationId = $installation->fetchColumn();
             if (!$installationId) return;
