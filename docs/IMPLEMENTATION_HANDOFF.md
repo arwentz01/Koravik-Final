@@ -1,6 +1,6 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Build 006 in validation  
+**Status:** Build 006 complete and merged  
 **Version:** 1.6  
 **Baseline date:** July 28, 2026  
 **Authoritative branch:** `main`
@@ -49,29 +49,23 @@ Persistent World navigation, Chapter One, durable Caretaker support-style choice
 
 **Checkpoint:** `a21b4392ff12927e3e92ca41c91218e73e3d0740`
 
-## Build 006 — Structured Quests, steps, and milestones
-
-### Player-visible outcome
+### Build 006 — Structured Quests, steps, and milestones
 
 A Quest may be a single action, habit, project, journey, responsibility, or World objective. Structured Quest types may contain ordered required or optional steps, show meaningful progress, reach milestones, and prevent completion while required steps remain.
 
-### Technical boundaries
+Delivered:
 
-- Quest type is explicit as required by the canonical domain model.
-- Steps, progress, and milestones remain owned by Quests.
-- Simple actions and habits remain lightweight.
-- Projects and Journeys gain structure without becoming project-management software.
-- Existing completion events include only the minimized Quest type needed by authorized consumers.
-- Pillar, Chronicle, and World behavior continues through the accepted event pipeline.
-
-### Included
-
-- relational Quest type field;
-- ordered Quest steps with required, optional, pending, completed, reopened, and skipped states;
+- explicit relational Quest types;
+- ordered required and optional Quest steps;
+- pending, completed, reopened, and skipped step states;
 - automatic 25%, 50%, and 100% milestones for Projects and Journeys;
-- progress presentation and completion guard;
+- progress presentation and required-step completion guard;
 - audit history for step changes;
-- browser and MySQL validation.
+- minimized Quest type in completion events;
+- preserved Pillar, Chronicle, and World reactions;
+- successful browser and MySQL validation.
+
+**Checkpoint:** `20f37f1e2ea81552c4f975ebbe3cdf46e73bee3a`
 
 ## Build workflow
 
