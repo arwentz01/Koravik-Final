@@ -3,6 +3,8 @@
 declare(strict_types=1);
 require dirname(__DIR__) . '/bootstrap.php';
 
+use Koravik\Platform\Hearth\HearthLayoutController;
+use Koravik\Platform\Hearth\HearthLayoutService;
 use Koravik\Platform\Notifications\NotificationController;
 use Koravik\Platform\Notifications\NotificationService;
 use Koravik\Platform\Privacy\PrivacyController;
@@ -14,14 +16,15 @@ $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 if ($method === 'GET' && $path === '/health') {
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['status' => 'ok', 'build' => '012'], JSON_THROW_ON_ERROR);
+    echo json_encode(['status' => 'ok', 'build' => '013'], JSON_THROW_ON_ERROR);
     return;
 }
 
 Security::startSession();
 ob_start();
 
-$handled = (new SettingsController(database()))->handle($method, $path);
+$handled = (new HearthLayoutController(database()))->handle($method, $path);
+if (!$handled) $handled = (new SettingsController(database()))->handle($method, $path);
 if (!$handled) $handled = (new PrivacyController(database()))->handle($method, $path);
 if (!$handled) $handled = (new SearchController(database()))->handle($method, $path);
 if (!$handled) $handled = (new NotificationController(database()))->handle($method, $path);
@@ -31,6 +34,7 @@ if (!$handled) (new Koravik\Application())->run();
 
 $html = (string) ob_get_clean();
 $account = Security::account();
+if ($account && $method === 'GET' && $path === '/hearth') $html=(new HearthLayoutService(database()))->apply($html,(string)$account['id']);
 if ($account && str_contains($html, '<nav aria-label="Primary">')) {
     if (!str_contains($html, 'href="/worlds"')) $html = str_replace('</nav>', '<a href="/worlds">Worlds</a></nav>', $html);
     if (!str_contains($html, 'href="/search"')) $html = str_replace('</nav>', '<a href="/search">Search</a></nav>', $html);
