@@ -1,0 +1,15 @@
+Options -Indexes
+DirectoryIndex index.php
+
+RewriteEngine On
+
+# Never expose application internals or secrets when the repository root is the web root.
+RewriteRule ^(?:\.env(?:\..*)?|bootstrap\.php|config(?:/|$)|database(?:/|$)|docs(?:/|$)|src(?:/|$)|storage(?:/|$)|tests(?:/|$)|tools(?:/|$)|vendor(?:/|$)|\.git(?:/|$)|\.github(?:/|$)) - [F,L,NC]
+
+# Serve public assets from their protected repository location.
+RewriteRule ^assets/(.*)$ public/assets/$1 [L]
+
+# Send application routes through the root front controller.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]

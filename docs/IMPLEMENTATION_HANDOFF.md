@@ -1,9 +1,10 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Approved — Build 001 Authorized  
-**Version:** 1.0  
+**Status:** Approved — Build 001 Complete  
+**Version:** 1.1  
 **Baseline date:** July 28, 2026  
-**Authoritative branch:** `main`
+**Authoritative branch:** `main`  
+**Completed checkpoint:** `7c17d997869c2ef7059731c6ab360424c2182d4d`
 
 ## Repository authority
 
@@ -52,68 +53,68 @@ The blueprint is authoritative. Implementation may clarify details but may not s
 
 ## Build 001 — Foundation and first vertical slice
 
-### Mission
+### Status
 
-Create the smallest working version of Koravik that already feels like Koravik.
+**Complete and merged to `main`.**
 
-### Required journey
+### Delivered journey
 
-1. A person signs in securely.
-2. The shared application shell loads.
+1. A person signs in through password-hashed credentials and a rotated secure session.
+2. The shared application shell loads with accessible navigation and focus behavior.
 3. Hearth provides a calm daily orientation surface.
 4. The person opens one Quests-owned action.
 5. The person completes the action.
-6. The source transaction records the completion and `Quests.QuestCompleted.v1` in the outbox atomically.
-7. A bounded worker delivers the event idempotently.
-8. Epic Ordinary interprets the approved fact.
-9. Independent World State changes.
-10. The person sees the reaction and why it occurred.
-11. The person returns to Hearth.
-12. The person can leave and later resume without losing context.
+6. The source transaction records the completion, audit entry, and `Quests.QuestCompleted.v1` outbox event atomically.
+7. A finite worker claims and delivers the event with retry and dead-letter behavior.
+8. Epic Ordinary interprets only the approved minimized fact.
+9. Independent World State and a durable reaction are recorded.
+10. The person sees the reaction and its provenance.
+11. The person returns to Hearth and can later resume from stored state.
 
-### Build 001 in scope
+### Implemented foundation
 
-- minimal application bootstrap and configuration;
-- database connection and migration runner;
-- Account, authentication, session, and authorization foundation;
-- shared shell and design tokens required for the journey;
-- minimal Hearth composition;
-- minimal Quests model and completion service;
-- transactional outbox and finite delivery command;
-- minimal World installation/runtime/state support for Epic Ordinary;
-- explainability record and visible reaction;
-- audit and structured logging required by the flow;
-- automated tests and acceptance checks for the full journey.
+- environment-aware PHP bootstrap and autoloading;
+- PDO connection with native prepared statements and explicit transactions;
+- versioned MySQL/MariaDB migration runner;
+- safe seed command requiring explicit credentials;
+- session authentication, logout, CSRF, and security headers;
+- responsive server-rendered shell and visual tokens;
+- minimal Hearth and Quests surfaces;
+- atomic Quest completion and outbox publication;
+- bounded outbox worker with retries, dead-letter state, and idempotent receipts;
+- Epic Ordinary installation, state, reaction, and explainability records;
+- audit record for the completed action;
+- Apache front controller and health endpoint;
+- GitHub Actions validation against an empty MySQL database.
 
-### Explicitly out of scope
+### Validation
 
-- broad District implementation;
-- Households and Organizations beyond abstractions required for future compatibility;
-- marketplace payments;
-- arbitrary creator code;
-- mobile applications;
-- broad public API;
-- generalized AI execution;
-- comprehensive search, notifications, or media systems;
+The Build 001 workflow passed on the accepted head commit and verified:
+
+- PHP 8.3 syntax for every PHP file;
+- migration from an empty MySQL 8.4 database;
+- safe account, Quest, and World seeding;
+- health response;
+- sign-in and session persistence;
+- Hearth orientation;
+- Quest detail and completion;
+- visible Epic Ordinary reaction and explanation;
+- idempotent worker execution after delivery.
+
+## Deferred scope
+
+Build 001 intentionally did not implement:
+
+- broad District functionality;
+- Households or Organizations;
+- generalized account administration or password recovery;
+- Companion execution;
+- marketplace or creator publishing;
 - multiple production Worlds;
-- engagement metrics, streak pressure, or social feeds.
-
-## Acceptance criteria
-
-Build 001 is accepted only when:
-
-- the required journey works end to end;
-- module ownership and database boundaries are preserved;
-- event publication is atomic and consumption is idempotent;
-- World State is independent and explainable;
-- no consequential Companion action bypass exists;
-- authentication, authorization, CSRF, validation, audit, and privacy checks pass;
-- keyboard, focus, responsive, reduced-motion, and screen-reader expectations are reviewed;
-- migrations work from an empty database;
-- finite worker execution is shared-host safe;
-- tests defined by the testing strategy pass;
-- relevant documentation is updated;
-- no implementation claim is inherited from another repository.
+- broad public APIs;
+- comprehensive search, notifications, or media;
+- mobile applications;
+- deployment automation for a specific production host.
 
 ## Build workflow
 
@@ -132,8 +133,6 @@ For every build:
 
 When implementation reveals a blueprint flaw, stop at the affected boundary. Record an ADR or update the authoritative document, review the consequences, and resume only after the direction is explicit.
 
-## Authorization
+## Next authorization
 
-Blueprint v1.0 has passed the documentation completion gate. Build 001 is authorized from the current `main` baseline.
-
-The next repository work should be implementation planning for Build 001, not additional speculative blueprint expansion.
+Build 001 is complete. The next repository work should define and approve the narrow player-visible outcome for Build 002 before implementation begins. Build 002 must extend the working product rather than replacing or bypassing the accepted vertical slice.
