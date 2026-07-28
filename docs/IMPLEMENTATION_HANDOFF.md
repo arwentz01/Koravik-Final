@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Build 009 complete and merged  
-**Version:** 1.9  
+**Status:** Build 010 complete and merged  
+**Version:** 1.10  
 **Baseline date:** July 28, 2026  
 **Authoritative branch:** `main`
 
@@ -120,6 +120,24 @@ Delivered:
 - successful browser, MySQL, preference-suppression, World, structured-Quest, return, and worker-idempotency validation.
 
 **Checkpoint:** `10ba3526ef07cac0f457ab4ffae9f8d607b2168c`
+
+### Build 010 — Global search and ownership-aware results
+
+A Player can search Koravik from one shared surface and find authorized Quests, Chronicle moments, and Worlds without Search becoming a duplicate data owner.
+
+Delivered:
+
+- authenticated global Search route and shared shell entry;
+- initial guidance, grouped results, and no-results presentation;
+- account-scoped Quest and Chronicle queries;
+- searchable World catalog metadata with installation status;
+- bounded privacy-conscious snippets and direct owner links;
+- explicit owning-module labels on every result group;
+- literal handling of SQL wildcard characters;
+- no duplicate search index or parallel source-of-truth tables;
+- successful browser, MySQL, cross-account-isolation, wildcard, World, structured-Quest, notifications, return, and worker-idempotency validation.
+
+**Checkpoint:** `266847ada00efa7d224ad323f5e9a67af69e4862`
 
 ## Build workflow
 
