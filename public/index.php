@@ -4,6 +4,7 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/bootstrap.php';
 
 use Koravik\Platform\Companion\CompanionController;
+use Koravik\Platform\Companion\CompanionLifecycleController;
 use Koravik\Platform\Hearth\HearthLayoutController;
 use Koravik\Platform\Hearth\HearthLayoutService;
 use Koravik\Platform\Notifications\NotificationController;
@@ -17,14 +18,15 @@ $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 if ($method === 'GET' && $path === '/health') {
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['status' => 'ok', 'build' => '015'], JSON_THROW_ON_ERROR);
+    echo json_encode(['status' => 'ok', 'build' => '016'], JSON_THROW_ON_ERROR);
     return;
 }
 
 Security::startSession();
 ob_start();
 
-$handled = (new CompanionController(database()))->handle($method, $path);
+$handled = (new CompanionLifecycleController(database()))->handle($method, $path);
+if (!$handled) $handled = (new CompanionController(database()))->handle($method, $path);
 if (!$handled) $handled = (new HearthLayoutController(database()))->handle($method, $path);
 if (!$handled) $handled = (new SettingsController(database()))->handle($method, $path);
 if (!$handled) $handled = (new PrivacyController(database()))->handle($method, $path);
