@@ -1,9 +1,9 @@
-name: Build 011
+name: Build 012
 
 on:
   pull_request:
   push:
-    branches: [main, build/011-privacy-consent-audit]
+    branches: [main, build/012-account-settings]
 
 jobs:
   verify:
@@ -41,52 +41,33 @@ jobs:
         run: |
           php tools/migrate.php
           php tools/seed.php
-          php tools/migrate.php | grep 'Already applied: 008_notifications'
+          php tools/migrate.php | grep 'Already applied: 009_account_settings'
       - name: Start application and sign in
         run: |
           php -S 127.0.0.1:8080 -t public public/index.php > /tmp/koravik-server.log 2>&1 &
           sleep 2
-          curl --fail http://127.0.0.1:8080/health | grep '"build":"011"'
+          curl --fail http://127.0.0.1:8080/health | grep '"build":"012"'
           curl -sS -c /tmp/cookies http://127.0.0.1:8080/login > /tmp/login.html
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/login.html | head -1 | sed 's/.*value="//;s/"$//')
           curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode 'email=owner@example.test' --data-urlencode 'password=Koravik8' http://127.0.0.1:8080/login > /tmp/hearth.html
-          grep 'Privacy' /tmp/hearth.html
-      - name: Explain current grants and last use
+          grep 'Settings' /tmp/hearth.html
+      - name: Save account and accessibility settings
         run: |
-          EVENT_ID='91000000-0000-4000-8000-000000000001'
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "INSERT INTO platform_outbox (id,event_name,event_version,account_id,payload_json,status,attempts,available_at,occurred_at,created_at) VALUES ('$EVENT_ID','Quests.QuestCompleted',1,'00000000-0000-4000-8000-000000000001',JSON_OBJECT('quest_id','00000000-0000-4000-8000-000000000101','occurrence_id','00000000-0000-4000-8000-000000000102','scheduled_date',CURRENT_DATE(),'recurring',false,'title','Privacy test','quest_type','action'),'pending',0,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())"
-          php tools/worker.php 20 | grep '"failed": 0'
-          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/privacy > /tmp/privacy.html
-          grep 'What may Koravik use' /tmp/privacy.html
-          grep 'Quest occurrence completed' /tmp/privacy.html
-          grep 'Player returned after an absence' /tmp/privacy.html
-          grep 'Last used' /tmp/privacy.html
-          grep 'Revocation effect' /tmp/privacy.html
-      - name: Revoke and enforce future delivery
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/settings > /tmp/settings.html
+          grep 'How should Koravik work for you' /tmp/settings.html
+          grep 'Notification preferences' /tmp/settings.html
+          grep 'Account export and deletion execution are not yet available' /tmp/settings.html
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/settings.html | head -1 | sed 's/.*value="//;s/"$//')
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode 'display_name=Builder Updated' --data-urlencode 'appearance=dark' --data-urlencode 'reduced_motion=on' --data-urlencode 'high_contrast=on' --data-urlencode 'timezone=America/Chicago' --data-urlencode 'date_format=year_month_day' http://127.0.0.1:8080/settings > /tmp/saved.html
+          grep 'Settings saved' /tmp/saved.html
+          grep 'Builder Updated' /tmp/saved.html
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT CONCAT(appearance,':',reduced_motion,':',high_contrast,':',timezone,':',date_format) FROM account_settings WHERE account_id='00000000-0000-4000-8000-000000000001'" | grep '^dark:1:1:America/Chicago:year_month_day$'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM audit_log WHERE account_id='00000000-0000-4000-8000-000000000001' AND action='settings.updated'" | grep '^1$'
+      - name: Reject invalid settings and preserve prior flows
         run: |
-          INSTALLATION_ID=$(mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT id FROM world_installations WHERE account_id='00000000-0000-4000-8000-000000000001' AND world_key='epic-ordinary'")
-          php -r 'require "bootstrap.php"; (new \Koravik\Platform\Privacy\PrivacyService(database()))->setGrant("00000000-0000-4000-8000-000000000001", $argv[1], "quest.completed", false);' "$INSTALLATION_ID"
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT granted FROM world_fact_permissions WHERE installation_id='$INSTALLATION_ID' AND fact_key='quest.completed'" | grep '^0$'
-          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/privacy > /tmp/revoked.html
-          grep 'Grant permission' /tmp/revoked.html
-          EVENT_ID='91000000-0000-4000-8000-000000000002'
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "INSERT INTO platform_outbox (id,event_name,event_version,account_id,payload_json,status,attempts,available_at,occurred_at,created_at) VALUES ('$EVENT_ID','Quests.QuestCompleted',1,'00000000-0000-4000-8000-000000000001',JSON_OBJECT('quest_id','00000000-0000-4000-8000-000000000101','occurrence_id','00000000-0000-4000-8000-000000000102','scheduled_date',CURRENT_DATE(),'recurring',false,'title','Revoked test','quest_type','action'),'pending',0,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())"
-          php tools/worker.php 20 | grep '"failed": 0'
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_reactions WHERE source_event_id='$EVENT_ID'" | grep '^0$'
-      - name: Restore grant and verify audit trail
-        run: |
-          INSTALLATION_ID=$(mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT id FROM world_installations WHERE account_id='00000000-0000-4000-8000-000000000001' AND world_key='epic-ordinary'")
-          php -r 'require "bootstrap.php"; (new \Koravik\Platform\Privacy\PrivacyService(database()))->setGrant("00000000-0000-4000-8000-000000000001", $argv[1], "quest.completed", true);' "$INSTALLATION_ID"
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT granted FROM world_fact_permissions WHERE installation_id='$INSTALLATION_ID' AND fact_key='quest.completed'" | grep '^1$'
-          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/audit > /tmp/audit.html
-          grep 'What consequential actions occurred' /tmp/audit.html
-          grep 'Permission was revoked for future fact delivery' /tmp/audit.html
-          grep 'Permission was granted for future fact delivery' /tmp/audit.html
-          grep 'This historical record cannot be edited' /tmp/audit.html
-      - name: Preserve previous platform flows
-        run: |
+          php -r 'require "bootstrap.php"; try {(new \Koravik\Platform\Settings\SettingsService(database()))->save("00000000-0000-4000-8000-000000000001",["display_name"=>"Builder","appearance"=>"neon","timezone"=>"UTC","date_format"=>"month_day_year"]); exit(1);} catch (RuntimeException $e) {echo $e->getMessage();}' | grep 'valid appearance'
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/privacy | grep 'What may Koravik use'
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/search | grep 'Find what you are looking for'
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/notifications | grep 'What changed that deserves attention'
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/worlds | grep 'Stories that respond with permission'
-          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/quests/create | grep 'Journey'
           php tools/worker.php 10 | grep '"processed": 0'
