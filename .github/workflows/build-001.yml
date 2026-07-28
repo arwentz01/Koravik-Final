@@ -1,4 +1,4 @@
-name: Build 004
+name: Build 005
 
 on:
   pull_request:
@@ -16,14 +16,10 @@ jobs:
           MYSQL_USER: koravik
           MYSQL_PASSWORD: koravik
           MYSQL_ROOT_PASSWORD: root
-        ports:
-          - 3306:3306
+        ports: ['3306:3306']
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-
+          --health-interval=10s --health-timeout=5s --health-retries=10
     steps:
       - uses: actions/checkout@v4
       - name: Set up PHP
@@ -45,68 +41,36 @@ jobs:
         run: |
           php tools/migrate.php
           php tools/seed.php
-          php tools/migrate.php | grep 'Already applied: 003_pillars_chronicle'
-      - name: Start application
-        run: php -S 127.0.0.1:8080 -t public public/index.php > /tmp/koravik-server.log 2>&1 &
-      - name: Sign in
+          php tools/migrate.php | grep 'Already applied: 004_epic_ordinary_continuation'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT current_chapter FROM world_narrative_progress" | grep '^the-first-light$'
+      - name: Start application and sign in
         run: |
+          php -S 127.0.0.1:8080 -t public public/index.php > /tmp/koravik-server.log 2>&1 &
           sleep 2
-          curl --fail http://127.0.0.1:8080/health | grep '"build":"004"'
+          curl --fail http://127.0.0.1:8080/health | grep '"build":"005"'
           curl -sS -c /tmp/cookies http://127.0.0.1:8080/login > /tmp/login.html
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/login.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies \
-            --data-urlencode "csrf=$CSRF" \
-            --data-urlencode 'email=owner@example.test' \
-            --data-urlencode 'password=Koravik8' \
-            http://127.0.0.1:8080/login > /tmp/hearth.html
-          grep 'What matters now' /tmp/hearth.html
-      - name: Verify Pillar completion experience
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode 'email=owner@example.test' --data-urlencode 'password=Koravik8' http://127.0.0.1:8080/login > /tmp/hearth.html
+          grep 'Enter Epic Ordinary' /tmp/hearth.html
+          grep '>World<' /tmp/hearth.html
+      - name: Verify meaningful World choice
         run: |
-          curl -sS -b /tmp/cookies http://127.0.0.1:8080/quests/create > /tmp/create.html
-          grep 'Supports' /tmp/create.html
-          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/create.html | head -1 | sed 's/.*value="//;s/"$//')
-          START=$(date +%F)
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies \
-            --data-urlencode "csrf=$CSRF" \
-            --data-urlencode 'title=Prepare a nourishing meal' \
-            --data-urlencode 'description=Choose something simple and sustaining.' \
-            --data-urlencode 'pillar_key=health' \
-            --data-urlencode 'frequency=none' \
-            --data-urlencode "starts_on=$START" \
-            --data-urlencode 'timezone=America/New_York' \
-            http://127.0.0.1:8080/quests > /tmp/created.html
-          CREATED_PATH=$(grep -o '/quests/[a-f0-9-]\{36\}' /tmp/created.html | tail -1)
-          test -n "$CREATED_PATH"
-          curl -sS -b /tmp/cookies "http://127.0.0.1:8080$CREATED_PATH" > /tmp/quest.html
+          curl -sS -b /tmp/cookies http://127.0.0.1:8080/world/epic-ordinary > /tmp/world.html
+          grep 'The Caretaker was already awake' /tmp/world.html
+          grep 'Remind me gently' /tmp/world.html
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/world.html | head -1 | sed 's/.*value="//;s/"$//')
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode 'choice=gentle' http://127.0.0.1:8080/world/epic-ordinary/choice > /tmp/chosen.html
+          grep 'The Caretaker will remember that choice' /tmp/chosen.html
+          grep 'Remind me gently' /tmp/chosen.html
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT CONCAT(choice_key, ':', trust_score, ':', relationship_stage) FROM world_choice_history c JOIN world_relationships r ON r.installation_id=c.installation_id WHERE c.scene_key='caretaker-welcome'" | grep '^gentle:2:known$'
+      - name: Verify real-life action changes relationship
+        run: |
+          curl -sS -b /tmp/cookies http://127.0.0.1:8080/quests/00000000-0000-4000-8000-000000000101 > /tmp/quest.html
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/quest.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" "http://127.0.0.1:8080$CREATED_PATH/complete" > /tmp/completed.html
-          grep 'Quest completed' /tmp/completed.html
-          grep 'Health' /tmp/completed.html
-          grep 'Moment recorded' /tmp/completed.html
-          COMPLETION_PATH=$(grep -o '/completions/[a-f0-9-]\{36\}' /tmp/completed.html | head -1)
-          test -n "$COMPLETION_PATH"
-          echo "COMPLETION_PATH=$COMPLETION_PATH" >> "$GITHUB_ENV"
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM pillar_contributions WHERE pillar_key='health' AND status='active'" | grep '^1$'
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM chronicle_entries WHERE entry_type='system' AND status='active'" | grep '^1$'
-      - name: Verify reflection and Hearth composition
-        run: |
-          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/completed.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies \
-            --data-urlencode "csrf=$CSRF" \
-            --data-urlencode 'reflection=This made the evening feel steadier.' \
-            "http://127.0.0.1:8080$COMPLETION_PATH/reflection" > /tmp/reflected.html
-          grep 'Reflection saved' /tmp/reflected.html
-          curl -sS -b /tmp/cookies http://127.0.0.1:8080/chronicle > /tmp/chronicle.html
-          grep 'This made the evening feel steadier' /tmp/chronicle.html
-          curl -sS -b /tmp/cookies http://127.0.0.1:8080/hearth > /tmp/hearth-after.html
-          grep 'What you have been supporting' /tmp/hearth-after.html
-          grep 'Health' /tmp/hearth-after.html
-      - name: Verify reversal and idempotency
-        run: |
-          curl -sS -b /tmp/cookies "http://127.0.0.1:8080$COMPLETION_PATH" > /tmp/completion-again.html
-          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/completion-again.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" "http://127.0.0.1:8080$COMPLETION_PATH/undo" > /tmp/undone.html
-          grep 'Completion undone' /tmp/undone.html
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM pillar_contributions WHERE status='reversed'" | grep '^1$'
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM chronicle_entries WHERE entry_type='system' AND status='reversed'" | grep '^1$'
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" http://127.0.0.1:8080/quests/00000000-0000-4000-8000-000000000101/complete > /tmp/completed.html
+          grep 'The Caretaker remembered' /tmp/completed.html
+          curl -sS -b /tmp/cookies http://127.0.0.1:8080/world/epic-ordinary > /tmp/world-after.html
+          grep 'Make one corner calmer' /tmp/world-after.html
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT trust_score FROM world_relationships WHERE npc_key='caretaker'" | grep '^3$'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_relationship_history WHERE reason_code='quest.completed'" | grep '^1$'
           php tools/worker.php 10 | grep '"processed": 0'
