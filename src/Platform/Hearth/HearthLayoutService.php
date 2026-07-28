@@ -25,10 +25,17 @@ final class HearthLayoutService
     {
         $order=array_values(array_filter(array_map('strval',(array)($input['order']??[])),static fn(string $v): bool=>isset(self::WIDGETS[$v])));
         if(count($order)!==count(self::WIDGETS) || count(array_unique($order))!==count(self::WIDGETS)) throw new RuntimeException('Keep each Hearth section exactly once.');
+        $move=(string)($input['move']??'');
+        if($move!=='' && preg_match('/^(pillars|chronicle|world):(up|down)$/',$move,$m)) {
+            $index=array_search($m[1],$order,true);
+            $swap=$m[2]==='up'?$index-1:$index+1;
+            if($index!==false && isset($order[$swap])) [$order[$index],$order[$swap]]=[$order[$swap],$order[$index]];
+        }
         $visible=array_map('strval',(array)($input['visible']??[]));
         $this->database->transaction(function(PDO $pdo) use($accountId,$order,$visible): void {
+            $pdo->prepare('UPDATE hearth_layout_preferences SET position=position+1000 WHERE account_id=:account_id')->execute(['account_id'=>$accountId]);
             foreach($order as $i=>$key) {
-                $pdo->prepare('INSERT INTO hearth_layout_preferences (account_id,widget_key,position,visible,updated_at) VALUES (:account_id,:widget_key,:position,:visible,UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE position=VALUES(position),visible=VALUES(visible),updated_at=UTC_TIMESTAMP()')->execute(['account_id'=>$accountId,'widget_key'=>$key,'position'=>($i+1)*10,'visible'=>in_array($key,$visible,true)?1:0]);
+                $pdo->prepare('UPDATE hearth_layout_preferences SET position=:position,visible=:visible,updated_at=UTC_TIMESTAMP() WHERE account_id=:account_id AND widget_key=:widget_key')->execute(['account_id'=>$accountId,'widget_key'=>$key,'position'=>($i+1)*10,'visible'=>in_array($key,$visible,true)?1:0]);
             }
             $pdo->prepare('INSERT INTO audit_log (id,account_id,action,subject_type,subject_id,occurred_at) VALUES (:id,:account_id,"hearth.layout.updated","account",:subject_id,UTC_TIMESTAMP())')->execute(['id'=>self::uuid(),'account_id'=>$accountId,'subject_id'=>$accountId]);
         });
@@ -38,6 +45,7 @@ final class HearthLayoutService
     {
         $this->database->transaction(function(PDO $pdo) use($accountId): void {
             $pdo->prepare('DELETE FROM hearth_layout_preferences WHERE account_id=:account_id')->execute(['account_id'=>$accountId]);
+            $pdo->prepare('INSERT INTO audit_log (id,account_id,action,subject_type,subject_id,occurred_at) VALUES (:id,:account_id,"hearth.layout.reset","account",:subject_id,UTC_TIMESTAMP())')->execute(['id'=>self::uuid(),'account_id'=>$accountId,'subject_id'=>$accountId]);
         });
         $this->ensure($accountId);
     }
