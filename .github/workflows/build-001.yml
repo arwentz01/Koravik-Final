@@ -1,9 +1,9 @@
-name: Build 010
+name: Build 011
 
 on:
   pull_request:
   push:
-    branches: [main, build/010-global-search]
+    branches: [main, build/011-privacy-consent-audit]
 
 jobs:
   verify:
@@ -46,45 +46,47 @@ jobs:
         run: |
           php -S 127.0.0.1:8080 -t public public/index.php > /tmp/koravik-server.log 2>&1 &
           sleep 2
-          curl --fail http://127.0.0.1:8080/health | grep '"build":"010"'
+          curl --fail http://127.0.0.1:8080/health | grep '"build":"011"'
           curl -sS -c /tmp/cookies http://127.0.0.1:8080/login > /tmp/login.html
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/login.html | head -1 | sed 's/.*value="//;s/"$//')
           curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode 'email=owner@example.test' --data-urlencode 'password=Koravik8' http://127.0.0.1:8080/login > /tmp/hearth.html
-          grep 'Search' /tmp/hearth.html
-          grep 'Notifications' /tmp/hearth.html
-      - name: Verify initial guidance and empty results
+          grep 'Privacy' /tmp/hearth.html
+      - name: Explain current grants and last use
         run: |
-          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/search > /tmp/search.html
-          grep 'Find what you are looking for' /tmp/search.html
-          grep 'checks authorization before showing each result' /tmp/search.html
-          curl --fail -sS -G -b /tmp/cookies --data-urlencode 'q=definitely absent phrase' http://127.0.0.1:8080/search > /tmp/no-results.html
-          grep 'No results for' /tmp/no-results.html
-      - name: Search grouped owned records
+          EVENT_ID='91000000-0000-4000-8000-000000000001'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "INSERT INTO platform_outbox (id,event_name,event_version,account_id,payload_json,status,attempts,available_at,occurred_at,created_at) VALUES ('$EVENT_ID','Quests.QuestCompleted',1,'00000000-0000-4000-8000-000000000001',JSON_OBJECT('quest_id','00000000-0000-4000-8000-000000000101','occurrence_id','00000000-0000-4000-8000-000000000102','scheduled_date',CURRENT_DATE(),'recurring',false,'title','Privacy test','quest_type','action'),'pending',0,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())"
+          php tools/worker.php 20 | grep '"failed": 0'
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/privacy > /tmp/privacy.html
+          grep 'What may Koravik use' /tmp/privacy.html
+          grep 'Quest occurrence completed' /tmp/privacy.html
+          grep 'Player returned after an absence' /tmp/privacy.html
+          grep 'Last used' /tmp/privacy.html
+          grep 'Revocation effect' /tmp/privacy.html
+      - name: Revoke and enforce future delivery
         run: |
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "INSERT INTO chronicle_entries (id,account_id,entry_type,title,body,status,created_at) VALUES ('a0000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001','reflection','A calmer corner','I made the reading corner easier to return to.','active',UTC_TIMESTAMP())"
-          curl --fail -sS -G -b /tmp/cookies --data-urlencode 'q=corner' http://127.0.0.1:8080/search > /tmp/corner.html
-          grep '<h2>Quests</h2>' /tmp/corner.html
-          grep 'Make one corner calmer' /tmp/corner.html
-          grep '<h2>Chronicle</h2>' /tmp/corner.html
-          grep 'A calmer corner' /tmp/corner.html
-          grep 'Results stay grouped by the part of Koravik that owns them' /tmp/corner.html
-          curl --fail -sS -G -b /tmp/cookies --data-urlencode 'q=Epic Ordinary' http://127.0.0.1:8080/search > /tmp/world-search.html
-          grep '<h2>Worlds</h2>' /tmp/world-search.html
-          grep 'Review World' /tmp/world-search.html
-      - name: Enforce account authorization and literal wildcards
+          INSTALLATION_ID=$(mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT id FROM world_installations WHERE account_id='00000000-0000-4000-8000-000000000001' AND world_key='epic-ordinary'")
+          php -r 'require "bootstrap.php"; (new \Koravik\Platform\Privacy\PrivacyService(database()))->setGrant("00000000-0000-4000-8000-000000000001", $argv[1], "quest.completed", false);' "$INSTALLATION_ID"
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT granted FROM world_fact_permissions WHERE installation_id='$INSTALLATION_ID' AND fact_key='quest.completed'" | grep '^0$'
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/privacy > /tmp/revoked.html
+          grep 'Grant permission' /tmp/revoked.html
+          EVENT_ID='91000000-0000-4000-8000-000000000002'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "INSERT INTO platform_outbox (id,event_name,event_version,account_id,payload_json,status,attempts,available_at,occurred_at,created_at) VALUES ('$EVENT_ID','Quests.QuestCompleted',1,'00000000-0000-4000-8000-000000000001',JSON_OBJECT('quest_id','00000000-0000-4000-8000-000000000101','occurrence_id','00000000-0000-4000-8000-000000000102','scheduled_date',CURRENT_DATE(),'recurring',false,'title','Revoked test','quest_type','action'),'pending',0,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())"
+          php tools/worker.php 20 | grep '"failed": 0'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_reactions WHERE source_event_id='$EVENT_ID'" | grep '^0$'
+      - name: Restore grant and verify audit trail
         run: |
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "INSERT INTO platform_accounts (id,email,display_name,role,status,created_at,updated_at) VALUES ('b0000000-0000-4000-8000-000000000001','other@example.test','Other','user','active',UTC_TIMESTAMP(),UTC_TIMESTAMP()); INSERT INTO quests (id,account_id,title,description,quest_type,status,lifecycle_status,created_at,updated_at) VALUES ('b0000000-0000-4000-8000-000000000101','b0000000-0000-4000-8000-000000000001','Private lighthouse plan','Should never appear for Builder','action','active','active',UTC_TIMESTAMP(),UTC_TIMESTAMP())"
-          curl --fail -sS -G -b /tmp/cookies --data-urlencode 'q=lighthouse' http://127.0.0.1:8080/search > /tmp/private.html
-          grep 'No results for' /tmp/private.html
-          ! grep 'Private lighthouse plan' /tmp/private.html
-          curl --fail -sS -G -b /tmp/cookies --data-urlencode 'q=%' http://127.0.0.1:8080/search > /tmp/literal.html
-          grep 'No results for' /tmp/literal.html
+          INSTALLATION_ID=$(mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT id FROM world_installations WHERE account_id='00000000-0000-4000-8000-000000000001' AND world_key='epic-ordinary'")
+          php -r 'require "bootstrap.php"; (new \Koravik\Platform\Privacy\PrivacyService(database()))->setGrant("00000000-0000-4000-8000-000000000001", $argv[1], "quest.completed", true);' "$INSTALLATION_ID"
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT granted FROM world_fact_permissions WHERE installation_id='$INSTALLATION_ID' AND fact_key='quest.completed'" | grep '^1$'
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/audit > /tmp/audit.html
+          grep 'What consequential actions occurred' /tmp/audit.html
+          grep 'Permission was revoked for future fact delivery' /tmp/audit.html
+          grep 'Permission was granted for future fact delivery' /tmp/audit.html
+          grep 'This historical record cannot be edited' /tmp/audit.html
       - name: Preserve previous platform flows
         run: |
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/search | grep 'Find what you are looking for'
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/notifications | grep 'What changed that deserves attention'
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/worlds | grep 'Stories that respond with permission'
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/quests/create | grep 'Journey'
-          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/notifications | grep 'What changed that deserves attention'
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "UPDATE account_activity SET last_seen_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 12 DAY),return_pending=0"
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies http://127.0.0.1:8080/hearth | grep 'A few things changed while you were away'
-          php tools/worker.php 20 | grep '"failed": 0'
           php tools/worker.php 10 | grep '"processed": 0'
