@@ -1,0 +1,43 @@
+name: Build 023
+on:
+  pull_request:
+  push:
+    branches: [main, build/023-epic-ordinary-chapter-two]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env: {MYSQL_DATABASE: koravik, MYSQL_USER: koravik, MYSQL_PASSWORD: koravik, MYSQL_ROOT_PASSWORD: root}
+        ports: ['3306:3306']
+        options: --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot" --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with: {php-version: '8.3', extensions: 'pdo_mysql, mbstring'}
+      - name: PHP syntax
+        run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+      - name: Configure and migrate
+        run: |
+          cp .env.example .env
+          sed -i 's|DB_DSN=.*|DB_DSN=mysql:host=127.0.0.1;port=3306;dbname=koravik;charset=utf8mb4|' .env
+          sed -i 's|DB_PASS=.*|DB_PASS=koravik|' .env
+          echo 'SEED_EMAIL=owner@example.test' >> .env
+          echo 'SEED_PASSWORD=Koravik8' >> .env
+          php tools/migrate.php
+          php tools/seed.php
+          php tools/migrate.php | grep 'Already applied: 018_epic_ordinary_chapter_two'
+      - name: Exercise Chapter Two
+        run: |
+          php -r 'require "bootstrap.php";$a="00000000-0000-4000-8000-000000000001";$e=new Koravik\Worlds\EpicOrdinary\EpicOrdinaryService(database());$s=$e->stateForAccount($a);if(!$s["support_choice"])$e->chooseSupportStyle($a,"gentle");$c=new Koravik\Worlds\EpicOrdinary\ChapterTwoService(database());$c->begin($a);$c->begin($a);$c->chooseRefuge($a,"rest");$c->chooseRefuge($a,"rest");$home=$c->home($a);if($home["current_chapter"]!=="the-eastern-room"||$home["current_scene"]!=="room-restored")throw new RuntimeException("progress");echo "chapter-ok";' | grep chapter-ok
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_choice_history WHERE installation_id='00000000-0000-4000-8000-000000000201' AND scene_key='eastern-room-purpose'" | grep '^1$'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_keepsakes WHERE installation_id='00000000-0000-4000-8000-000000000201'" | grep '^1$'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT CONCAT(status,':',objective_key) FROM world_objectives WHERE installation_id='00000000-0000-4000-8000-000000000201'" | grep '^completed:choose-refuge$'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM quests WHERE account_id='00000000-0000-4000-8000-000000000001'" | grep '^1$'
+      - name: Validate World contracts
+        run: |
+          grep -q 'Inactivity never reduces trust' docs/product/EPIC_ORDINARY_CHAPTER_TWO.md
+          grep -q 'must not create or modify real-life Quest records' docs/engineering/EPIC_ORDINARY_RUNTIME.md
+          grep -q '/worlds/epic-ordinary/play' docs/product/ROUTE_VISUAL_INVENTORY.md
+          grep -q "'build'=>'023'" public/index.php
