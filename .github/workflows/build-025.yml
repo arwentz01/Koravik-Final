@@ -1,0 +1,40 @@
+name: Build 025
+on:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: koravik
+          MYSQL_USER: koravik
+          MYSQL_PASSWORD: koravik
+          MYSQL_ROOT_PASSWORD: root
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      SEED_EMAIL: owner@example.test
+      SEED_PASSWORD: password123
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with: {php-version: '8.3', extensions: pdo_mysql, coverage: none}
+      - name: PHP syntax
+        run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+      - name: Configure and migrate
+        run: |
+          cp .env.example .env
+          sed -i 's/^DB_PASS=.*/DB_PASS=koravik/' .env
+          php tools/migrate.php
+          php tools/migrate.php
+          php tools/seed.php
+      - name: Exercise lifecycle boundaries
+        run: |
+          php -r 'require "bootstrap.php"; $s=new Koravik\Worlds\WorldLifecycleService(database()); $a="00000000-0000-4000-8000-000000000001"; $q0=(int)database()->pdo()->query("SELECT COUNT(*) FROM quests")->fetchColumn(); $s->suspend($a,"epic-ordinary"); $s->suspend($a,"epic-ordinary"); $d=$s->detail($a,"epic-ordinary"); if($d["status"]!=="suspended"||!(int)$d["state_retained"]) exit(1); $s->activate($a,"epic-ordinary"); try{$s->restart($a,"epic-ordinary","wrong");exit(1);}catch(RuntimeException $e){} $s->restart($a,"epic-ordinary","RESTART WORLD"); $s->restart($a,"epic-ordinary","RESTART WORLD"); $q1=(int)database()->pdo()->query("SELECT COUNT(*) FROM quests")->fetchColumn(); if($q0!==$q1) exit(1); $p=database()->pdo()->query("SELECT current_chapter FROM world_narrative_progress WHERE installation_id=\"00000000-0000-4000-8000-000000000201\"")->fetchColumn(); if($p!=="the-first-light") exit(1); echo "Lifecycle checks passed\n";'
+          grep -q 'Delete eligible World State' docs/product/INSTALLED_WORLD_LIFECYCLE.md
+          grep -q 'other World' docs/product/INSTALLED_WORLD_LIFECYCLE.md
