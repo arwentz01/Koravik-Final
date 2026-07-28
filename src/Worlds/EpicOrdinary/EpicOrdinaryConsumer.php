@@ -25,12 +25,16 @@ final class EpicOrdinaryConsumer implements EventConsumer
         $this->database->transaction(function (PDO $pdo) use ($event, $name): void {
             $duplicate = $pdo->prepare('SELECT event_id FROM world_event_receipts WHERE event_id = :event_id LIMIT 1');
             $duplicate->execute(['event_id' => $event['id']]);
-            if ($duplicate->fetch()) return;
+            if ($duplicate->fetch()) {
+                return;
+            }
 
             $installation = $pdo->prepare('SELECT id FROM world_installations WHERE account_id = :account_id AND world_key = "epic-ordinary" AND status = "active" LIMIT 1 FOR UPDATE');
             $installation->execute(['account_id' => $event['account_id']]);
             $installationId = $installation->fetchColumn();
-            if (!$installationId) return;
+            if (!$installationId) {
+                return;
+            }
 
             $payload = json_decode((string) $event['payload_json'], true, 512, JSON_THROW_ON_ERROR);
             if ($name === 'Quests.QuestCompletionReversed') {
@@ -57,12 +61,7 @@ final class EpicOrdinaryConsumer implements EventConsumer
         $relationship = $pdo->prepare('SELECT trust_count FROM world_relationships WHERE installation_id = :installation_id AND character_key = "caretaker" FOR UPDATE');
         $relationship->execute(['installation_id' => $installationId]);
         $trust = (int) $relationship->fetchColumn() + 1;
-        $stage = match (true) {
-            $trust >= 10 => 'trusted_companion',
-            $trust >= 6 => 'steady_ally',
-            $trust >= 3 => 'familiar_presence',
-            default => 'new_acquaintance',
-        };
+        $stage = $this->relationshipStage($trust);
 
         $pdo->prepare('UPDATE world_story_threads SET chapter = :chapter, progress_count = :progress_count, updated_at = UTC_TIMESTAMP() WHERE installation_id = :installation_id')->execute(['chapter' => $chapter, 'progress_count' => $progress, 'installation_id' => $installationId]);
         $pdo->prepare('UPDATE world_relationships SET relationship_stage = :stage, trust_count = :trust_count, last_interaction_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() WHERE installation_id = :installation_id AND character_key = "caretaker"')->execute(['stage' => $stage, 'trust_count' => $trust, 'installation_id' => $installationId]);
@@ -72,23 +71,63 @@ final class EpicOrdinaryConsumer implements EventConsumer
         $explanation = sprintf('Epic Ordinary continued the Caretaker path because you completed “%s.” This is story chapter %d, and the Caretaker now regards you as a %s.', $questTitle, $chapter, str_replace('_', ' ', $stage));
 
         $pdo->prepare('INSERT INTO world_story_moments (id, installation_id, source_event_id, source_completion_event_id, story_key, chapter, character_key, relationship_stage, title, body, status, created_at) VALUES (:id, :installation_id, :source_event_id, :completion_event_id, "caretaker-path", :chapter, "caretaker", :stage, :title, :body, "active", UTC_TIMESTAMP())')->execute(['id' => self::uuid(), 'installation_id' => $installationId, 'source_event_id' => $eventId, 'completion_event_id' => $eventId, 'chapter' => $chapter, 'stage' => $stage, 'title' => $title, 'body' => $message]);
-        $pdo->prepare('INSERT INTO world_state (installation_id, state_key, state_json, updated_at) VALUES (:installation_id, "caretaker.continuity", :state_json, UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE state_json = VALUES(state_json), updated_at = VALUES(updated_at)')->execute(['installation_id' => $installationId, 'state_json' => json_encode(['story_key' => 'caretaker-path', 'chapter' => $chapter, 'progress_count' => $progress, 'relationship_stage' => $stage, 'trust_count' => $trust, 'source_event_id' => $eventId], JSON_THROW_ON_ERROR)]);
+        $this->writeContinuityState($pdo, $installationId, $chapter, $progress, $stage, $trust, $eventId);
         $pdo->prepare('INSERT INTO world_reactions (id, installation_id, source_event_id, title, message, explanation, created_at) VALUES (:id, :installation_id, :source_event_id, :title, :message, :explanation, UTC_TIMESTAMP())')->execute(['id' => self::uuid(), 'installation_id' => $installationId, 'source_event_id' => $eventId, 'title' => $title, 'message' => $message, 'explanation' => $explanation]);
     }
 
     private function reverse(PDO $pdo, string $installationId, array $payload, string $eventId): void
     {
         $completionEventId = (string) ($payload['completion_event_id'] ?? '');
-        if ($completionEventId === '') return;
+        if ($completionEventId === '') {
+            return;
+        }
 
         $moment = $pdo->prepare('SELECT id FROM world_story_moments WHERE installation_id = :installation_id AND source_completion_event_id = :event_id AND status = "active" LIMIT 1 FOR UPDATE');
         $moment->execute(['installation_id' => $installationId, 'event_id' => $completionEventId]);
-        if (!$moment->fetchColumn()) return;
+        if (!$moment->fetchColumn()) {
+            return;
+        }
+
+        $thread = $pdo->prepare('SELECT progress_count FROM world_story_threads WHERE installation_id = :installation_id FOR UPDATE');
+        $thread->execute(['installation_id' => $installationId]);
+        $progress = max(0, (int) $thread->fetchColumn() - 1);
+        $chapter = min(4, 1 + intdiv(max(0, $progress - 1), 3));
+
+        $relationship = $pdo->prepare('SELECT trust_count FROM world_relationships WHERE installation_id = :installation_id AND character_key = "caretaker" FOR UPDATE');
+        $relationship->execute(['installation_id' => $installationId]);
+        $trust = max(0, (int) $relationship->fetchColumn() - 1);
+        $stage = $this->relationshipStage($trust);
 
         $pdo->prepare('UPDATE world_story_moments SET status = "reversed", reversed_at = UTC_TIMESTAMP() WHERE installation_id = :installation_id AND source_completion_event_id = :event_id')->execute(['installation_id' => $installationId, 'event_id' => $completionEventId]);
-        $pdo->prepare('UPDATE world_story_threads SET progress_count = GREATEST(progress_count - 1, 0), chapter = LEAST(4, 1 + FLOOR(GREATEST(progress_count - 2, 0) / 3)), updated_at = UTC_TIMESTAMP() WHERE installation_id = :installation_id')->execute(['installation_id' => $installationId]);
-        $pdo->prepare('UPDATE world_relationships SET trust_count = GREATEST(trust_count - 1, 0), relationship_stage = CASE WHEN trust_count - 1 >= 10 THEN "trusted_companion" WHEN trust_count - 1 >= 6 THEN "steady_ally" WHEN trust_count - 1 >= 3 THEN "familiar_presence" ELSE "new_acquaintance" END, updated_at = UTC_TIMESTAMP() WHERE installation_id = :installation_id AND character_key = "caretaker"')->execute(['installation_id' => $installationId]);
+        $pdo->prepare('UPDATE world_story_threads SET progress_count = :progress_count, chapter = :chapter, updated_at = UTC_TIMESTAMP() WHERE installation_id = :installation_id')->execute(['progress_count' => $progress, 'chapter' => $chapter, 'installation_id' => $installationId]);
+        $pdo->prepare('UPDATE world_relationships SET trust_count = :trust_count, relationship_stage = :stage, updated_at = UTC_TIMESTAMP() WHERE installation_id = :installation_id AND character_key = "caretaker"')->execute(['trust_count' => $trust, 'stage' => $stage, 'installation_id' => $installationId]);
+        $this->writeContinuityState($pdo, $installationId, $chapter, $progress, $stage, $trust, $eventId);
         $pdo->prepare('INSERT INTO world_reactions (id, installation_id, source_event_id, title, message, explanation, created_at) VALUES (:id, :installation_id, :source_event_id, "The thread was corrected", "The Caretaker lets the moment go without judgment. The path remains open.", "Epic Ordinary adjusted its independent story state because a previously completed Quest occurrence was reversed.", UTC_TIMESTAMP())')->execute(['id' => self::uuid(), 'installation_id' => $installationId, 'source_event_id' => $eventId]);
+    }
+
+    private function writeContinuityState(PDO $pdo, string $installationId, int $chapter, int $progress, string $stage, int $trust, string $eventId): void
+    {
+        $pdo->prepare('INSERT INTO world_state (installation_id, state_key, state_json, updated_at) VALUES (:installation_id, "caretaker.continuity", :state_json, UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE state_json = VALUES(state_json), updated_at = VALUES(updated_at)')->execute([
+            'installation_id' => $installationId,
+            'state_json' => json_encode([
+                'story_key' => 'caretaker-path',
+                'chapter' => $chapter,
+                'progress_count' => $progress,
+                'relationship_stage' => $stage,
+                'trust_count' => $trust,
+                'source_event_id' => $eventId,
+            ], JSON_THROW_ON_ERROR),
+        ]);
+    }
+
+    private function relationshipStage(int $trust): string
+    {
+        return match (true) {
+            $trust >= 10 => 'trusted_companion',
+            $trust >= 6 => 'steady_ally',
+            $trust >= 3 => 'familiar_presence',
+            default => 'new_acquaintance',
+        };
     }
 
     private function reactionFor(int $chapter, string $stage): array
