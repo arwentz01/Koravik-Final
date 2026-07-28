@@ -85,6 +85,7 @@ jobs:
           grep 'Moment recorded' /tmp/completed.html
           COMPLETION_PATH=$(grep -o '/completions/[a-f0-9-]\{36\}' /tmp/completed.html | head -1)
           test -n "$COMPLETION_PATH"
+          echo "COMPLETION_PATH=$COMPLETION_PATH" >> "$GITHUB_ENV"
           mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM pillar_contributions WHERE pillar_key='health' AND status='active'" | grep '^1$'
           mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM chronicle_entries WHERE entry_type='system' AND status='active'" | grep '^1$'
       - name: Verify reflection and Hearth composition
