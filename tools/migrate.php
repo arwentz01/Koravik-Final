@@ -24,17 +24,10 @@ foreach ($files as $file) {
         throw new RuntimeException("Unable to read migration {$version}");
     }
 
-    $pdo->beginTransaction();
-    try {
-        $pdo->exec($sql);
-        $record = $pdo->prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (:version, UTC_TIMESTAMP())');
-        $record->execute(['version' => $version]);
-        $pdo->commit();
-        echo "Applied: {$version}\n";
-    } catch (Throwable $throwable) {
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
-        throw $throwable;
-    }
+    // MySQL and MariaDB may implicitly commit DDL. Execute the migration first,
+    // then record its version only after every statement succeeds.
+    $pdo->exec($sql);
+    $record = $pdo->prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (:version, UTC_TIMESTAMP())');
+    $record->execute(['version' => $version]);
+    echo "Applied: {$version}\n";
 }
