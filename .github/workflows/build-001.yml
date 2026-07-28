@@ -98,7 +98,8 @@ jobs:
       - name: Verify Pillar Hearth composition
         run: |
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/hearth > /tmp/hearth-after.html
-          grep 'One meaningful action' /tmp/hearth-after.html
+          grep 'Life in view' /tmp/hearth-after.html
+          grep 'Growth' /tmp/hearth-after.html
           mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM quest_occurrences qo JOIN quests q ON q.id=qo.quest_id WHERE q.pillar_key='growth' AND qo.status='completed'" | grep '^1$'
       - name: Verify World reaction remains event-driven
         run: |
