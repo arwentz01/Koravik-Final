@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Build 013 complete and merged  
-**Version:** 1.13  
+**Status:** Build 015 complete and merged  
+**Version:** 1.15  
 **Baseline date:** July 28, 2026  
 **Authoritative branch:** `main`
 
@@ -13,6 +13,13 @@ This handoff applies only to `arwentz01/Koravik-Final`. Do not import code, sche
 
 Before implementation, read `README.md`, `docs/README.md`, `docs/FOUNDATIONAL_DECISIONS.md`, all canonical documents, Project Zero, product and engineering documents, the ADR register, and this handoff. Follow the authority order in `docs/README.md` when documents disagree.
 
+For Companion work, additionally read:
+
+- `docs/canonical/COMPANION_GOVERNANCE.md`;
+- `docs/product/COMPANION_PROPOSALS.md`;
+- `docs/engineering/COMPANION_EXECUTION.md`;
+- Companion flows in `docs/product/USER_FLOWS.md`.
+
 ## Architecture baseline
 
 Koravik-Final is a PHP 8.3+ custom modular monolith using MySQL or MariaDB through PDO and an Apache-compatible shared-hosting model.
@@ -20,6 +27,8 @@ Koravik-Final is a PHP 8.3+ custom modular monolith using MySQL or MariaDB throu
 - Districts own real-life truth.
 - Hearth composes but does not own source records.
 - Worlds interpret approved minimized facts into independent World State.
+- Companion owns proposals, not destination records.
+- Approved Companion proposals execute only through destination-module revalidation.
 - Platform events describe committed facts and use a transactional outbox.
 - Authorization is capability-based and contextual.
 - Server-rendered accessible HTML is the baseline.
@@ -51,151 +60,118 @@ Persistent World navigation, Chapter One, durable Caretaker support-style choice
 
 ### Build 006 — Structured Quests, steps, and milestones
 
-A Quest may be a single action, habit, project, journey, responsibility, or World objective. Structured Quest types may contain ordered required or optional steps, show meaningful progress, reach milestones, and prevent completion while required steps remain.
-
-Delivered:
-
-- explicit relational Quest types;
-- ordered required and optional Quest steps;
-- pending, completed, reopened, and skipped step states;
-- automatic 25%, 50%, and 100% milestones for Projects and Journeys;
-- progress presentation and required-step completion guard;
-- audit history for step changes;
-- minimized Quest type in completion events;
-- preserved Pillar, Chronicle, and World reactions;
-- successful browser and MySQL validation.
+Explicit Quest types, ordered required and optional steps, step lifecycle, Project and Journey milestones, meaningful progress, completion guards, audit history, minimized completion facts, and preserved Pillar, Chronicle, and World reactions.
 
 **Checkpoint:** `20f37f1e2ea81552c4f975ebbe3cdf46e73bee3a`
 
 ### Build 007 — World catalog, lifecycle, and fact permissions
 
-A Player can review available Worlds, understand content and accessibility information, install or resume Epic Ordinary, suspend or uninstall it while retaining state, and explicitly grant or revoke future access to minimized Quest-completion facts.
-
-Delivered:
-
-- relational World catalog metadata;
-- informed World detail presentation;
-- shared World navigation;
-- install, suspend, resume, and uninstall-with-retention lifecycle;
-- revocable `quest.completed` fact permission;
-- Epic Ordinary enforcement of active installation and granted permission;
-- audit history for lifecycle and permission changes;
-- migration backfill and seed compatibility for existing installations;
-- successful browser, MySQL, permission-enforcement, retention, and structured-Quest regression validation.
+World catalog metadata, informed detail presentation, shared World navigation, install/suspend/resume/uninstall-with-retention lifecycle, revocable fact permissions, consumer enforcement, audit history, migration backfill, and permission/retention validation.
 
 **Checkpoint:** `5177ce80c454f441916d925b55416b946ee08391`
 
 ### Build 008 — Return, resume, and Quest triage
 
-A Player returning after a meaningful absence receives a calm, bounded welcome-back summary and can decide what still matters without being presented with an overdue backlog or punishment mechanics.
-
-Delivered:
-
-- durable account visit and return state;
-- seven-day meaningful-absence detection;
-- stale, still-relevant, upcoming, completed, and archived groupings;
-- resume, skip, dismiss, and reschedule decisions for individual Quest occurrences;
-- preserved recurrence rules when one occurrence is skipped or dismissed;
-- minimized occurrence lifecycle events and `Platform.PlayerReturned.v1`;
-- audit history for return and triage decisions;
-- revocable Epic Ordinary return acknowledgement without Quest details;
-- restored and regression-tested Build 007 World catalog routing;
-- successful browser, MySQL, World, structured-Quest, and idempotent worker validation.
+Durable visit state, meaningful-absence detection, calm welcome-back summary, stale-item groupings, occurrence resume/skip/dismiss/reschedule actions, preserved recurrence, minimized return facts, audit history, and nonpunitive Epic Ordinary acknowledgement.
 
 **Checkpoint:** `a730fc40ee5e57b19303fc66b5f692ff45e1681c`
 
 ### Build 009 — Notifications center and attention preferences
 
-A Player has one bounded, explainable in-app center for meaningful source-owned changes without allowing notifications to become source truth or engagement pressure.
-
-Delivered:
-
-- relational notification records and per-category preferences;
-- event-driven World-reaction and welcome-back notifications;
-- source attribution, direct context links, and plain-language delivery reasons;
-- read, unread, dismiss, and mark-all-read lifecycle;
-- restrained capped shell indicator;
-- category preference controls that affect future notices without rewriting source history;
-- idempotent source-event uniqueness and synchronization fallback for committed outcomes;
-- successful browser, MySQL, preference-suppression, World, structured-Quest, return, and worker-idempotency validation.
+Relational notification records and preferences, explainable source attribution, direct context links, read/unread/dismiss lifecycle, restrained shell indicator, category suppression, idempotency, and full regression validation.
 
 **Checkpoint:** `10ba3526ef07cac0f457ab4ffae9f8d607b2168c`
 
 ### Build 010 — Global search and ownership-aware results
 
-A Player can search Koravik from one shared surface and find authorized Quests, Chronicle moments, and Worlds without Search becoming a duplicate data owner.
-
-Delivered:
-
-- authenticated global Search route and shared shell entry;
-- initial guidance, grouped results, and no-results presentation;
-- account-scoped Quest and Chronicle queries;
-- searchable World catalog metadata with installation status;
-- bounded privacy-conscious snippets and direct owner links;
-- explicit owning-module labels on every result group;
-- literal handling of SQL wildcard characters;
-- no duplicate search index or parallel source-of-truth tables;
-- successful browser, MySQL, cross-account-isolation, wildcard, World, structured-Quest, notifications, return, and worker-idempotency validation.
+Authenticated global Search, grouped owner-aware results, account-scoped Quest and Chronicle queries, World catalog search, bounded snippets, literal wildcard handling, and cross-account isolation.
 
 **Checkpoint:** `266847ada00efa7d224ad323f5e9a67af69e4862`
 
 ### Build 011 — Privacy, consent, and audit activity
 
-A Player can review what future facts each installed World may receive, understand the source and purpose of each grant, see when it was last used, revoke or restore permission, and inspect a human-readable read-only audit history.
-
-Delivered:
-
-- shared Privacy and Consent center;
-- source, recipient, purpose, status, last-use, and revocation-effect presentation;
-- grant and revoke controls for approved World fact categories;
-- enforcement through existing World consumer permissions;
-- append-only consent audit records;
-- human-readable Audit Activity surface with technical context;
-- account-scoped authorization;
-- retained source records, Chronicle entries, World State, reactions, and audit evidence after revocation;
-- successful browser, MySQL, permission-enforcement, audit, Search, notifications, Worlds, structured-Quest, and worker-idempotency validation.
+Shared Privacy and Consent center, source/recipient/purpose/last-use explanations, grant and revoke controls, enforcement through World permissions, append-only consent audit records, human-readable Audit Activity, and retained historical source and World state.
 
 **Checkpoint:** `a54c78ff1cd10291fed2357d7e2744b92584e903`
 
 ### Build 012 — Account settings, accessibility, and data controls
 
-A Player can manage account identity, low-risk appearance and accessibility preferences, time and date presentation, and reach consequence-grouped notification, privacy, audit, and data controls from one Settings surface.
-
-Delivered:
-
-- relational account settings with upgrade backfill;
-- display-name management;
-- system, light, and dark appearance preferences;
-- reduced-motion and increased-contrast preferences;
-- supported time-zone and date-format preferences;
-- direct links to notification preferences, Privacy and Consent, and Audit Activity;
-- honest presentation of unavailable account export and deletion execution;
-- transactional validation and `settings.updated` audit history;
-- successful migration, browser, validation, Settings, Privacy, Search, notifications, Worlds, and worker-idempotency regression validation.
+Relational account settings, display-name management, appearance, reduced motion, increased contrast, time-zone and date-format preferences, consequence-grouped links, honest unavailable-data-control language, validation, and audit history.
 
 **Checkpoint:** `53be2842ba13ff02bb5a92c4df02edf48e458d24`
 
 ### Build 013 — Hearth customization and bounded composition
 
-A Player can choose which optional supporting sections appear on Hearth, reorder them with keyboard-safe controls, preview the result, and restore defaults while required orientation and next-action regions remain fixed.
-
-Delivered:
-
-- relational account-owned Hearth layout preferences;
-- bounded optional placements for Pillar support, Chronicle, and active World continuation;
-- show and hide controls;
-- collision-safe move-up and move-down ordering;
-- preview guidance and restore-defaults behavior;
-- required greeting and `What matters now` regions that cannot be removed;
-- live composition from source-owned records without copying Quest, Chronicle, Pillar, or World truth;
-- `hearth.layout.updated` and `hearth.layout.reset` audit history;
-- successful migration, browser, hide, reorder, reset, Settings, Privacy, Search, notifications, and worker-idempotency regression validation.
+Account-owned Hearth layout preferences, bounded optional Pillar/Chronicle/World placements, show/hide, keyboard-safe ordering, preview, restore defaults, required orientation and next-action regions, live source-owned composition, and audit history.
 
 **Checkpoint:** `311bf229f9459211fbd998473113b0ce14b49b8b`
 
+### Build 014 — Companion proposals and human approval
+
+A player can ask Companion for help, receive a bounded Quest proposal, understand source context and reasoning, edit it, approve one specific version, or dismiss it without changing a District record.
+
+Delivered:
+
+- account-scoped relational Companion proposal records;
+- proposal types, statuses, versioning, expiration metadata, and provenance;
+- explicit owning module, expected consequence, reasoning, and source context;
+- initial `quest.create` proposal flow;
+- editing that increments version and invalidates prior approval;
+- version-specific approval and dismissal without penalty;
+- visible separation between proposals and saved records;
+- proposal creation, approval, and dismissal audit history;
+- canonical Companion governance and product-contract documentation;
+- browser and MySQL proof that approval alone creates no Quest.
+
+**Checkpoint:** `f2376556d264be65c1f607aed3f277bb33af44e1`
+
+### Build 015 — Approved Quest execution and Chronicle reflection proposals
+
+Approved proposals may become source-owned records only through destination-module execution. Quests revalidates and creates approved Quest proposals; Chronicle revalidates and saves explicitly approved reflection proposals.
+
+Delivered:
+
+- Quests-owned `QuestProposalExecutor`;
+- Chronicle-owned `ChronicleProposalExecutor`;
+- editable `chronicle.reflection.create` proposals;
+- source-context, destination, privacy-consequence, and Companion-draft voice labeling;
+- explicit **Create Quest** and **Save to Chronicle** actions after approval;
+- owner revalidation of account, proposal type, status, version, expiration, and payload;
+- transactional destination record, execution receipt, proposal transition, provenance, and audit commit;
+- idempotent repeat execution returning the original destination record;
+- result links to the created Quest or Chronicle;
+- canonical, product, engineering, and documentation-authority updates;
+- successful migration, PHP lint, Quest execution, Chronicle execution, idempotency, browser, Settings, Privacy, and worker-regression validation.
+
+**Checkpoint:** `e4d25085316b82db9d2f04c5f48bba93f64cb227`
+
+## Current database migrations
+
+Production deployments through Build 015 must apply all migrations, including:
+
+```text
+011_companion_proposals
+012_companion_execution
+```
+
+Run:
+
+```bash
+php tools/migrate.php
+```
+
+## Explicit current boundaries
+
+- Companion does not autonomously monitor behavior or create unsolicited consequential actions.
+- Companion does not directly own or mutate Quest or Chronicle source records.
+- Approval and execution remain separate user actions.
+- External AI-provider integration is not part of Builds 014 or 015.
+- Proposal lifecycle outbox events remain deferred; relational state and audit history are authoritative for the implemented lifecycle.
+- Household, Organization, messaging, email sending, and other high-consequence proposal types remain deferred.
+
 ## Build workflow
 
-For every build: inspect current `main`, read affected authority, state the player-visible outcome and boundary, implement one coherent vertical slice, validate it, update documentation, and merge one cohesive milestone.
+For every build: inspect current `main`, read affected authority, state the player-visible outcome and boundary, implement one coherent vertical slice, validate it, update all affected documentation, and merge one cohesive milestone.
 
 ## Change control
 
