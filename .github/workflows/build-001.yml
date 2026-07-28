@@ -83,7 +83,7 @@ jobs:
         run: |
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/worlds | grep 'Stories that respond with permission'
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/quests/create | grep 'Journey'
-          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/notifications | grep 'What changed that deserves your attention'
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/notifications | grep 'What changed that deserves attention'
           mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "UPDATE account_activity SET last_seen_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 12 DAY),return_pending=0"
           curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies http://127.0.0.1:8080/hearth | grep 'A few things changed while you were away'
           php tools/worker.php 20 | grep '"failed": 0'
