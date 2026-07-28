@@ -1,41 +1,60 @@
 # Koravik Final
 
-Koravik is a human-centered life platform where useful real-world tools can
-optionally influence persistent narrative Worlds.
+> An operating system for intentional living.
 
-This repository is the clean-start authority for the final Koravik
-implementation. It does not inherit application code, database state, build
-numbers, deployment assumptions, or implementation claims from Koravik v1,
-Koravik v2, Koravik v3, prototypes, or related projects.
+Koravik is a human-centered life platform where useful real-world tools can optionally influence persistent narrative Worlds.
+
+This repository is the clean-start authority for the final Koravik implementation. It does not inherit application code, database state, build numbers, deployment assumptions, or implementation claims from Koravik v1, Koravik v2, Koravik v3, prototypes, or related projects.
 
 ## Current status
 
-Documentation foundation only. No product implementation has begun.
+**Blueprint v1.0 complete. Build 001 authorized.**
 
-## Documentation
+Project Zero and the product and engineering blueprint are complete. The next work is implementation of the first approved vertical slice, not further speculative product definition.
+
+## Documentation entry points
 
 - [Documentation authority map](docs/README.md)
 - [Foundational decisions](docs/FOUNDATIONAL_DECISIONS.md)
 - [Canonical product documents](docs/canonical/)
-- [Legacy reference documents](docs/archive/)
+- [Project Zero](docs/project-zero/README.md)
+- [Product Blueprint](docs/product/)
+- [Engineering Blueprint](docs/engineering/)
+- [Architecture Decision Register](docs/adr/ADR-REGISTER.md)
+- [Implementation Handoff](docs/IMPLEMENTATION_HANDOFF.md)
+- [Legacy references](docs/archive/)
 
-## Initial implementation direction
+Before writing code, read the mandatory documents in the order specified by the implementation handoff.
+
+## Implementation direction
 
 - PHP 8.3+
 - Custom modular monolith
 - MySQL or MariaDB through PDO
 - Apache and shared-hosting compatible
-- Database-backed outbox with finite cron processing
-- Capability-based authorization
+- Server-rendered accessible interface with progressive enhancement
+- Database-backed transactional outbox with finite cron processing
+- Capability-based contextual authorization
 - Versioned migrations and platform events
 - Structured, non-executable World packages
-- Accessible shared interface from the beginning
+- Visible privacy, consent, audit, and explainability
 
-The first implementation milestone must prove the defining Koravik loop:
+## Build 001 mission
 
-1. A person securely owns one durable Account.
-2. A District records a real-life action.
-3. The committed change publishes a minimized platform event.
-4. Epic Ordinary interprets the event.
-5. Independent World State changes with an explainable reason.
-6. The person can leave, return, and resume.
+Create the smallest working version of Koravik that already feels like Koravik.
+
+The first implementation milestone must prove:
+
+1. A person signs in securely.
+2. The shared application shell and Hearth provide orientation.
+3. Quests records one real-life action.
+4. The committed change publishes `Quests.QuestCompleted.v1` through the transactional outbox.
+5. Epic Ordinary interprets the approved fact.
+6. Independent World State changes with an explainable reason.
+7. The person returns to Hearth, leaves, and later resumes safely.
+
+## Rule zero
+
+If approved blueprint and implementation disagree, the blueprint is correct until it is deliberately revised through the documented change process.
+
+The blueprint is a product. The software is its implementation.
