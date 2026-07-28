@@ -14,6 +14,53 @@ final class QuestService
     {
     }
 
+    public function create(string $accountId, string $title, string $description = ''): string
+    {
+        $title = trim($title);
+        $description = trim($description);
+
+        if ($title === '') {
+            throw new RuntimeException('Give this Quest a title.');
+        }
+        if (mb_strlen($title) > 180) {
+            throw new RuntimeException('Quest titles must be 180 characters or fewer.');
+        }
+        if (mb_strlen($description) > 4000) {
+            throw new RuntimeException('Quest notes must be 4,000 characters or fewer.');
+        }
+
+        return $this->database->transaction(function (PDO $pdo) use ($accountId, $title, $description): string {
+            $questId = self::uuid();
+            $now = gmdate('Y-m-d H:i:s');
+
+            $statement = $pdo->prepare(
+                'INSERT INTO quests (id, account_id, title, description, status, created_at, updated_at)
+                 VALUES (:id, :account_id, :title, :description, "active", :created_at, :updated_at)'
+            );
+            $statement->execute([
+                'id' => $questId,
+                'account_id' => $accountId,
+                'title' => $title,
+                'description' => $description,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            $audit = $pdo->prepare(
+                'INSERT INTO audit_log (id, account_id, action, subject_type, subject_id, occurred_at)
+                 VALUES (:id, :account_id, "quest.created", "quest", :subject_id, :occurred_at)'
+            );
+            $audit->execute([
+                'id' => self::uuid(),
+                'account_id' => $accountId,
+                'subject_id' => $questId,
+                'occurred_at' => $now,
+            ]);
+
+            return $questId;
+        });
+    }
+
     public function getForAccount(string $questId, string $accountId): ?array
     {
         $statement = $this->database->pdo()->prepare(
@@ -41,7 +88,7 @@ final class QuestService
              FROM quests q
              LEFT JOIN quest_completions qc ON qc.quest_id = q.id AND qc.account_id = :completion_account_id
              WHERE q.account_id = :quest_account_id
-             ORDER BY q.created_at ASC'
+             ORDER BY completed ASC, q.created_at DESC'
         );
         $statement->execute([
             'completion_account_id' => $accountId,
