@@ -1,4 +1,4 @@
-name: Build 003
+name: Build 004
 
 on:
   pull_request:
@@ -45,13 +45,13 @@ jobs:
         run: |
           php tools/migrate.php
           php tools/seed.php
-          php tools/migrate.php | grep 'Already applied: 002_quest_lifecycle_recurrence'
+          php tools/migrate.php | grep 'Already applied: 003_pillars_chronicle'
       - name: Start application
         run: php -S 127.0.0.1:8080 -t public public/index.php > /tmp/koravik-server.log 2>&1 &
       - name: Sign in
         run: |
           sleep 2
-          curl --fail http://127.0.0.1:8080/health | grep '"build":"003"'
+          curl --fail http://127.0.0.1:8080/health | grep '"build":"004"'
           curl -sS -c /tmp/cookies http://127.0.0.1:8080/login > /tmp/login.html
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/login.html | head -1 | sed 's/.*value="//;s/"$//')
           curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies \
@@ -59,56 +59,53 @@ jobs:
             --data-urlencode 'email=owner@example.test' \
             --data-urlencode 'password=Koravik8' \
             http://127.0.0.1:8080/login > /tmp/hearth.html
-          grep 'New Quest' /tmp/hearth.html
-      - name: Verify Monday Wednesday Friday recurrence
+          grep 'What matters now' /tmp/hearth.html
+      - name: Verify Pillar completion experience
         run: |
           curl -sS -b /tmp/cookies http://127.0.0.1:8080/quests/create > /tmp/create.html
-          grep 'weekdays\[\]' /tmp/create.html
+          grep 'Supports' /tmp/create.html
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/create.html | head -1 | sed 's/.*value="//;s/"$//')
           START=$(date +%F)
           curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies \
             --data-urlencode "csrf=$CSRF" \
-            --data-urlencode 'title=Move with intention' \
-            --data-urlencode 'description=A recurring life action, not a checklist streak.' \
-            --data-urlencode 'frequency=weekly' \
-            --data-urlencode 'interval_count=1' \
+            --data-urlencode 'title=Prepare a nourishing meal' \
+            --data-urlencode 'description=Choose something simple and sustaining.' \
+            --data-urlencode 'pillar_key=health' \
+            --data-urlencode 'frequency=none' \
             --data-urlencode "starts_on=$START" \
-            --data-urlencode 'weekdays[]=1' \
-            --data-urlencode 'weekdays[]=3' \
-            --data-urlencode 'weekdays[]=5' \
             --data-urlencode 'timezone=America/New_York' \
             http://127.0.0.1:8080/quests > /tmp/created.html
-          grep 'Every week on Mon, Wed, Fri' /tmp/created.html
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT GROUP_CONCAT(weekday ORDER BY weekday) FROM quest_recurrence_weekdays w JOIN quests q ON q.id=w.quest_id WHERE q.title='Move with intention'" | grep '^1,3,5$'
-          COUNT=$(mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM quest_occurrences o JOIN quests q ON q.id=o.quest_id WHERE q.title='Move with intention'")
-          test "$COUNT" -ge 35
-      - name: Verify biweekly Monday and occurrence completion
-        run: |
-          curl -sS -b /tmp/cookies http://127.0.0.1:8080/quests/create > /tmp/create-biweekly.html
-          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/create-biweekly.html | head -1 | sed 's/.*value="//;s/"$//')
-          START=$(date +%F)
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies \
-            --data-urlencode "csrf=$CSRF" \
-            --data-urlencode 'title=Call someone I care about' \
-            --data-urlencode 'frequency=weekly' \
-            --data-urlencode 'interval_count=2' \
-            --data-urlencode "starts_on=$START" \
-            --data-urlencode 'weekdays[]=1' \
-            --data-urlencode 'timezone=America/New_York' \
-            http://127.0.0.1:8080/quests > /tmp/biweekly.html
-          grep 'Every 2 weeks on Mon' /tmp/biweekly.html
-          CREATED_PATH=$(grep -o '/quests/[a-f0-9-]\{36\}' /tmp/biweekly.html | tail -1)
+          CREATED_PATH=$(grep -o '/quests/[a-f0-9-]\{36\}' /tmp/created.html | tail -1)
+          test -n "$CREATED_PATH"
           curl -sS -b /tmp/cookies "http://127.0.0.1:8080$CREATED_PATH" > /tmp/quest.html
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/quest.html | head -1 | sed 's/.*value="//;s/"$//')
           curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" "http://127.0.0.1:8080$CREATED_PATH/complete" > /tmp/completed.html
-          grep 'Occurrence complete' /tmp/completed.html
-          php tools/worker.php 10 | grep '"processed": 0'
-      - name: Verify lifecycle and bounded generation
+          grep 'Quest completed' /tmp/completed.html
+          grep 'Health' /tmp/completed.html
+          grep 'Moment recorded' /tmp/completed.html
+          COMPLETION_PATH=$(grep -o '/completions/[a-f0-9-]\{36\}' /tmp/completed.html | head -1)
+          test -n "$COMPLETION_PATH"
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM pillar_contributions WHERE pillar_key='health' AND status='active'" | grep '^1$'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM chronicle_entries WHERE entry_type='system' AND status='active'" | grep '^1$'
+      - name: Verify reflection and Hearth composition
         run: |
-          php tools/generate-occurrences.php 120 50 | grep '"days_ahead": 120'
-          curl -sS -b /tmp/cookies http://127.0.0.1:8080/quests > /tmp/quests.html
-          PATH_TO_PAUSE=$(grep -o '/quests/[a-f0-9-]\{36\}' /tmp/quests.html | head -1)
-          curl -sS -b /tmp/cookies "http://127.0.0.1:8080$PATH_TO_PAUSE" > /tmp/pause.html
-          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/pause.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" "http://127.0.0.1:8080$PATH_TO_PAUSE/pause" > /tmp/paused.html
-          grep 'Quest paused' /tmp/paused.html
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/completed.html | head -1 | sed 's/.*value="//;s/"$//')
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies \
+            --data-urlencode "csrf=$CSRF" \
+            --data-urlencode 'reflection=This made the evening feel steadier.' \
+            "http://127.0.0.1:8080$COMPLETION_PATH/reflection" > /tmp/reflected.html
+          grep 'Reflection saved' /tmp/reflected.html
+          curl -sS -b /tmp/cookies http://127.0.0.1:8080/chronicle > /tmp/chronicle.html
+          grep 'This made the evening feel steadier' /tmp/chronicle.html
+          curl -sS -b /tmp/cookies http://127.0.0.1:8080/hearth > /tmp/hearth-after.html
+          grep 'What you have been supporting' /tmp/hearth-after.html
+          grep 'Health' /tmp/hearth-after.html
+      - name: Verify reversal and idempotency
+        run: |
+          curl -sS -b /tmp/cookies "http://127.0.0.1:8080$COMPLETION_PATH" > /tmp/completion-again.html
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/completion-again.html | head -1 | sed 's/.*value="//;s/"$//')
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" "http://127.0.0.1:8080$COMPLETION_PATH/undo" > /tmp/undone.html
+          grep 'Completion undone' /tmp/undone.html
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM pillar_contributions WHERE status='reversed'" | grep '^1$'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM chronicle_entries WHERE entry_type='system' AND status='reversed'" | grep '^1$'
+          php tools/worker.php 10 | grep '"processed": 0'
