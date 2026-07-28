@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Build 010 complete and merged  
-**Version:** 1.10  
+**Status:** Build 011 complete and merged  
+**Version:** 1.11  
 **Baseline date:** July 28, 2026  
 **Authoritative branch:** `main`
 
@@ -138,6 +138,24 @@ Delivered:
 - successful browser, MySQL, cross-account-isolation, wildcard, World, structured-Quest, notifications, return, and worker-idempotency validation.
 
 **Checkpoint:** `266847ada00efa7d224ad323f5e9a67af69e4862`
+
+### Build 011 — Privacy, consent, and audit activity
+
+A Player can review what future facts each installed World may receive, understand the source and purpose of each grant, see when it was last used, revoke or restore permission, and inspect a human-readable read-only audit history.
+
+Delivered:
+
+- shared Privacy and Consent center;
+- source, recipient, purpose, status, last-use, and revocation-effect presentation;
+- grant and revoke controls for approved World fact categories;
+- enforcement through existing World consumer permissions;
+- append-only consent audit records;
+- human-readable Audit Activity surface with technical context;
+- account-scoped authorization;
+- retained source records, Chronicle entries, World State, reactions, and audit evidence after revocation;
+- successful browser, MySQL, permission-enforcement, audit, Search, notifications, Worlds, structured-Quest, and worker-idempotency validation.
+
+**Checkpoint:** `a54c78ff1cd10291fed2357d7e2744b92584e903`
 
 ## Build workflow
 
