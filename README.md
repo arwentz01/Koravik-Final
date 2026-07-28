@@ -8,9 +8,11 @@ This repository is the clean-start authority for the final Koravik implementatio
 
 ## Current status
 
-**Blueprint v1.0 complete. Build 001 authorized.**
+**Blueprint v1.0 complete. Build 001 complete.**
 
-Project Zero and the product and engineering blueprint are complete. The next work is implementation of the first approved vertical slice, not further speculative product definition.
+The first working vertical slice is merged to `main`. A person can sign in, orient in Hearth, complete one Quests-owned action, publish a transactional Platform Event, receive an explainable Epic Ordinary reaction, and later resume from durable state.
+
+Completed checkpoint: `7c17d997869c2ef7059731c6ab360424c2182d4d`
 
 ## Documentation entry points
 
@@ -39,11 +41,16 @@ Before writing code, read the mandatory documents in the order specified by the 
 - Structured, non-executable World packages
 - Visible privacy, consent, audit, and explainability
 
-## Build 001 mission
+## Run Build 001 locally
 
-Create the smallest working version of Koravik that already feels like Koravik.
+1. Copy `.env.example` to `.env` and configure the database.
+2. Run `php tools/migrate.php`.
+3. Set `SEED_EMAIL`, `SEED_PASSWORD`, and optionally `SEED_DISPLAY_NAME`.
+4. Run `php tools/seed.php`.
+5. Point Apache at `public/`, or run `php -S 127.0.0.1:8080 -t public public/index.php`.
+6. Run `php tools/worker.php 10` from cron for bounded outbox delivery.
 
-The first implementation milestone must prove:
+## Build 001 outcome
 
 1. A person signs in securely.
 2. The shared application shell and Hearth provide orientation.
