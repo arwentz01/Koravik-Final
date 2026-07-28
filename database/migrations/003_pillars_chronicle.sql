@@ -4,7 +4,7 @@ CREATE TABLE pillar_definitions (
     description VARCHAR(255) NOT NULL,
     sort_order SMALLINT UNSIGNED NOT NULL,
     active TINYINT(1) NOT NULL DEFAULT 1,
-    created_at DATETIME NOT NULL DEFAULT UTC_TIMESTAMP()
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO pillar_definitions (pillar_key, name, description, sort_order) VALUES
@@ -21,7 +21,7 @@ CREATE TABLE quest_pillar_links (
     quest_id CHAR(36) NOT NULL,
     pillar_key VARCHAR(64) NOT NULL,
     is_primary TINYINT(1) NOT NULL DEFAULT 0,
-    created_at DATETIME NOT NULL DEFAULT UTC_TIMESTAMP(),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (quest_id, pillar_key),
     CONSTRAINT fk_quest_pillar_quest FOREIGN KEY (quest_id) REFERENCES quests(id) ON DELETE CASCADE,
     CONSTRAINT fk_quest_pillar_definition FOREIGN KEY (pillar_key) REFERENCES pillar_definitions(pillar_key)
