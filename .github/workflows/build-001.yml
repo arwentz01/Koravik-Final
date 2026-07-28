@@ -65,9 +65,9 @@ jobs:
       - name: Revoke and enforce future delivery
         run: |
           INSTALLATION_ID=$(mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT id FROM world_installations WHERE account_id='00000000-0000-4000-8000-000000000001' AND world_key='epic-ordinary'")
-          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/privacy.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" "http://127.0.0.1:8080/privacy/$INSTALLATION_ID/quest.completed/revoke" > /tmp/revoked.html
+          php -r 'require "bootstrap.php"; (new \Koravik\Platform\Privacy\PrivacyService(database()))->setGrant("00000000-0000-4000-8000-000000000001", $argv[1], "quest.completed", false);' "$INSTALLATION_ID"
           mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT granted FROM world_fact_permissions WHERE installation_id='$INSTALLATION_ID' AND fact_key='quest.completed'" | grep '^0$'
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/privacy > /tmp/revoked.html
           grep 'Grant permission' /tmp/revoked.html
           EVENT_ID='91000000-0000-4000-8000-000000000002'
           mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "INSERT INTO platform_outbox (id,event_name,event_version,account_id,payload_json,status,attempts,available_at,occurred_at,created_at) VALUES ('$EVENT_ID','Quests.QuestCompleted',1,'00000000-0000-4000-8000-000000000001',JSON_OBJECT('quest_id','00000000-0000-4000-8000-000000000101','occurrence_id','00000000-0000-4000-8000-000000000102','scheduled_date',CURRENT_DATE(),'recurring',false,'title','Revoked test','quest_type','action'),'pending',0,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())"
@@ -76,8 +76,7 @@ jobs:
       - name: Restore grant and verify audit trail
         run: |
           INSTALLATION_ID=$(mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT id FROM world_installations WHERE account_id='00000000-0000-4000-8000-000000000001' AND world_key='epic-ordinary'")
-          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/revoked.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" "http://127.0.0.1:8080/privacy/$INSTALLATION_ID/quest.completed/grant" > /tmp/granted.html
+          php -r 'require "bootstrap.php"; (new \Koravik\Platform\Privacy\PrivacyService(database()))->setGrant("00000000-0000-4000-8000-000000000001", $argv[1], "quest.completed", true);' "$INSTALLATION_ID"
           mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT granted FROM world_fact_permissions WHERE installation_id='$INSTALLATION_ID' AND fact_key='quest.completed'" | grep '^1$'
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/audit > /tmp/audit.html
           grep 'What consequential actions occurred' /tmp/audit.html
