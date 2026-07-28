@@ -3,6 +3,7 @@
 declare(strict_types=1);
 require dirname(__DIR__) . '/bootstrap.php';
 
+use Koravik\Platform\AccountData\AccountDataController;
 use Koravik\Platform\Companion\CompanionContextController;
 use Koravik\Platform\Companion\CompanionController;
 use Koravik\Platform\Companion\CompanionLifecycleController;
@@ -17,9 +18,10 @@ use Koravik\Platform\Security\Security;
 use Koravik\Platform\Settings\SettingsController;
 
 $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');$path=parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/';
-if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'018'],JSON_THROW_ON_ERROR);return;}
+if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'019'],JSON_THROW_ON_ERROR);return;}
 Security::startSession();ob_start();
-$handled=(new ChronicleManagementController(database()))->handle($method,$path);
+$handled=(new AccountDataController(database()))->handle($method,$path);
+if(!$handled)$handled=(new ChronicleManagementController(database()))->handle($method,$path);
 if(!$handled)$handled=(new CompanionContextController(database()))->handle($method,$path);
 if(!$handled)$handled=(new CompanionLifecycleController(database()))->handle($method,$path);
 if(!$handled)$handled=(new CompanionController(database()))->handle($method,$path);
@@ -34,6 +36,7 @@ if(!$handled)(new Koravik\Application())->run();
 $html=(string)ob_get_clean();$account=Security::account();
 if($account&&$method==='GET'&&$path==='/hearth')$html=(new HearthLayoutService(database()))->apply($html,(string)$account['id']);
 if($account&&$method==='GET'&&$path==='/chronicle')$html=str_replace('<section class="page-heading">','<section class="page-heading"><p><a class="button" href="/chronicle/new">New entry</a> <a href="/chronicle/manage">Manage Chronicle</a></p>',$html);
+if($account&&$method==='GET'&&$path==='/settings')$html=str_replace('Account export and deletion execution are not yet available; Koravik does not pretend otherwise.','Account export and staged account closure are available from <a href="/settings/data">Data controls</a>.',$html);
 if($account&&str_contains($html,'<nav aria-label="Primary">')){
  if(!str_contains($html,'href="/worlds"'))$html=str_replace('</nav>','<a href="/worlds">Worlds</a></nav>',$html);
  if(!str_contains($html,'href="/companion"'))$html=str_replace('</nav>','<a href="/companion">Companion</a></nav>',$html);
