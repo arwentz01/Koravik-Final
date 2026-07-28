@@ -4,7 +4,7 @@ CREATE TABLE world_npcs (
     name VARCHAR(120) NOT NULL,
     role_label VARCHAR(160) NOT NULL,
     description VARCHAR(500) NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT UTC_TIMESTAMP(),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (world_key, npc_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
