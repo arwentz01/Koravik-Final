@@ -1,10 +1,10 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Approved — Build 001 Complete  
-**Version:** 1.1  
+**Status:** Approved — Build 002 Complete  
+**Version:** 1.2  
 **Baseline date:** July 28, 2026  
 **Authoritative branch:** `main`  
-**Completed checkpoint:** `7c17d997869c2ef7059731c6ab360424c2182d4d`
+**Completed checkpoint:** `87e1354db20e0e9de9a7441462ba1dbc219701e5`
 
 ## Repository authority
 
@@ -53,68 +53,71 @@ The blueprint is authoritative. Implementation may clarify details but may not s
 
 ## Build 001 — Foundation and first vertical slice
 
-### Status
+**Status:** Complete and merged to `main`.
 
-**Complete and merged to `main`.**
+Delivered secure sign-in, the shared shell and Hearth, seeded Quest completion, atomic `Quests.QuestCompleted.v1` publication, bounded idempotent outbox delivery, independent Epic Ordinary World State, visible explainability, audit history, shared-host routing, migration and seed tools, and end-to-end MySQL validation.
 
-### Delivered journey
+**Checkpoint:** `7c17d997869c2ef7059731c6ab360424c2182d4d`
 
-1. A person signs in through password-hashed credentials and a rotated secure session.
-2. The shared application shell loads with accessible navigation and focus behavior.
-3. Hearth provides a calm daily orientation surface.
-4. The person opens one Quests-owned action.
-5. The person completes the action.
-6. The source transaction records the completion, audit entry, and `Quests.QuestCompleted.v1` outbox event atomically.
-7. A finite worker claims and delivers the event with retry and dead-letter behavior.
-8. Epic Ordinary interprets only the approved minimized fact.
-9. Independent World State and a durable reaction are recorded.
-10. The person sees the reaction and its provenance.
-11. The person returns to Hearth and can later resume from stored state.
+## Build 002 — Personal Quest creation
 
-### Implemented foundation
+**Status:** Complete and merged to `main`.
 
-- environment-aware PHP bootstrap and autoloading;
-- PDO connection with native prepared statements and explicit transactions;
-- versioned MySQL/MariaDB migration runner;
-- safe seed command requiring explicit credentials;
-- session authentication, logout, CSRF, and security headers;
-- responsive server-rendered shell and visual tokens;
-- minimal Hearth and Quests surfaces;
-- atomic Quest completion and outbox publication;
-- bounded outbox worker with retries, dead-letter state, and idempotent receipts;
-- Epic Ordinary installation, state, reaction, and explainability records;
-- audit record for the completed action;
-- Apache front controller and health endpoint;
-- GitHub Actions validation against an empty MySQL database.
+### Player-visible outcome
+
+A signed-in person can now:
+
+1. open a dedicated Quests area;
+2. create a personal Quest using only a title;
+3. optionally add notes;
+4. receive clear inline validation without losing entered text;
+5. see the saved Quest immediately in Quests and Hearth;
+6. open and complete the user-created Quest;
+7. receive the existing explainable Epic Ordinary reaction;
+8. leave and later resume from durable state.
+
+### Implemented boundaries
+
+- Quests remains the sole owner of Quest records and validation.
+- A Quest does not require a Household, Organization, World, category, reward, due date, recurrence, or project.
+- Quest creation records a `quest.created` audit entry.
+- Quest creation does not publish a Platform Event.
+- Quest completion continues to atomically publish the approved minimized fact.
+- Existing Build 001 tables were sufficient; no schema migration was needed.
+- Navigation, empty states, form behavior, flash messages, and responsive presentation were extended without replacing the accepted shell.
 
 ### Validation
 
-The Build 001 workflow passed on the accepted head commit and verified:
+The Build 002 workflow passed and verified:
 
-- PHP 8.3 syntax for every PHP file;
-- migration from an empty MySQL 8.4 database;
-- safe account, Quest, and World seeding;
-- health response;
-- sign-in and session persistence;
-- Hearth orientation;
-- Quest detail and completion;
-- visible Epic Ordinary reaction and explanation;
+- PHP 8.3 syntax;
+- clean MySQL migration and seed;
+- eight-character seed password support;
+- authentication and session persistence;
+- personal Quest creation with title and optional notes;
+- validation failure for an empty title with HTTP 422;
+- durable Quest list and detail display;
+- completion of the newly created Quest;
+- Epic Ordinary reaction and explanation;
 - idempotent worker execution after delivery.
+
+**Checkpoint:** `87e1354db20e0e9de9a7441462ba1dbc219701e5`
 
 ## Deferred scope
 
-Build 001 intentionally did not implement:
+The accepted product still does not include:
 
-- broad District functionality;
-- Households or Organizations;
+- Quest editing, archiving, deletion, recurrence, due guidance, projects, or assignments;
 - generalized account administration or password recovery;
+- Households or Organizations;
+- broad District functionality;
 - Companion execution;
 - marketplace or creator publishing;
 - multiple production Worlds;
 - broad public APIs;
 - comprehensive search, notifications, or media;
 - mobile applications;
-- deployment automation for a specific production host.
+- host-specific deployment automation.
 
 ## Build workflow
 
@@ -135,4 +138,4 @@ When implementation reveals a blueprint flaw, stop at the affected boundary. Rec
 
 ## Next authorization
 
-Build 001 is complete. The next repository work should define and approve the narrow player-visible outcome for Build 002 before implementation begins. Build 002 must extend the working product rather than replacing or bypassing the accepted vertical slice.
+Build 002 is complete. The next repository work should define a narrow Build 003 outcome that deepens the useful personal Quest lifecycle or adds another approved product flow without weakening the accepted architecture.
