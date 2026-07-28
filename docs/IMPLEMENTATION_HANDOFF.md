@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Build 005 in validation  
-**Version:** 1.5  
+**Status:** Build 006 in validation  
+**Version:** 1.6  
 **Baseline date:** July 28, 2026  
 **Authoritative branch:** `main`
 
@@ -43,32 +43,35 @@ Relational recurrence rules, multiple weekdays, every-X intervals, generated occ
 
 Optional Quest-to-Pillar meaning, event-driven contribution ledger, automatic Chronicle moments, optional reflections, richer Hearth composition, completion summaries, bounded undo, reversal events, and module-neutral composite event consumers.
 
-**Checkpoint:** `0a0eb9f24bc2b9dec3b346497872c37d05ce0a11`
+### Build 005 — Epic Ordinary continuation
 
-## Build 005 — Epic Ordinary continuation
+Persistent World navigation, Chapter One, durable Caretaker support-style choice, NPC relationship state and provenance, Quest-completion-driven trust changes, fresh-install initialization, responsive presentation, and MySQL validation.
+
+**Checkpoint:** `a21b4392ff12927e3e92ca41c91218e73e3d0740`
+
+## Build 006 — Structured Quests, steps, and milestones
 
 ### Player-visible outcome
 
-A Player can enter Epic Ordinary, meet the Caretaker through durable dialogue, choose how support should feel, and see that choice and completed real-life Quests shape the ongoing relationship.
+A Quest may be a single action, habit, project, journey, responsibility, or World objective. Structured Quest types may contain ordered required or optional steps, show meaningful progress, reach milestones, and prevent completion while required steps remain.
 
 ### Technical boundaries
 
-- Epic Ordinary uses the same World contracts expected of future Worlds.
-- World reactions consume minimized Platform events rather than reading Quest-owned records.
-- NPC relationship changes have durable, explainable provenance.
-- Meaningful choices are persisted and are not presented as disposable UI.
-- World progress remains isolated by account and installation.
+- Quest type is explicit as required by the canonical domain model.
+- Steps, progress, and milestones remain owned by Quests.
+- Simple actions and habits remain lightweight.
+- Projects and Journeys gain structure without becoming project-management software.
+- Existing completion events include only the minimized Quest type needed by authorized consumers.
+- Pillar, Chronicle, and World behavior continues through the accepted event pipeline.
 
 ### Included
 
-- World navigation and persistent World home;
-- Chapter One, The First Light;
-- Caretaker NPC relationship and history;
-- durable support-style choice;
-- Quest-completion-driven trust changes;
-- fresh-install initialization;
-- accessible responsive presentation;
-- end-to-end MySQL validation.
+- relational Quest type field;
+- ordered Quest steps with required, optional, pending, completed, reopened, and skipped states;
+- automatic 25%, 50%, and 100% milestones for Projects and Journeys;
+- progress presentation and completion guard;
+- audit history for step changes;
+- browser and MySQL validation.
 
 ## Build workflow
 
