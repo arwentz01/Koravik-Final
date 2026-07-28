@@ -1,7 +1,7 @@
 # Documentation Authority
 
 **Status:** Approved for Blueprint v1.0  
-**Version:** 1.2
+**Version:** 1.3
 
 ## Authority order
 
@@ -44,23 +44,30 @@ The implementation handoff may narrow current work but may not override higher-o
 
 ### Product Blueprint
 
-`product/` defines interaction behavior, shell, components, user flows, screen inventory, Epic Ordinary direction, Companion proposals, consent-scoped Companion context and memory, and Chronicle ownership.
+`product/` defines interaction behavior, shell, components, user flows, screen inventory, Epic Ordinary direction, Companion proposals, consent-scoped Companion context and memory, Chronicle ownership, and visual placement.
 
 Focused contracts include:
 
 - `product/COMPANION_PROPOSALS.md`
 - `product/COMPANION_CONTEXT_AND_MEMORY.md`
 - `product/CHRONICLE_OWNERSHIP.md`
+- `product/VISUAL_INFORMATION_ARCHITECTURE.md`
+- `product/ROUTE_VISUAL_INVENTORY.md`
+- `product/EPIC_ORDINARY_CHAPTER_TWO.md`
 
 ### Engineering Blueprint
 
-`engineering/` defines architecture, database and migration conventions, events, API rules, security, testing, deployment, ownership, execution, lifecycle recovery, and account-data handling.
+`engineering/` defines architecture, database and migration conventions, events, API rules, security, testing, deployment, ownership, execution, lifecycle recovery, account-data handling, visual rendering, and World runtime boundaries.
 
 Focused contracts include:
 
 - `engineering/COMPANION_EXECUTION.md`
 - `engineering/COMPANION_LIFECYCLE.md`
 - `engineering/ACCOUNT_DATA_LIFECYCLE.md`
+- `engineering/AUTHENTICATION_RECOVERY.md`
+- `engineering/RELEASE_CANDIDATE_CHECKLIST.md`
+- `engineering/VISUAL_SYSTEM.md`
+- `engineering/EPIC_ORDINARY_RUNTIME.md`
 
 ### Decisions
 
@@ -91,4 +98,4 @@ The `archive/` directory is non-authoritative. Legacy roadmaps and handoffs must
 
 ## Current state
 
-Project Zero and Blueprint v1.0 remain authoritative. Builds 001 through 019 are merged. Begin work from `IMPLEMENTATION_HANDOFF.md` and read the focused ownership, Companion, Chronicle, and account-data contracts whenever those areas are affected.
+Project Zero and Blueprint v1.0 remain authoritative. Builds 001 through 023 are merged. Begin work from `IMPLEMENTATION_HANDOFF.md` and read the focused visual-system and Epic Ordinary contracts when those areas are affected.
