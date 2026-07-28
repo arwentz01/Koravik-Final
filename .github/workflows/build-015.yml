@@ -1,0 +1,77 @@
+name: Build 015
+
+on:
+  pull_request:
+  push:
+    branches: [main, build/015-companion-execution]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: koravik
+          MYSQL_USER: koravik
+          MYSQL_PASSWORD: koravik
+          MYSQL_ROOT_PASSWORD: root
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, mbstring
+      - name: Lint PHP
+        run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+      - name: Configure
+        run: |
+          cp .env.example .env
+          sed -i 's|DB_DSN=.*|DB_DSN=mysql:host=127.0.0.1;port=3306;dbname=koravik;charset=utf8mb4|' .env
+          sed -i 's|DB_PASS=.*|DB_PASS=koravik|' .env
+          echo 'SEED_EMAIL=owner@example.test' >> .env
+          echo 'SEED_PASSWORD=Koravik8' >> .env
+          echo 'SEED_DISPLAY_NAME=Builder' >> .env
+      - name: Migrate and seed
+        run: |
+          php tools/migrate.php
+          php tools/seed.php
+          php tools/migrate.php | grep 'Already applied: 012_companion_execution'
+      - name: Execute approved Quest proposal idempotently
+        run: |
+          ACCOUNT='00000000-0000-4000-8000-000000000001'
+          PROPOSAL=$(php -r 'require "bootstrap.php"; $s=new \Koravik\Platform\Companion\CompanionService(database()); $id=$s->proposeQuest($argv[1],"Help me make my bedroom less overwhelming"); $p=$s->get($argv[1],$id); $s->decide($argv[1],$id,"approve",(int)$p["version"]); echo $id;' "$ACCOUNT")
+          QUEST1=$(php -r 'require "bootstrap.php"; echo (new \Koravik\Districts\Quests\QuestProposalExecutor(database()))->execute($argv[1],$argv[2]);' "$ACCOUNT" "$PROPOSAL")
+          QUEST2=$(php -r 'require "bootstrap.php"; echo (new \Koravik\Districts\Quests\QuestProposalExecutor(database()))->execute($argv[1],$argv[2]);' "$ACCOUNT" "$PROPOSAL")
+          test "$QUEST1" = "$QUEST2"
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM quests WHERE id='$QUEST1' AND title='Clear one visible surface'" | grep '^1$'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM companion_execution_receipts WHERE proposal_id='$PROPOSAL' AND record_id='$QUEST1'" | grep '^1$'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT status FROM companion_proposals WHERE id='$PROPOSAL'" | grep '^executed$'
+      - name: Save approved reflection to Chronicle idempotently
+        run: |
+          ACCOUNT='00000000-0000-4000-8000-000000000001'
+          PROPOSAL=$(php -r 'require "bootstrap.php"; $id=(new \Koravik\Platform\Companion\ReflectionProposalService(database()))->create($argv[1],"A difficult week that I handled with more patience than usual.","I noticed that pausing before answering changed the whole conversation."); $s=new \Koravik\Platform\Companion\CompanionService(database()); $p=$s->get($argv[1],$id); $s->decide($argv[1],$id,"approve",(int)$p["version"]); echo $id;' "$ACCOUNT")
+          ENTRY1=$(php -r 'require "bootstrap.php"; echo (new \Koravik\Platform\Experience\ChronicleProposalExecutor(database()))->execute($argv[1],$argv[2]);' "$ACCOUNT" "$PROPOSAL")
+          ENTRY2=$(php -r 'require "bootstrap.php"; echo (new \Koravik\Platform\Experience\ChronicleProposalExecutor(database()))->execute($argv[1],$argv[2]);' "$ACCOUNT" "$PROPOSAL")
+          test "$ENTRY1" = "$ENTRY2"
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM chronicle_entries WHERE id='$ENTRY1' AND entry_type='reflection'" | grep '^1$'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM companion_execution_receipts WHERE proposal_id='$PROPOSAL' AND owner_module='Chronicle'" | grep '^1$'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM audit_log WHERE action='companion.proposal.executed'" | grep '^2$'
+      - name: Validate browser surfaces and prior flows
+        run: |
+          php -S 127.0.0.1:8080 -t public public/index.php >/tmp/server.log 2>&1 &
+          sleep 2
+          curl --fail http://127.0.0.1:8080/health | grep '"build":"015"'
+          curl -sS -c /tmp/cookies http://127.0.0.1:8080/login >/tmp/login.html
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/login.html | head -1 | sed 's/.*value="//;s/"$//')
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode 'email=owner@example.test' --data-urlencode 'password=Koravik8' http://127.0.0.1:8080/login >/tmp/hearth.html
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/companion | grep 'Draft a reflection'
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/companion/reflections/new | grep 'Nothing is saved to Chronicle from this screen'
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/chronicle | grep 'pausing before answering'
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/settings | grep 'How should Koravik work for you'
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/privacy | grep 'What may Koravik use'
+          php tools/worker.php 10 | grep '"processed": 0'

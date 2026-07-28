@@ -17,7 +17,7 @@ $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 if ($method === 'GET' && $path === '/health') {
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['status' => 'ok', 'build' => '014'], JSON_THROW_ON_ERROR);
+    echo json_encode(['status' => 'ok', 'build' => '015'], JSON_THROW_ON_ERROR);
     return;
 }
 
