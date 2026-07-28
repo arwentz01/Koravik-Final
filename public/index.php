@@ -18,9 +18,10 @@ use Koravik\Platform\Security\Security;
 use Koravik\Platform\Settings\SettingsController;
 use Koravik\Platform\UI\AppShell;
 use Koravik\Platform\UI\GuideController;
+use Koravik\Platform\UI\VisualSystem;
 
 $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');$path=parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/';
-if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'021'],JSON_THROW_ON_ERROR);return;}
+if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'022'],JSON_THROW_ON_ERROR);return;}
 Security::startSession();ob_start();
 $handled=(new GuideController())->handle($method,$path);
 if(!$handled)$handled=(new AuthRecoveryController(database()))->handle($method,$path);
@@ -40,7 +41,8 @@ if(!$handled)(new Koravik\Application())->run();
 $html=(string)ob_get_clean();$account=Security::account();
 if(!$account&&$method==='GET'&&$path==='/login'&&!str_contains($html,'href="/recover"'))$html=str_replace('</form>','</form><p><a href="/recover">Forgot your password?</a></p>',$html);
 if($account&&$method==='GET'&&$path==='/hearth')$html=(new HearthLayoutService(database()))->apply($html,(string)$account['id']);
-if($account&&$method==='GET'&&$path==='/chronicle')$html=str_replace('<section class="page-heading">','<section class="page-heading"><p><a class="button" href="/chronicle/new">New entry</a> <a href="/chronicle/manage">Manage Chronicle</a></p>',$html);
-if($account&&$method==='GET'&&$path==='/settings'){$html=str_replace('Account export and deletion execution are not yet available; Koravik does not pretend otherwise.','Account export and staged account closure are available from <a href="/settings/data">Data controls</a>.',$html);if(!str_contains($html,'/settings/security'))$html=str_replace('</main>','<section class="settings-card"><h2>Security</h2><p>Change your password and invalidate older sessions.</p><a href="/settings/security">Open security settings</a></section></main>',$html);}
+if($account&&$method==='GET'&&$path==='/chronicle')$html=str_replace('<section class="page-heading">','<section class="page-heading"><p class="local-actions"><a class="button" href="/chronicle/new">New entry</a> <a href="/chronicle/manage">Manage Chronicle</a></p>',$html);
+if($account&&$method==='GET'&&$path==='/settings'){$html=str_replace('Account export and deletion execution are not yet available; Koravik does not pretend otherwise.','Account export and staged account closure are available from <a href="/settings/data">Data controls</a>.',$html);if(!str_contains($html,'/settings/security'))$html=str_replace('</main>','<section class="settings-card trust-panel"><h2>Security</h2><p>Change your password and invalidate older sessions.</p><a href="/settings/security">Open security settings</a></section></main>',$html);}
 $html=(new AppShell())->apply($html,$account,$path);
+$html=(new VisualSystem())->apply($html,$account,$path);
 echo $html;

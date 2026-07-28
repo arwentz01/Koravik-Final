@@ -1,0 +1,38 @@
+name: Build 022
+on:
+  pull_request:
+  push:
+    branches: [main, build/022-visual-system-route-states]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env: {MYSQL_DATABASE: koravik, MYSQL_USER: koravik, MYSQL_PASSWORD: koravik, MYSQL_ROOT_PASSWORD: root}
+        ports: ['3306:3306']
+        options: --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot" --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with: {php-version: '8.3', extensions: 'pdo_mysql, mbstring'}
+      - name: PHP syntax
+        run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+      - name: Configure and migrate
+        run: |
+          cp .env.example .env
+          sed -i 's|DB_DSN=.*|DB_DSN=mysql:host=127.0.0.1;port=3306;dbname=koravik;charset=utf8mb4|' .env
+          sed -i 's|DB_PASS=.*|DB_PASS=koravik|' .env
+          echo 'SEED_EMAIL=owner@example.test' >> .env
+          echo 'SEED_PASSWORD=Koravik8' >> .env
+          php tools/migrate.php
+          php tools/seed.php
+          php tools/migrate.php | grep 'Already applied: 017_auth_recovery'
+      - name: Validate visual preferences
+        run: |
+          php -r 'require "bootstrap.php";$s=new Koravik\Platform\Settings\SettingsService(database());$id="00000000-0000-4000-8000-000000000001";$s->save($id,["display_name"=>"Owner","appearance"=>"dark","timezone"=>"America/New_York","date_format"=>"month_day_year","reduced_motion"=>"1","high_contrast"=>"1"]);$html="<html><head></head><body><main id=\"main\"><section class=\"empty-state\">Empty</section></main></body></html>";$out=(new Koravik\Platform\UI\VisualSystem())->apply($html,["id"=>$id],"/quests");foreach(["appearance-dark","reduce-motion","high-contrast","visual-system.css","state-empty","Current location"] as $needle){if(!str_contains($out,$needle))throw new RuntimeException($needle);}echo "visual-ok";' | grep visual-ok
+      - name: Validate contracts
+        run: |
+          grep -q 'Every player-facing route' docs/product/ROUTE_VISUAL_INVENTORY.md
+          grep -q 'Preferences must affect the rendered page' docs/engineering/VISUAL_SYSTEM.md
+          grep -q "'build'=>'022'" public/index.php
