@@ -33,13 +33,15 @@ try {
         ->execute(['id'=>$occurrenceId,'quest_id'=>$questId,'account_id'=>$accountId,'scheduled_for'=>$today,'available_at'=>$now,'created_at'=>$now,'updated_at'=>$now]);
     $pdo->prepare('INSERT INTO world_installations (id, account_id, world_key, status, installed_at) VALUES (:id, :account_id, "epic-ordinary", "active", :installed_at) ON DUPLICATE KEY UPDATE status = VALUES(status)')
         ->execute(['id'=>$installationId,'account_id'=>$accountId,'installed_at'=>$now]);
+    $pdo->prepare('INSERT INTO world_fact_permissions (installation_id, fact_key, granted, explanation, granted_at, revoked_at, updated_at) VALUES (:installation_id, "quest.completed", 1, :explanation, :granted_at, NULL, :updated_at) ON DUPLICATE KEY UPDATE granted = 1, explanation = VALUES(explanation), granted_at = COALESCE(world_fact_permissions.granted_at, VALUES(granted_at)), revoked_at = NULL, updated_at = VALUES(updated_at)')
+        ->execute(['installation_id'=>$installationId,'explanation'=>'Allows Epic Ordinary to receive a minimized fact when a Quest occurrence is completed. Quest notes and full private records are not shared.','granted_at'=>$now,'updated_at'=>$now]);
     $pdo->prepare('INSERT INTO world_relationships (installation_id, npc_key, trust_score, relationship_stage, updated_at) VALUES (:installation_id, "caretaker", 0, "new", :updated_at) ON DUPLICATE KEY UPDATE updated_at = VALUES(updated_at)')
         ->execute(['installation_id'=>$installationId,'updated_at'=>$now]);
     $pdo->prepare('INSERT INTO world_narrative_progress (installation_id, current_arc, current_chapter, current_scene, updated_at) VALUES (:installation_id, "coming-home", "the-first-light", "caretaker-welcome", :updated_at) ON DUPLICATE KEY UPDATE updated_at = VALUES(updated_at)')
         ->execute(['installation_id'=>$installationId,'updated_at'=>$now]);
 
     $pdo->commit();
-    echo "Seeded Build 005 account, Quest occurrence, and Epic Ordinary continuation.\n";
+    echo "Seeded Build 007 account, Quest occurrence, World installation, and default fact permission.\n";
 } catch (Throwable $throwable) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     throw $throwable;
