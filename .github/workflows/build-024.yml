@@ -1,0 +1,40 @@
+name: Build 024
+on:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: koravik
+          MYSQL_USER: koravik
+          MYSQL_PASSWORD: koravik
+          MYSQL_ROOT_PASSWORD: root
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      SEED_EMAIL: owner@example.test
+      SEED_PASSWORD: password123
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with: {php-version: '8.3', extensions: pdo_mysql, coverage: none}
+      - name: PHP syntax
+        run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+      - name: Configure and migrate
+        run: |
+          cp .env.example .env
+          sed -i 's/^DB_PASS=.*/DB_PASS=koravik/' .env
+          php tools/migrate.php
+          php tools/migrate.php
+          php tools/seed.php
+      - name: Validate progress ownership and minimized reaction detail
+        run: |
+          php -r 'require "bootstrap.php"; $s=new Koravik\Worlds\EpicOrdinary\WorldProgressService(database()); $p=$s->progress("00000000-0000-4000-8000-000000000001"); if(!array_key_exists("objectives",$p)||!array_key_exists("history",$p)) exit(1); try{$s->progress("ffffffff-ffff-4fff-8fff-ffffffffffff");exit(1);}catch(RuntimeException $e){} echo "World progress checks passed\n";'
+          grep -q 'Quest notes, Chronicle prose, Companion memory' src/Worlds/EpicOrdinary/WorldProgressService.php
+          grep -q 'Fictional keepsake' src/Worlds/EpicOrdinary/WorldProgressController.php
