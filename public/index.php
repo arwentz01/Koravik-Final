@@ -20,9 +20,10 @@ use Koravik\Platform\UI\AppShell;
 use Koravik\Platform\UI\GuideController;
 use Koravik\Platform\UI\VisualSystem;
 use Koravik\Worlds\EpicOrdinary\ChapterTwoController;
+use Koravik\Worlds\EpicOrdinary\WorldProgressController;
 
 $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');$path=parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/';
-if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'023'],JSON_THROW_ON_ERROR);return;}
+if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'024'],JSON_THROW_ON_ERROR);return;}
 Security::startSession();ob_start();
 $handled=(new GuideController())->handle($method,$path);
 if(!$handled)$handled=(new AuthRecoveryController(database()))->handle($method,$path);
@@ -37,6 +38,7 @@ if(!$handled)$handled=(new PrivacyController(database()))->handle($method,$path)
 if(!$handled)$handled=(new SearchController(database()))->handle($method,$path);
 if(!$handled)$handled=(new NotificationController(database()))->handle($method,$path);
 if(!$handled)$handled=(new Koravik\Platform\ReturnExperience\ReturnController(database()))->handle();
+if(!$handled)$handled=(new WorldProgressController())->handle($method,$path);
 if(!$handled)$handled=(new ChapterTwoController())->handle($method,$path);
 if(!$handled)$handled=(new Koravik\Worlds\WorldController())->handle($method,$path);
 if(!$handled)(new Koravik\Application())->run();
@@ -45,7 +47,7 @@ if(!$account&&$method==='GET'&&$path==='/login'&&!str_contains($html,'href="/rec
 if($account&&$method==='GET'&&$path==='/hearth')$html=(new HearthLayoutService(database()))->apply($html,(string)$account['id']);
 if($account&&$method==='GET'&&$path==='/chronicle')$html=str_replace('<section class="page-heading">','<section class="page-heading"><p class="local-actions"><a class="button" href="/chronicle/new">New entry</a> <a href="/chronicle/manage">Manage Chronicle</a></p>',$html);
 if($account&&$method==='GET'&&$path==='/settings'){$html=str_replace('Account export and deletion execution are not yet available; Koravik does not pretend otherwise.','Account export and staged account closure are available from <a href="/settings/data">Data controls</a>.',$html);if(!str_contains($html,'/settings/security'))$html=str_replace('</main>','<section class="settings-card trust-panel"><h2>Security</h2><p>Change your password and invalidate older sessions.</p><a href="/settings/security">Open security settings</a></section></main>',$html);}
-if($account&&$method==='GET'&&$path==='/worlds/epic-ordinary'&&str_contains($html,'Status: Active')&&!str_contains($html,'/worlds/epic-ordinary/play'))$html=str_replace('</section>','<p class="local-actions"><a class="button" href="/worlds/epic-ordinary/play">Continue story</a></p></section>',$html,1);
+if($account&&$method==='GET'&&$path==='/worlds/epic-ordinary'&&str_contains($html,'Status: Active')&&!str_contains($html,'/worlds/epic-ordinary/play'))$html=str_replace('</section>','<p class="local-actions"><a class="button" href="/worlds/epic-ordinary/play">Continue story</a><a href="/worlds/epic-ordinary/progress">View progress</a></p></section>',$html,1);
 $html=(new AppShell())->apply($html,$account,$path);
 $html=(new VisualSystem())->apply($html,$account,$path);
 echo $html;
