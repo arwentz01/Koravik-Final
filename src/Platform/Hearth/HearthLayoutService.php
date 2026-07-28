@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Koravik\Platform\Hearth;
+
+use Koravik\Platform\Database\Database;
+use PDO;
+use RuntimeException;
+
+final class HearthLayoutService
+{
+    public const WIDGETS=['pillars'=>'Pillar support','chronicle'=>'Chronicle moment','world'=>'Active World continuation'];
+    public function __construct(private readonly Database $database) {}
+
+    public function get(string $accountId): array
+    {
+        $this->ensure($accountId);
+        $s=$this->database->pdo()->prepare('SELECT widget_key,position,visible FROM hearth_layout_preferences WHERE account_id=:account_id ORDER BY position');
+        $s->execute(['account_id'=>$accountId]);
+        return $s->fetchAll();
+    }
+
+    public function save(string $accountId,array $input): void
+    {
+        $order=array_values(array_filter(array_map('strval',(array)($input['order']??[])),static fn(string $v): bool=>isset(self::WIDGETS[$v])));
+        if(count($order)!==count(self::WIDGETS) || count(array_unique($order))!==count(self::WIDGETS)) throw new RuntimeException('Keep each Hearth section exactly once.');
+        $visible=array_map('strval',(array)($input['visible']??[]));
+        $this->database->transaction(function(PDO $pdo) use($accountId,$order,$visible): void {
+            foreach($order as $i=>$key) {
+                $pdo->prepare('INSERT INTO hearth_layout_preferences (account_id,widget_key,position,visible,updated_at) VALUES (:account_id,:widget_key,:position,:visible,UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE position=VALUES(position),visible=VALUES(visible),updated_at=UTC_TIMESTAMP()')->execute(['account_id'=>$accountId,'widget_key'=>$key,'position'=>($i+1)*10,'visible'=>in_array($key,$visible,true)?1:0]);
+            }
+            $pdo->prepare('INSERT INTO audit_log (id,account_id,action,subject_type,subject_id,occurred_at) VALUES (:id,:account_id,"hearth.layout.updated","account",:subject_id,UTC_TIMESTAMP())')->execute(['id'=>self::uuid(),'account_id'=>$accountId,'subject_id'=>$accountId]);
+        });
+    }
+
+    public function reset(string $accountId): void
+    {
+        $this->database->transaction(function(PDO $pdo) use($accountId): void {
+            $pdo->prepare('DELETE FROM hearth_layout_preferences WHERE account_id=:account_id')->execute(['account_id'=>$accountId]);
+        });
+        $this->ensure($accountId);
+    }
+
+    public function apply(string $html,string $accountId): string
+    {
+        $layout=$this->get($accountId);
+        $parts=[];
+        if(preg_match('#<section><h2>What you have been supporting</h2>.*?</section>#s',$html,$m)) { $parts['pillars']=$m[0]; $html=str_replace($m[0],'',$html); }
+        if(preg_match('#<section class="experience-grid">(.*?)</section>#s',$html,$m)) {
+            $inside=$m[1];
+            if(preg_match('#<article class="chronicle-card[^>]*>.*?</article>#s',$inside,$c)) $parts['chronicle']='<section class="experience-grid">'.$c[0].'</section>';
+            if(preg_match('#<article class="world-card[^>]*>.*?</article>#s',$inside,$w)) $parts['world']='<section class="experience-grid">'.$w[0].'</section>';
+            $html=str_replace($m[0],'',$html);
+        }
+        $optional='';
+        foreach($layout as $row) if((bool)$row['visible'] && isset($parts[$row['widget_key']])) $optional.=$parts[$row['widget_key']];
+        $html=str_replace('</main>',$optional.'</main>',$html);
+        $html=str_replace('<p>One meaningful next step is enough.</p>','<p>One meaningful next step is enough.</p><p><a class="quiet-link" href="/hearth/customize">Customize Hearth</a></p>',$html);
+        return $html;
+    }
+
+    private function ensure(string $accountId): void
+    {
+        $pdo=$this->database->pdo();
+        foreach(array_keys(self::WIDGETS) as $i=>$key) $pdo->prepare('INSERT INTO hearth_layout_preferences (account_id,widget_key,position,visible,updated_at) VALUES (:account_id,:widget_key,:position,1,UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE widget_key=VALUES(widget_key)')->execute(['account_id'=>$accountId,'widget_key'=>$key,'position'=>($i+1)*10]);
+    }
+    private static function uuid(): string { $b=random_bytes(16);$b[6]=chr((ord($b[6])&15)|64);$b[8]=chr((ord($b[8])&63)|128);return vsprintf('%s%s-%s-%s-%s-%s%s%s',str_split(bin2hex($b),4)); }
+}
