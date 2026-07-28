@@ -1,4 +1,4 @@
-name: Build 004
+name: Build 005
 
 on:
   pull_request:
@@ -45,7 +45,7 @@ jobs:
         run: |
           php tools/migrate.php
           php tools/seed.php
-          php tools/migrate.php | grep 'Already applied: 003_pillars_chronicle'
+          php tools/migrate.php | grep 'Already applied: 004_epic_ordinary_continuity'
       - name: Start application
         run: php -S 127.0.0.1:8080 -t public public/index.php > /tmp/koravik-server.log 2>&1 &
       - name: Sign in
@@ -110,3 +110,10 @@ jobs:
           mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM pillar_contributions WHERE status='reversed'" | grep '^1$'
           mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM chronicle_entries WHERE entry_type='system' AND status='reversed'" | grep '^1$'
           php tools/worker.php 10 | grep '"processed": 0'
+      - name: Verify World continuity and relationship state
+        run: |
+          php tools/verify-world-continuity.php | tee /tmp/world-continuity.json
+          grep '"chapter": 1' /tmp/world-continuity.json
+          grep '"progress_count": 3' /tmp/world-continuity.json
+          grep '"relationship_stage": "familiar_presence"' /tmp/world-continuity.json
+          grep '"idempotent": true' /tmp/world-continuity.json
