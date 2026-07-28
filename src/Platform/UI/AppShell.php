@@ -11,6 +11,7 @@ final class AppShell
     public function apply(string $html,?array $account,string $path): string
     {
         if(!$account||!str_contains($html,'<body')) return $html;
+        if(!str_contains($html,'app-shell.css'))$html=str_replace('</head>','<link rel="stylesheet" href="/assets/app-shell.css"></head>',$html);
         $primary=['/hearth'=>'Hearth','/quests'=>'Quests','/chronicle'=>'Chronicle','/worlds'=>'Worlds','/companion'=>'Companion'];
         $primaryHtml='';foreach($primary as $href=>$label)$primaryHtml.=$this->link($href,$label,$path);
         $count=(new NotificationService(\database()))->unreadCount((string)$account['id']);
