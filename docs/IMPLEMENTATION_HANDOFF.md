@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Build 021 complete and merged  
-**Version:** 1.21  
+**Status:** Build 023 complete and merged  
+**Version:** 1.23  
 **Baseline date:** July 28, 2026  
 **Authoritative branch:** `main`
 
@@ -20,11 +20,15 @@ Focused contracts now include:
 - `docs/product/COMPANION_CONTEXT_AND_MEMORY.md`;
 - `docs/product/CHRONICLE_OWNERSHIP.md`;
 - `docs/product/VISUAL_INFORMATION_ARCHITECTURE.md`;
+- `docs/product/ROUTE_VISUAL_INVENTORY.md`;
+- `docs/product/EPIC_ORDINARY_CHAPTER_TWO.md`;
 - `docs/engineering/COMPANION_EXECUTION.md`;
 - `docs/engineering/COMPANION_LIFECYCLE.md`;
 - `docs/engineering/ACCOUNT_DATA_LIFECYCLE.md`;
 - `docs/engineering/AUTHENTICATION_RECOVERY.md`;
-- `docs/engineering/RELEASE_CANDIDATE_CHECKLIST.md`.
+- `docs/engineering/RELEASE_CANDIDATE_CHECKLIST.md`;
+- `docs/engineering/VISUAL_SYSTEM.md`;
+- `docs/engineering/EPIC_ORDINARY_RUNTIME.md`.
 
 ## Architecture baseline
 
@@ -33,6 +37,7 @@ Koravik-Final is a PHP 8.3+ custom modular monolith using MySQL or MariaDB throu
 - Districts own real-life truth.
 - Hearth composes but does not own source records.
 - Worlds interpret approved minimized facts into independent World State.
+- World objectives, choices, keepsakes, and relationship state remain fictional and do not mutate District truth.
 - Companion owns proposals and approved Companion memory, not destination records.
 - Companion context requires explicit permission and selection.
 - Approved proposals execute only through destination-module revalidation.
@@ -40,7 +45,8 @@ Koravik-Final is a PHP 8.3+ custom modular monolith using MySQL or MariaDB throu
 - Search and Notifications are non-owning utilities.
 - Account export and closure coordinate owner-specific handlers.
 - Authentication recovery stores only hashed, expiring, single-use tokens.
-- Authenticated pages receive one shared application shell and visual hierarchy.
+- Authenticated pages receive one shared application shell and visual system.
+- Appearance, reduced-motion, and increased-contrast preferences affect rendering.
 - Platform events describe committed facts and use a transactional outbox.
 - Authorization is capability-based and contextual.
 - Background work is finite, idempotent, lock-safe, and cron compatible.
@@ -73,44 +79,50 @@ Account-scoped export manifests, secret exclusions, seven-day export expiry, sta
 
 ### Build 020 — Authentication recovery and session security
 
-Delivered:
-
-- generic recovery responses that do not enumerate accounts;
-- 256-bit single-use recovery tokens stored only as SHA-256 hashes;
-- thirty-minute token expiry;
-- bounded recovery requests;
-- queued authentication-delivery abstraction;
-- password reset and password-change flows;
-- durable session versions that invalidate older sessions;
-- session regeneration after successful authentication;
-- failed-attempt tracking and fifteen-minute lockout after five failures;
-- authentication audit records;
-- Security settings and Forgot Password visual entry points;
-- migration, syntax, reset, session-version, login, and lockout validation.
+Generic recovery responses, hashed single-use recovery tokens, thirty-minute expiry, bounded requests, queued delivery abstraction, password reset and change, session-version invalidation, session regeneration, failed-attempt lockout, audit history, and security entry points.
 
 **Checkpoint:** `043288b5eeedf7e1ea60ef7392089b4c2e998a4e`
 
 ### Build 021 — Release candidate shell and visual information architecture
 
-Delivered:
-
-- one shared authenticated application shell;
-- stable primary places: Hearth, Quests, Chronicle, Worlds, and Companion;
-- distinct Search and Notifications utilities;
-- account-menu homes for the Koravik Guide, Settings, Privacy, Audit Activity, Security, and Data Controls;
-- semantic active-location states;
-- responsive mobile navigation preserving desktop hierarchy;
-- in-product `/guide` capability and ownership map;
-- approved Visual Information Architecture contract;
-- Release Candidate Checklist;
-- removal of piecemeal primary-navigation link injection in favor of the shared shell;
-- syntax, migration, hierarchy, documentation-contract, and authentication regression validation.
+One shared authenticated shell; stable primary places; distinct utilities; account and trust controls; semantic active states; responsive navigation; `/guide`; approved visual information architecture; and release-candidate checklist.
 
 **Checkpoint:** `ff9396f90ee923acb4f4579189d72e4a52684ffa`
 
+### Build 022 — Visual system consolidation and route-state audit
+
+Delivered:
+
+- shared post-render visual-system normalization;
+- dark appearance, reduced-motion, and increased-contrast enforcement from saved settings;
+- contextual location navigation;
+- shared page-header, surface, editor, state-panel, metadata, provenance, and trust-panel vocabulary;
+- approved route visual inventory and template families;
+- visual-system engineering contract;
+- migration, syntax, preference-rendering, and documentation-contract validation.
+
+**Checkpoint:** `298ab019944d65f148d70d948f22159a0192afb8`
+
+### Build 023 — Epic Ordinary Chapter Two and World experience home
+
+Delivered:
+
+- `/worlds/epic-ordinary/play` World home;
+- current chapter, scene, objective, support style, relationship state, permission status, recent explained reaction, and fictional keepsakes;
+- Chapter Two, **The Eastern Room**;
+- explicit chapter transition and refuge choice;
+- World-owned objective and keepsake tables;
+- transactional objective completion, scene advancement, choice, keepsake, and relationship provenance;
+- idempotent repeated begin and choice submissions;
+- no inactivity trust loss or punishment language;
+- CI proof that Chapter Two does not create or mutate real-life Quests;
+- product, runtime, route, migration, syntax, and MySQL validation.
+
+**Checkpoint:** `381959e1c4536b6ae8236448a6f9f89b0682377c`
+
 ## Current database migrations
 
-Production deployments through Build 021 must apply all migrations, including:
+Production deployments through Build 023 must apply all migrations, including:
 
 ```text
 011_companion_proposals
@@ -120,6 +132,7 @@ Production deployments through Build 021 must apply all migrations, including:
 015_chronicle_ownership
 016_data_export_account_closure
 017_auth_recovery
+018_epic_ordinary_chapter_two
 ```
 
 Run:
@@ -156,6 +169,9 @@ Hearth may preview and orient, but it may not become an infinite dashboard or du
 - Passkeys, social login, and multifactor authentication remain deferred.
 - Export files expire and exclude authentication secrets.
 - Account closure uses a cancellation window and owner-specific processing.
+- Epic Ordinary receives only currently permitted minimized facts.
+- Epic Ordinary does not read Quest notes, Chronicle prose, Companion memory, or unrelated private records.
+- Fictional World objectives never become duplicate real-life Quests.
 
 ## Build workflow
 
