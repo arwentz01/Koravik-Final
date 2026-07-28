@@ -69,8 +69,8 @@ jobs:
           mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT granted FROM world_fact_permissions p JOIN world_installations i ON i.id=p.installation_id WHERE i.world_key='epic-ordinary' AND p.fact_key='quest.completed'" | grep '^0$'
           BEFORE=$(mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_reactions")
           EVENT_ID='70000000-0000-4000-8000-000000000001'
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "INSERT INTO platform_outbox (id,event_name,event_version,account_id,payload_json,status,attempts,available_at,occurred_at,created_at) VALUES ('$EVENT_ID','Quests.QuestCompleted',1,'00000000-0000-4000-8000-000000000001',JSON_OBJECT('quest_id','00000000-0000-4000-8000-000000000101','title','Permission test'),'pending',0,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())"
-          php tools/worker.php 10
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "INSERT INTO platform_outbox (id,event_name,event_version,account_id,payload_json,status,attempts,available_at,occurred_at,created_at) VALUES ('$EVENT_ID','Quests.QuestCompleted',1,'00000000-0000-4000-8000-000000000001',JSON_OBJECT('quest_id','00000000-0000-4000-8000-000000000101','occurrence_id','00000000-0000-4000-8000-000000000102','scheduled_date',CURRENT_DATE(),'recurring',false,'title','Permission test','quest_type','action'),'pending',0,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())"
+          php tools/worker.php 10 | grep '"failed": 0'
           AFTER=$(mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_reactions")
           test "$BEFORE" = "$AFTER"
       - name: Grant permission and resume reactions
@@ -80,8 +80,8 @@ jobs:
           curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" http://127.0.0.1:8080/worlds/epic-ordinary/permissions/quest-completed/grant > /tmp/granted.html
           grep 'Quest completion access granted' /tmp/granted.html
           EVENT_ID='70000000-0000-4000-8000-000000000002'
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "INSERT INTO platform_outbox (id,event_name,event_version,account_id,payload_json,status,attempts,available_at,occurred_at,created_at) VALUES ('$EVENT_ID','Quests.QuestCompleted',1,'00000000-0000-4000-8000-000000000001',JSON_OBJECT('quest_id','00000000-0000-4000-8000-000000000101','title','Permission restored'),'pending',0,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())"
-          php tools/worker.php 10
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "INSERT INTO platform_outbox (id,event_name,event_version,account_id,payload_json,status,attempts,available_at,occurred_at,created_at) VALUES ('$EVENT_ID','Quests.QuestCompleted',1,'00000000-0000-4000-8000-000000000001',JSON_OBJECT('quest_id','00000000-0000-4000-8000-000000000101','occurrence_id','00000000-0000-4000-8000-000000000102','scheduled_date',CURRENT_DATE(),'recurring',false,'title','Permission restored','quest_type','action'),'pending',0,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())"
+          php tools/worker.php 10 | grep '"failed": 0'
           mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_reactions WHERE source_event_id='$EVENT_ID'" | grep '^1$'
       - name: Verify suspend resume and retained state
         run: |
