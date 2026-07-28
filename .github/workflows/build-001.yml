@@ -3,7 +3,7 @@ name: Build 005
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, build/005-world-continuation]
 
 jobs:
   verify:
@@ -51,7 +51,7 @@ jobs:
       - name: Sign in
         run: |
           sleep 2
-          curl --fail http://127.0.0.1:8080/health | grep '"build":"004"'
+          curl --fail http://127.0.0.1:8080/health | grep '"build":"005"'
           curl -sS -c /tmp/cookies http://127.0.0.1:8080/login > /tmp/login.html
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/login.html | head -1 | sed 's/.*value="//;s/"$//')
           curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies \
