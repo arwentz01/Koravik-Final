@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Build 006 complete and merged  
-**Version:** 1.6  
+**Status:** Build 007 complete and merged  
+**Version:** 1.7  
 **Baseline date:** July 28, 2026  
 **Authoritative branch:** `main`
 
@@ -66,6 +66,24 @@ Delivered:
 - successful browser and MySQL validation.
 
 **Checkpoint:** `20f37f1e2ea81552c4f975ebbe3cdf46e73bee3a`
+
+### Build 007 — World catalog, lifecycle, and fact permissions
+
+A Player can review available Worlds, understand content and accessibility information, install or resume Epic Ordinary, suspend or uninstall it while retaining state, and explicitly grant or revoke future access to minimized Quest-completion facts.
+
+Delivered:
+
+- relational World catalog metadata;
+- informed World detail presentation;
+- shared World navigation;
+- install, suspend, resume, and uninstall-with-retention lifecycle;
+- revocable `quest.completed` fact permission;
+- Epic Ordinary enforcement of active installation and granted permission;
+- audit history for lifecycle and permission changes;
+- migration backfill and seed compatibility for existing installations;
+- successful browser, MySQL, permission-enforcement, retention, and structured-Quest regression validation.
+
+**Checkpoint:** `5177ce80c454f441916d925b55416b946ee08391`
 
 ## Build workflow
 
