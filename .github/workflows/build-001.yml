@@ -1,4 +1,4 @@
-name: Build 005
+name: Build 006
 
 on:
   pull_request:
@@ -41,36 +41,56 @@ jobs:
         run: |
           php tools/migrate.php
           php tools/seed.php
-          php tools/migrate.php | grep 'Already applied: 004_epic_ordinary_continuation'
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT current_chapter FROM world_narrative_progress" | grep '^the-first-light$'
+          php tools/migrate.php | grep 'Already applied: 005_structured_quests'
       - name: Start application and sign in
         run: |
           php -S 127.0.0.1:8080 -t public public/index.php > /tmp/koravik-server.log 2>&1 &
           sleep 2
-          curl --fail http://127.0.0.1:8080/health | grep '"build":"005"'
+          curl --fail http://127.0.0.1:8080/health | grep '"build":"006"'
           curl -sS -c /tmp/cookies http://127.0.0.1:8080/login > /tmp/login.html
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/login.html | head -1 | sed 's/.*value="//;s/"$//')
           curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode 'email=owner@example.test' --data-urlencode 'password=Koravik8' http://127.0.0.1:8080/login > /tmp/hearth.html
-          grep 'Enter Epic Ordinary' /tmp/hearth.html
-          grep '>World<' /tmp/hearth.html
-      - name: Verify meaningful World choice
+          grep 'What matters now' /tmp/hearth.html
+      - name: Create a Journey with milestones
         run: |
-          curl -sS -b /tmp/cookies http://127.0.0.1:8080/world/epic-ordinary > /tmp/world.html
-          grep 'The Caretaker was already awake' /tmp/world.html
-          grep 'Remind me gently' /tmp/world.html
-          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/world.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode 'choice=gentle' http://127.0.0.1:8080/world/epic-ordinary/choice > /tmp/chosen.html
-          grep 'The Caretaker will remember that choice' /tmp/chosen.html
-          grep 'Remind me gently' /tmp/chosen.html
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT CONCAT(choice_key, ':', trust_score, ':', relationship_stage) FROM world_choice_history c JOIN world_relationships r ON r.installation_id=c.installation_id WHERE c.scene_key='caretaker-welcome'" | grep '^gentle:2:known$'
-      - name: Verify real-life action changes relationship
+          curl -sS -b /tmp/cookies http://127.0.0.1:8080/quests/create > /tmp/create.html
+          grep 'Journey' /tmp/create.html
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/create.html | head -1 | sed 's/.*value="//;s/"$//')
+          START=$(date +%F)
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode 'quest_type=journey' --data-urlencode 'title=Build a calmer morning' --data-urlencode 'description=Shape a sustainable start to the day.' --data-urlencode 'pillar_key=health' --data-urlencode 'frequency=none' --data-urlencode "starts_on=$START" --data-urlencode 'timezone=America/New_York' http://127.0.0.1:8080/quests > /tmp/journey.html
+          JOURNEY_PATH=$(grep -o '/quests/[a-f0-9-]\{36\}' /tmp/journey.html | tail -1)
+          test -n "$JOURNEY_PATH"
+          echo "JOURNEY_PATH=$JOURNEY_PATH" >> "$GITHUB_ENV"
+          grep 'Journey' /tmp/journey.html
+          grep 'First foothold' /tmp/journey.html
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT CONCAT(quest_type, ':', COUNT(m.id)) FROM quests q JOIN quest_milestones m ON m.quest_id=q.id WHERE q.title='Build a calmer morning' GROUP BY quest_type" | grep '^journey:3$'
+      - name: Add steps and block premature completion
         run: |
-          curl -sS -b /tmp/cookies http://127.0.0.1:8080/quests/00000000-0000-4000-8000-000000000101 > /tmp/quest.html
-          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/quest.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" http://127.0.0.1:8080/quests/00000000-0000-4000-8000-000000000101/complete > /tmp/completed.html
+          curl -sS -b /tmp/cookies "http://127.0.0.1:8080$JOURNEY_PATH" > /tmp/journey.html
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/journey.html | head -1 | sed 's/.*value="//;s/"$//')
+          for STEP in 'Prepare clothes the night before' 'Drink water after waking' 'Take five quiet minutes'; do
+            curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode "step_title=$STEP" --data-urlencode 'required=1' "http://127.0.0.1:8080$JOURNEY_PATH/steps" > /tmp/step.html
+            CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/step.html | head -1 | sed 's/.*value="//;s/"$//')
+          done
+          grep '0%' /tmp/step.html
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/step.html | head -1 | sed 's/.*value="//;s/"$//')
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" "http://127.0.0.1:8080$JOURNEY_PATH/complete" > /tmp/blocked.html
+          grep 'Complete the required steps' /tmp/blocked.html
+      - name: Complete steps reach milestones and finish Journey
+        run: |
+          curl -sS -b /tmp/cookies "http://127.0.0.1:8080$JOURNEY_PATH" > /tmp/steps.html
+          mapfile -t STEP_PATHS < <(grep -o "$JOURNEY_PATH/steps/[a-f0-9-]\{36\}/complete" /tmp/steps.html)
+          test "${#STEP_PATHS[@]}" = '3'
+          for STEP_PATH in "${STEP_PATHS[@]}"; do
+            curl -sS -b /tmp/cookies "http://127.0.0.1:8080$JOURNEY_PATH" > /tmp/current.html
+            CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/current.html | head -1 | sed 's/.*value="//;s/"$//')
+            curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" "http://127.0.0.1:8080$STEP_PATH" > /tmp/progress.html
+          done
+          grep '100%' /tmp/progress.html
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM quest_milestones m JOIN quests q ON q.id=m.quest_id WHERE q.title='Build a calmer morning' AND m.reached_at IS NOT NULL" | grep '^3$'
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/progress.html | head -1 | sed 's/.*value="//;s/"$//')
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" "http://127.0.0.1:8080$JOURNEY_PATH/complete" > /tmp/completed.html
+          grep 'Quest completed' /tmp/completed.html
           grep 'The Caretaker remembered' /tmp/completed.html
-          curl -sS -b /tmp/cookies http://127.0.0.1:8080/world/epic-ordinary > /tmp/world-after.html
-          grep 'Make one corner calmer' /tmp/world-after.html
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT trust_score FROM world_relationships WHERE npc_key='caretaker'" | grep '^3$'
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_relationship_history WHERE reason_code='quest.completed'" | grep '^1$'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.quest_type')) FROM platform_outbox WHERE event_name='Quests.QuestCompleted' ORDER BY created_at DESC LIMIT 1" | grep '^journey$'
           php tools/worker.php 10 | grep '"processed": 0'
