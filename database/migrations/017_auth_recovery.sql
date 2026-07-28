@@ -11,7 +11,7 @@ CREATE TABLE auth_security_state (
 
 INSERT INTO auth_security_state (account_id,updated_at)
 SELECT id,UTC_TIMESTAMP() FROM platform_accounts
-ON DUPLICATE KEY UPDATE updated_at=updated_at;
+ON DUPLICATE KEY UPDATE auth_security_state.updated_at=auth_security_state.updated_at;
 
 CREATE TABLE auth_recovery_tokens (
   id CHAR(36) PRIMARY KEY,
