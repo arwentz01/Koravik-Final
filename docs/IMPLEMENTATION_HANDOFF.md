@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Build 011 complete and merged  
-**Version:** 1.11  
+**Status:** Build 013 complete and merged  
+**Version:** 1.13  
 **Baseline date:** July 28, 2026  
 **Authoritative branch:** `main`
 
@@ -156,6 +156,42 @@ Delivered:
 - successful browser, MySQL, permission-enforcement, audit, Search, notifications, Worlds, structured-Quest, and worker-idempotency validation.
 
 **Checkpoint:** `a54c78ff1cd10291fed2357d7e2744b92584e903`
+
+### Build 012 — Account settings, accessibility, and data controls
+
+A Player can manage account identity, low-risk appearance and accessibility preferences, time and date presentation, and reach consequence-grouped notification, privacy, audit, and data controls from one Settings surface.
+
+Delivered:
+
+- relational account settings with upgrade backfill;
+- display-name management;
+- system, light, and dark appearance preferences;
+- reduced-motion and increased-contrast preferences;
+- supported time-zone and date-format preferences;
+- direct links to notification preferences, Privacy and Consent, and Audit Activity;
+- honest presentation of unavailable account export and deletion execution;
+- transactional validation and `settings.updated` audit history;
+- successful migration, browser, validation, Settings, Privacy, Search, notifications, Worlds, and worker-idempotency regression validation.
+
+**Checkpoint:** `53be2842ba13ff02bb5a92c4df02edf48e458d24`
+
+### Build 013 — Hearth customization and bounded composition
+
+A Player can choose which optional supporting sections appear on Hearth, reorder them with keyboard-safe controls, preview the result, and restore defaults while required orientation and next-action regions remain fixed.
+
+Delivered:
+
+- relational account-owned Hearth layout preferences;
+- bounded optional placements for Pillar support, Chronicle, and active World continuation;
+- show and hide controls;
+- collision-safe move-up and move-down ordering;
+- preview guidance and restore-defaults behavior;
+- required greeting and `What matters now` regions that cannot be removed;
+- live composition from source-owned records without copying Quest, Chronicle, Pillar, or World truth;
+- `hearth.layout.updated` and `hearth.layout.reset` audit history;
+- successful migration, browser, hide, reorder, reset, Settings, Privacy, Search, notifications, and worker-idempotency regression validation.
+
+**Checkpoint:** `311bf229f9459211fbd998473113b0ce14b49b8b`
 
 ## Build workflow
 
