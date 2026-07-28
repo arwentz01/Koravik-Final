@@ -1,9 +1,9 @@
-name: Build 001
+name: Build 002
 
 on:
   pull_request:
   push:
-    branches: [main, build/001-foundation]
+    branches: [main, build/002-personal-quests]
 
 jobs:
   verify:
@@ -39,7 +39,7 @@ jobs:
           sed -i 's|DB_DSN=.*|DB_DSN=mysql:host=127.0.0.1;port=3306;dbname=koravik;charset=utf8mb4|' .env
           sed -i 's|DB_PASS=.*|DB_PASS=koravik|' .env
           echo 'SEED_EMAIL=owner@example.test' >> .env
-          echo 'SEED_PASSWORD=Correct-Horse-Battery-001!' >> .env
+          echo 'SEED_PASSWORD=Koravik8' >> .env
           echo 'SEED_DISPLAY_NAME=Builder' >> .env
       - name: Migrate and seed
         run: |
@@ -47,26 +47,45 @@ jobs:
           php tools/seed.php
       - name: Start application
         run: php -S 127.0.0.1:8080 -t public public/index.php > /tmp/koravik-server.log 2>&1 &
-      - name: Verify complete journey
+      - name: Verify personal Quest journey
         run: |
           sleep 2
-          curl --fail http://127.0.0.1:8080/health | grep '"status":"ok"'
+          curl --fail http://127.0.0.1:8080/health | grep '"build":"002"'
           curl -sS -c /tmp/cookies http://127.0.0.1:8080/login > /tmp/login.html
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/login.html | head -1 | sed 's/.*value="//;s/"$//')
           test -n "$CSRF"
           curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies \
             --data-urlencode "csrf=$CSRF" \
             --data-urlencode 'email=owner@example.test' \
-            --data-urlencode 'password=Correct-Horse-Battery-001!' \
+            --data-urlencode 'password=Koravik8' \
             http://127.0.0.1:8080/login > /tmp/hearth.html
-          grep 'Make one corner calmer' /tmp/hearth.html
-          curl -sS -b /tmp/cookies http://127.0.0.1:8080/quests/00000000-0000-4000-8000-000000000101 > /tmp/quest.html
+          grep 'New Quest' /tmp/hearth.html
+          curl -sS -b /tmp/cookies http://127.0.0.1:8080/quests/create > /tmp/create.html
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/create.html | head -1 | sed 's/.*value="//;s/"$//')
+          test -n "$CSRF"
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies \
+            --data-urlencode "csrf=$CSRF" \
+            --data-urlencode 'title=Prepare tomorrow calmly' \
+            --data-urlencode 'description=Set out the three things needed before bed.' \
+            http://127.0.0.1:8080/quests > /tmp/created.html
+          grep 'Prepare tomorrow calmly' /tmp/created.html
+          grep 'Quest saved' /tmp/created.html
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/quests > /tmp/quests.html
+          grep 'Prepare tomorrow calmly' /tmp/quests.html
+          CREATED_PATH=$(grep -o '/quests/[a-f0-9-]\{36\}' /tmp/quests.html | tail -1)
+          test -n "$CREATED_PATH"
+          curl -sS -b /tmp/cookies "http://127.0.0.1:8080$CREATED_PATH" > /tmp/quest.html
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/quest.html | head -1 | sed 's/.*value="//;s/"$//')
           curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies \
             --data-urlencode "csrf=$CSRF" \
-            http://127.0.0.1:8080/quests/00000000-0000-4000-8000-000000000101/complete > /tmp/completed.html
+            "http://127.0.0.1:8080$CREATED_PATH/complete" > /tmp/completed.html
           grep 'The Caretaker noticed' /tmp/completed.html
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/world/reaction | grep 'Why this happened'
-      - name: Verify idempotency
+      - name: Verify validation and idempotency
         run: |
+          curl -sS -b /tmp/cookies http://127.0.0.1:8080/quests/create > /tmp/create-empty.html
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/create-empty.html | head -1 | sed 's/.*value="//;s/"$//')
+          STATUS=$(curl -sS -o /tmp/invalid.html -w '%{http_code}' -b /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode 'title=' http://127.0.0.1:8080/quests)
+          test "$STATUS" = "422"
+          grep 'Give this Quest a title' /tmp/invalid.html
           php tools/worker.php 10 | grep '"processed": 0'
