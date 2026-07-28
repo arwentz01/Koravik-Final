@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Build 008 complete and merged  
-**Version:** 1.8  
+**Status:** Build 009 complete and merged  
+**Version:** 1.9  
 **Baseline date:** July 28, 2026  
 **Authoritative branch:** `main`
 
@@ -103,6 +103,23 @@ Delivered:
 - successful browser, MySQL, World, structured-Quest, and idempotent worker validation.
 
 **Checkpoint:** `a730fc40ee5e57b19303fc66b5f692ff45e1681c`
+
+### Build 009 — Notifications center and attention preferences
+
+A Player has one bounded, explainable in-app center for meaningful source-owned changes without allowing notifications to become source truth or engagement pressure.
+
+Delivered:
+
+- relational notification records and per-category preferences;
+- event-driven World-reaction and welcome-back notifications;
+- source attribution, direct context links, and plain-language delivery reasons;
+- read, unread, dismiss, and mark-all-read lifecycle;
+- restrained capped shell indicator;
+- category preference controls that affect future notices without rewriting source history;
+- idempotent source-event uniqueness and synchronization fallback for committed outcomes;
+- successful browser, MySQL, preference-suppression, World, structured-Quest, return, and worker-idempotency validation.
+
+**Checkpoint:** `10ba3526ef07cac0f457ab4ffae9f8d607b2168c`
 
 ## Build workflow
 
