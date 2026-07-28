@@ -8,8 +8,8 @@ $email = env('SEED_EMAIL');
 $password = env('SEED_PASSWORD');
 $name = env('SEED_DISPLAY_NAME', 'Andrew') ?? 'Andrew';
 
-if (!$email || !$password || strlen($password) < 12) {
-    fwrite(STDERR, "Set SEED_EMAIL and a SEED_PASSWORD of at least 12 characters.\n");
+if (!$email || !$password || strlen($password) < 8) {
+    fwrite(STDERR, "Set SEED_EMAIL and a SEED_PASSWORD of at least 8 characters.\n");
     exit(1);
 }
 
