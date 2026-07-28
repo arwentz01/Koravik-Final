@@ -1,0 +1,72 @@
+name: Build 001
+
+on:
+  pull_request:
+  push:
+    branches: [main, build/001-foundation]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: koravik
+          MYSQL_USER: koravik
+          MYSQL_PASSWORD: koravik
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, mbstring
+      - name: Lint PHP
+        run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+      - name: Configure test environment
+        run: |
+          cp .env.example .env
+          sed -i 's|DB_DSN=.*|DB_DSN=mysql:host=127.0.0.1;port=3306;dbname=koravik;charset=utf8mb4|' .env
+          sed -i 's|DB_PASS=.*|DB_PASS=koravik|' .env
+          echo 'SEED_EMAIL=owner@example.test' >> .env
+          echo 'SEED_PASSWORD=Correct-Horse-Battery-001!' >> .env
+          echo 'SEED_DISPLAY_NAME=Builder' >> .env
+      - name: Migrate and seed
+        run: |
+          php tools/migrate.php
+          php tools/seed.php
+      - name: Start application
+        run: php -S 127.0.0.1:8080 -t public public/index.php > /tmp/koravik-server.log 2>&1 &
+      - name: Verify complete journey
+        run: |
+          sleep 2
+          curl --fail http://127.0.0.1:8080/health | grep '"status":"ok"'
+          curl -sS -c /tmp/cookies http://127.0.0.1:8080/login > /tmp/login.html
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/login.html | head -1 | sed 's/.*value="//;s/"$//')
+          test -n "$CSRF"
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies \
+            --data-urlencode "csrf=$CSRF" \
+            --data-urlencode 'email=owner@example.test' \
+            --data-urlencode 'password=Correct-Horse-Battery-001!' \
+            http://127.0.0.1:8080/login > /tmp/hearth.html
+          grep 'Make one corner calmer' /tmp/hearth.html
+          curl -sS -b /tmp/cookies http://127.0.0.1:8080/quests/00000000-0000-4000-8000-000000000101 > /tmp/quest.html
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/quest.html | head -1 | sed 's/.*value="//;s/"$//')
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies \
+            --data-urlencode "csrf=$CSRF" \
+            http://127.0.0.1:8080/quests/00000000-0000-4000-8000-000000000101/complete > /tmp/completed.html
+          grep 'The Caretaker noticed' /tmp/completed.html
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/world/reaction | grep 'Why this happened'
+      - name: Verify idempotency
+        run: |
+          php tools/worker.php 10 | grep '"processed": 0'
