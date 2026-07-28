@@ -1,9 +1,9 @@
-name: Build 012
+name: Build 013
 
 on:
   pull_request:
   push:
-    branches: [main, build/012-account-settings]
+    branches: [main, build/013-hearth-customization]
 
 jobs:
   verify:
@@ -41,33 +41,39 @@ jobs:
         run: |
           php tools/migrate.php
           php tools/seed.php
-          php tools/migrate.php | grep 'Already applied: 009_account_settings'
+          php tools/migrate.php | grep 'Already applied: 010_hearth_layout'
       - name: Start application and sign in
         run: |
           php -S 127.0.0.1:8080 -t public public/index.php > /tmp/koravik-server.log 2>&1 &
           sleep 2
-          curl --fail http://127.0.0.1:8080/health | grep '"build":"012"'
+          curl --fail http://127.0.0.1:8080/health | grep '"build":"013"'
           curl -sS -c /tmp/cookies http://127.0.0.1:8080/login > /tmp/login.html
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/login.html | head -1 | sed 's/.*value="//;s/"$//')
           curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode 'email=owner@example.test' --data-urlencode 'password=Koravik8' http://127.0.0.1:8080/login > /tmp/hearth.html
-          grep 'Settings' /tmp/hearth.html
-      - name: Save account and accessibility settings
+          grep 'Customize Hearth' /tmp/hearth.html
+          grep 'What matters now' /tmp/hearth.html
+      - name: Customize bounded optional sections
         run: |
-          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/settings > /tmp/settings.html
-          grep 'How should Koravik work for you' /tmp/settings.html
-          grep 'Notification preferences' /tmp/settings.html
-          grep 'Account export and deletion execution are not yet available' /tmp/settings.html
-          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/settings.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode 'display_name=Builder Updated' --data-urlencode 'appearance=dark' --data-urlencode 'reduced_motion=on' --data-urlencode 'high_contrast=on' --data-urlencode 'timezone=America/Chicago' --data-urlencode 'date_format=year_month_day' http://127.0.0.1:8080/settings > /tmp/saved.html
-          grep 'Settings saved' /tmp/saved.html
-          grep 'Builder Updated' /tmp/saved.html
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT CONCAT(appearance,':',reduced_motion,':',high_contrast,':',timezone,':',date_format) FROM account_settings WHERE account_id='00000000-0000-4000-8000-000000000001'" | grep '^dark:1:1:America/Chicago:year_month_day$'
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM audit_log WHERE account_id='00000000-0000-4000-8000-000000000001' AND action='settings.updated'" | grep '^1$'
-      - name: Reject invalid settings and preserve prior flows
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/hearth/customize > /tmp/customize.html
+          grep 'What should appear on your Hearth' /tmp/customize.html
+          grep 'The greeting and “What matters now” remain required' /tmp/customize.html
+          grep 'Restore defaults' /tmp/customize.html
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/customize.html | head -1 | sed 's/.*value="//;s/"$//')
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode 'order[]=world' --data-urlencode 'order[]=chronicle' --data-urlencode 'order[]=pillars' --data-urlencode 'visible[]=world' --data-urlencode 'visible[]=pillars' http://127.0.0.1:8080/hearth/customize > /tmp/saved.html
+          grep 'Hearth layout saved' /tmp/saved.html
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT GROUP_CONCAT(CONCAT(widget_key,':',position,':',visible) ORDER BY position SEPARATOR ',') FROM hearth_layout_preferences WHERE account_id='00000000-0000-4000-8000-000000000001'" | grep '^world:10:1,chronicle:20:0,pillars:30:1$'
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/hearth > /tmp/custom-hearth.html
+          grep 'What matters now' /tmp/custom-hearth.html
+          grep 'Continue with the Caretaker' /tmp/custom-hearth.html
+          ! grep 'Open Chronicle' /tmp/custom-hearth.html
+      - name: Restore defaults and preserve platform flows
         run: |
-          php -r 'require "bootstrap.php"; try {(new \Koravik\Platform\Settings\SettingsService(database()))->save("00000000-0000-4000-8000-000000000001",["display_name"=>"Builder","appearance"=>"neon","timezone"=>"UTC","date_format"=>"month_day_year"]); exit(1);} catch (RuntimeException $e) {echo $e->getMessage();}' | grep 'valid appearance'
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/saved.html | head -1 | sed 's/.*value="//;s/"$//')
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" http://127.0.0.1:8080/hearth/customize/reset > /tmp/reset.html
+          grep 'Hearth layout restored to defaults' /tmp/reset.html
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/hearth | grep 'Open Chronicle'
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/settings | grep 'How should Koravik work for you'
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/privacy | grep 'What may Koravik use'
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/search | grep 'Find what you are looking for'
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/notifications | grep 'What changed that deserves attention'
-          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/worlds | grep 'Stories that respond with permission'
           php tools/worker.php 10 | grep '"processed": 0'
