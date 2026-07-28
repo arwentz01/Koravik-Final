@@ -23,7 +23,6 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
-
     steps:
       - uses: actions/checkout@v4
       - name: Set up PHP
@@ -54,11 +53,7 @@ jobs:
           curl --fail http://127.0.0.1:8080/health | grep '"build":"004"'
           curl -sS -c /tmp/cookies http://127.0.0.1:8080/login > /tmp/login.html
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/login.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies \
-            --data-urlencode "csrf=$CSRF" \
-            --data-urlencode 'email=owner@example.test' \
-            --data-urlencode 'password=Koravik8' \
-            http://127.0.0.1:8080/login > /tmp/hearth.html
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode 'email=owner@example.test' --data-urlencode 'password=Koravik8' http://127.0.0.1:8080/login > /tmp/hearth.html
           grep 'Life in view' /tmp/hearth.html
           grep 'Chronicle' /tmp/hearth.html
       - name: Verify meaningful recurring Quest
@@ -69,20 +64,13 @@ jobs:
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/create.html | head -1 | sed 's/.*value="//;s/"$//')
           START=$(date +%F)
           curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies \
-            --data-urlencode "csrf=$CSRF" \
-            --data-urlencode 'title=Practice a new clinical skill' \
+            --data-urlencode "csrf=$CSRF" --data-urlencode 'title=Practice a new clinical skill' \
             --data-urlencode 'description=Spend twenty focused minutes learning.' \
             --data-urlencode 'purpose=Become more capable without turning learning into a streak.' \
-            --data-urlencode 'quest_type=habit' \
-            --data-urlencode 'pillar_key=growth' \
-            --data-urlencode 'frequency=weekly' \
-            --data-urlencode 'interval_count=1' \
-            --data-urlencode "starts_on=$START" \
-            --data-urlencode 'weekdays[]=1' \
-            --data-urlencode 'weekdays[]=3' \
-            --data-urlencode 'weekdays[]=5' \
-            --data-urlencode 'timezone=America/New_York' \
-            http://127.0.0.1:8080/quests > /tmp/created.html
+            --data-urlencode 'quest_type=habit' --data-urlencode 'pillar_key=growth' \
+            --data-urlencode 'frequency=weekly' --data-urlencode 'interval_count=1' --data-urlencode "starts_on=$START" \
+            --data-urlencode 'weekdays[]=1' --data-urlencode 'weekdays[]=3' --data-urlencode 'weekdays[]=5' \
+            --data-urlencode 'timezone=America/New_York' http://127.0.0.1:8080/quests > /tmp/created.html
           grep 'Practice a new clinical skill' /tmp/created.html
           grep 'Why this matters' /tmp/created.html
           grep 'Growth' /tmp/created.html
@@ -95,30 +83,30 @@ jobs:
           test -n "$CREATED_PATH"
           curl -sS -b /tmp/cookies "http://127.0.0.1:8080$CREATED_PATH" > /tmp/quest.html
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/quest.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies \
-            --data-urlencode "csrf=$CSRF" \
-            "http://127.0.0.1:8080$CREATED_PATH/complete" > /tmp/reflection.html
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" "http://127.0.0.1:8080$CREATED_PATH/complete" > /tmp/reflection.html
           grep 'What should be remembered' /tmp/reflection.html
           grep 'Saving a personal reflection is optional and private' /tmp/reflection.html
           REFLECTION_ACTION=$(grep -o '/quests/[a-f0-9-]\{36\}/reflection/[a-f0-9-]\{36\}' /tmp/reflection.html | head -1)
           test -n "$REFLECTION_ACTION"
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/reflection.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies \
-            --data-urlencode "csrf=$CSRF" \
-            --data-urlencode 'reflection=I noticed that twenty focused minutes was enough to feel real progress.' \
-            --data-urlencode 'mood=proud' \
-            "http://127.0.0.1:8080$REFLECTION_ACTION" > /tmp/entry.html
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode 'reflection=I noticed that twenty focused minutes was enough to feel real progress.' --data-urlencode 'mood=proud' "http://127.0.0.1:8080$REFLECTION_ACTION" > /tmp/entry.html
           grep 'Reflection saved privately to Chronicle' /tmp/entry.html
           grep 'I noticed that twenty focused minutes' /tmp/entry.html
           grep 'Created from the completed Quest' /tmp/entry.html
           mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e 'SELECT COUNT(*) FROM chronicle_entries' | grep '^1$'
           mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e 'SELECT COUNT(*) FROM chronicle_source_references' | grep '^1$'
-      - name: Verify Hearth composition and event idempotency
+      - name: Verify Pillar Hearth composition
         run: |
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/hearth > /tmp/hearth-after.html
           grep 'One meaningful action' /tmp/hearth-after.html
-          grep 'The Caretaker noticed' /tmp/hearth-after.html
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM quest_occurrences qo JOIN quests q ON q.id=qo.quest_id WHERE q.pillar_key='growth' AND qo.status='completed'" | grep '^1$'
+      - name: Verify World reaction remains event-driven
+        run: |
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/world/reaction > /tmp/world.html
+          grep 'Why this happened' /tmp/world.html
+          php tools/worker.php 10 | grep '"processed": 0'
+      - name: Verify Chronicle composition
+        run: |
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/chronicle > /tmp/chronicle.html
           grep 'What you chose to remember' /tmp/chronicle.html
           grep 'Reflection: Practice a new clinical skill' /tmp/chronicle.html
-          php tools/worker.php 10 | grep '"processed": 0'
