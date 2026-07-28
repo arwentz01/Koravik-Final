@@ -20,11 +20,15 @@ final class QuestService
             'SELECT q.id, q.title, q.description, q.status,
                     CASE WHEN qc.id IS NULL THEN 0 ELSE 1 END AS completed
              FROM quests q
-             LEFT JOIN quest_completions qc ON qc.quest_id = q.id AND qc.account_id = :account_id
-             WHERE q.id = :quest_id AND q.account_id = :account_id
+             LEFT JOIN quest_completions qc ON qc.quest_id = q.id AND qc.account_id = :completion_account_id
+             WHERE q.id = :quest_id AND q.account_id = :quest_account_id
              LIMIT 1'
         );
-        $statement->execute(['quest_id' => $questId, 'account_id' => $accountId]);
+        $statement->execute([
+            'quest_id' => $questId,
+            'completion_account_id' => $accountId,
+            'quest_account_id' => $accountId,
+        ]);
         $quest = $statement->fetch();
         return $quest ?: null;
     }
@@ -35,11 +39,14 @@ final class QuestService
             'SELECT q.id, q.title, q.description,
                     CASE WHEN qc.id IS NULL THEN 0 ELSE 1 END AS completed
              FROM quests q
-             LEFT JOIN quest_completions qc ON qc.quest_id = q.id AND qc.account_id = :account_id
-             WHERE q.account_id = :account_id
+             LEFT JOIN quest_completions qc ON qc.quest_id = q.id AND qc.account_id = :completion_account_id
+             WHERE q.account_id = :quest_account_id
              ORDER BY q.created_at ASC'
         );
-        $statement->execute(['account_id' => $accountId]);
+        $statement->execute([
+            'completion_account_id' => $accountId,
+            'quest_account_id' => $accountId,
+        ]);
         return $statement->fetchAll();
     }
 
