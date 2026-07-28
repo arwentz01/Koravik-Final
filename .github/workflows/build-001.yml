@@ -65,13 +65,13 @@ jobs:
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/hearth > /tmp/custom-hearth.html
           grep 'What matters now' /tmp/custom-hearth.html
           grep 'Continue with the Caretaker' /tmp/custom-hearth.html
-          ! grep 'Open Chronicle' /tmp/custom-hearth.html
+          ! grep 'Your story will gather here' /tmp/custom-hearth.html
       - name: Restore defaults and preserve platform flows
         run: |
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/saved.html | head -1 | sed 's/.*value="//;s/"$//')
           curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" http://127.0.0.1:8080/hearth/customize/reset > /tmp/reset.html
           grep 'Hearth layout restored to defaults' /tmp/reset.html
-          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/hearth | grep 'Open Chronicle'
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/hearth | grep 'Your story will gather here'
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/settings | grep 'How should Koravik work for you'
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/privacy | grep 'What may Koravik use'
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/search | grep 'Find what you are looking for'
