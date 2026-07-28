@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Build 007 complete and merged  
-**Version:** 1.7  
+**Status:** Build 008 complete and merged  
+**Version:** 1.8  
 **Baseline date:** July 28, 2026  
 **Authoritative branch:** `main`
 
@@ -84,6 +84,25 @@ Delivered:
 - successful browser, MySQL, permission-enforcement, retention, and structured-Quest regression validation.
 
 **Checkpoint:** `5177ce80c454f441916d925b55416b946ee08391`
+
+### Build 008 — Return, resume, and Quest triage
+
+A Player returning after a meaningful absence receives a calm, bounded welcome-back summary and can decide what still matters without being presented with an overdue backlog or punishment mechanics.
+
+Delivered:
+
+- durable account visit and return state;
+- seven-day meaningful-absence detection;
+- stale, still-relevant, upcoming, completed, and archived groupings;
+- resume, skip, dismiss, and reschedule decisions for individual Quest occurrences;
+- preserved recurrence rules when one occurrence is skipped or dismissed;
+- minimized occurrence lifecycle events and `Platform.PlayerReturned.v1`;
+- audit history for return and triage decisions;
+- revocable Epic Ordinary return acknowledgement without Quest details;
+- restored and regression-tested Build 007 World catalog routing;
+- successful browser, MySQL, World, structured-Quest, and idempotent worker validation.
+
+**Checkpoint:** `a730fc40ee5e57b19303fc66b5f692ff45e1681c`
 
 ## Build workflow
 
