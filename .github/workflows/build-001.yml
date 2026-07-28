@@ -37,10 +37,12 @@ jobs:
           echo 'SEED_EMAIL=owner@example.test' >> .env
           echo 'SEED_PASSWORD=Koravik8' >> .env
           echo 'SEED_DISPLAY_NAME=Builder' >> .env
-      - name: Migrate and seed
+      - name: Migrate database
+        run: php tools/migrate.php
+      - name: Seed first Player
+        run: php tools/seed.php
+      - name: Verify migration and World initialization
         run: |
-          php tools/migrate.php
-          php tools/seed.php
           php tools/migrate.php | grep 'Already applied: 004_epic_ordinary_continuation'
           mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT current_chapter FROM world_narrative_progress" | grep '^the-first-light$'
       - name: Start application and sign in
