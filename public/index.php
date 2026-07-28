@@ -19,9 +19,10 @@ use Koravik\Platform\Settings\SettingsController;
 use Koravik\Platform\UI\AppShell;
 use Koravik\Platform\UI\GuideController;
 use Koravik\Platform\UI\VisualSystem;
+use Koravik\Worlds\EpicOrdinary\ChapterTwoController;
 
 $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');$path=parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/';
-if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'022'],JSON_THROW_ON_ERROR);return;}
+if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'023'],JSON_THROW_ON_ERROR);return;}
 Security::startSession();ob_start();
 $handled=(new GuideController())->handle($method,$path);
 if(!$handled)$handled=(new AuthRecoveryController(database()))->handle($method,$path);
@@ -36,6 +37,7 @@ if(!$handled)$handled=(new PrivacyController(database()))->handle($method,$path)
 if(!$handled)$handled=(new SearchController(database()))->handle($method,$path);
 if(!$handled)$handled=(new NotificationController(database()))->handle($method,$path);
 if(!$handled)$handled=(new Koravik\Platform\ReturnExperience\ReturnController(database()))->handle();
+if(!$handled)$handled=(new ChapterTwoController())->handle($method,$path);
 if(!$handled)$handled=(new Koravik\Worlds\WorldController())->handle($method,$path);
 if(!$handled)(new Koravik\Application())->run();
 $html=(string)ob_get_clean();$account=Security::account();
