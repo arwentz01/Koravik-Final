@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Build 023 complete and merged  
-**Version:** 1.23  
+**Status:** Build 025 complete and merged  
+**Version:** 1.25  
 **Baseline date:** July 28, 2026  
 **Authoritative branch:** `main`
 
@@ -22,6 +22,8 @@ Focused contracts now include:
 - `docs/product/VISUAL_INFORMATION_ARCHITECTURE.md`;
 - `docs/product/ROUTE_VISUAL_INVENTORY.md`;
 - `docs/product/EPIC_ORDINARY_CHAPTER_TWO.md`;
+- `docs/product/WORLD_PROGRESS_AND_REACTIONS.md`;
+- `docs/product/INSTALLED_WORLD_LIFECYCLE.md`;
 - `docs/engineering/COMPANION_EXECUTION.md`;
 - `docs/engineering/COMPANION_LIFECYCLE.md`;
 - `docs/engineering/ACCOUNT_DATA_LIFECYCLE.md`;
@@ -37,10 +39,9 @@ Koravik-Final is a PHP 8.3+ custom modular monolith using MySQL or MariaDB throu
 - Districts own real-life truth.
 - Hearth composes but does not own source records.
 - Worlds interpret approved minimized facts into independent World State.
-- World objectives, choices, keepsakes, and relationship state remain fictional and do not mutate District truth.
+- World objectives, choices, keepsakes, relationships, reactions, and lifecycle history remain fictional and account-scoped.
+- World lifecycle operations affect only the selected installation and never mutate District truth, another World, or shared catalog/package definitions.
 - Companion owns proposals and approved Companion memory, not destination records.
-- Companion context requires explicit permission and selection.
-- Approved proposals execute only through destination-module revalidation.
 - Chronicle owns saved personal and approved reflections.
 - Search and Notifications are non-owning utilities.
 - Account export and closure coordinate owner-specific handlers.
@@ -91,38 +92,48 @@ One shared authenticated shell; stable primary places; distinct utilities; accou
 
 ### Build 022 — Visual system consolidation and route-state audit
 
-Delivered:
-
-- shared post-render visual-system normalization;
-- dark appearance, reduced-motion, and increased-contrast enforcement from saved settings;
-- contextual location navigation;
-- shared page-header, surface, editor, state-panel, metadata, provenance, and trust-panel vocabulary;
-- approved route visual inventory and template families;
-- visual-system engineering contract;
-- migration, syntax, preference-rendering, and documentation-contract validation.
+Shared visual-system normalization; saved appearance, reduced-motion, and increased-contrast enforcement; contextual location navigation; shared template vocabulary; route visual inventory; and validation.
 
 **Checkpoint:** `298ab019944d65f148d70d948f22159a0192afb8`
 
 ### Build 023 — Epic Ordinary Chapter Two and World experience home
 
-Delivered:
-
-- `/worlds/epic-ordinary/play` World home;
-- current chapter, scene, objective, support style, relationship state, permission status, recent explained reaction, and fictional keepsakes;
-- Chapter Two, **The Eastern Room**;
-- explicit chapter transition and refuge choice;
-- World-owned objective and keepsake tables;
-- transactional objective completion, scene advancement, choice, keepsake, and relationship provenance;
-- idempotent repeated begin and choice submissions;
-- no inactivity trust loss or punishment language;
-- CI proof that Chapter Two does not create or mutate real-life Quests;
-- product, runtime, route, migration, syntax, and MySQL validation.
+`/worlds/epic-ordinary/play`, Chapter Two **The Eastern Room**, World-owned objectives and keepsakes, transactional narrative progression, idempotent choices, and proof that fictional progress does not mutate real-life Quests.
 
 **Checkpoint:** `381959e1c4536b6ae8236448a6f9f89b0682377c`
 
+### Build 024 — World progress, reactions, and story history
+
+Delivered:
+
+- `/worlds/epic-ordinary/progress`;
+- account-scoped chapter, scene, objective, choice, relationship, keepsake, reaction, permission, and package presentation;
+- `/worlds/epic-ordinary/reactions/{id}` explainability;
+- minimized fact, rule, interpretation-time, and deliberate-exclusion fields;
+- durable readable World story history;
+- cross-account failure and private-data exclusion validation.
+
+**Checkpoint:** `be8bec7ac12126c944222c806a8c0ca0e283de37`
+
+### Build 025 — Installed Worlds and safe lifecycle controls
+
+Delivered:
+
+- `/worlds/installed` and `/worlds/{world-key}/manage`;
+- activate/resume while preserving other Worlds;
+- suspend while retaining state;
+- uninstall with retained recoverable state;
+- exact-confirmation restart scoped to one World;
+- exact-confirmation deletion of eligible account-specific World State;
+- installed and available package-version foundation;
+- durable lifecycle revisions and consequence history;
+- proof that repeated operations are safe and real-life Quest records remain unchanged.
+
+**Checkpoint:** `afff879f6abe52a795392aa70c61f7c2098fd717`
+
 ## Current database migrations
 
-Production deployments through Build 023 must apply all migrations, including:
+Production deployments through Build 025 must apply all migrations, including:
 
 ```text
 011_companion_proposals
@@ -133,6 +144,8 @@ Production deployments through Build 023 must apply all migrations, including:
 016_data_export_account_closure
 017_auth_recovery
 018_epic_ordinary_chapter_two
+019_world_progress_reactions
+020_world_lifecycle
 ```
 
 Run:
@@ -149,14 +162,7 @@ php tools/process_account_closures.php 5
 
 ## Visual-home rule
 
-Every new capability must identify its visual home before implementation. It must be classified as one of:
-
-1. a primary owner destination;
-2. a non-owning utility;
-3. an account or trust control; or
-4. contextual content linking to its owner.
-
-Hearth may preview and orient, but it may not become an infinite dashboard or duplicate full source lifecycle controls.
+Every new capability must identify its visual home before implementation. Hearth may preview and orient, but it may not duplicate full source lifecycle controls.
 
 ## Explicit current boundaries
 
@@ -167,11 +173,11 @@ Hearth may preview and orient, but it may not become an infinite dashboard or du
 - Household, Organization, messaging, email sending, and other collaborative domains remain deferred.
 - Provider-specific authentication email delivery remains an adapter concern.
 - Passkeys, social login, and multifactor authentication remain deferred.
-- Export files expire and exclude authentication secrets.
-- Account closure uses a cancellation window and owner-specific processing.
 - Epic Ordinary receives only currently permitted minimized facts.
-- Epic Ordinary does not read Quest notes, Chronicle prose, Companion memory, or unrelated private records.
+- World reactions do not expose Quest notes, Chronicle prose, Companion memory, account secrets, or unrelated private records.
 - Fictional World objectives never become duplicate real-life Quests.
+- Restart and deletion affect only the selected account-specific World State.
+- Shared World catalog and package definitions are never deleted through player lifecycle controls.
 
 ## Build workflow
 
