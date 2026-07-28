@@ -1,9 +1,9 @@
-name: Build 007
+name: Build 008
 
 on:
   pull_request:
   push:
-    branches: [main, build/007-world-catalog-permissions]
+    branches: [main, build/008-return-resume-triage]
 
 jobs:
   verify:
@@ -41,64 +41,46 @@ jobs:
         run: |
           php tools/migrate.php
           php tools/seed.php
-          php tools/migrate.php | grep 'Already applied: 006_world_catalog_permissions'
+          php tools/migrate.php | grep 'Already applied: 007_return_resume_triage'
       - name: Start application and sign in
         run: |
           php -S 127.0.0.1:8080 -t public public/index.php > /tmp/koravik-server.log 2>&1 &
           sleep 2
-          curl --fail http://127.0.0.1:8080/health | grep '"build":"006"'
+          curl --fail http://127.0.0.1:8080/health | grep '"build":"008"'
           curl -sS -c /tmp/cookies http://127.0.0.1:8080/login > /tmp/login.html
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/login.html | head -1 | sed 's/.*value="//;s/"$//')
           curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode 'email=owner@example.test' --data-urlencode 'password=Koravik8' http://127.0.0.1:8080/login > /tmp/hearth.html
-          grep 'Worlds' /tmp/hearth.html
-      - name: Verify World catalog and informed detail
+          grep 'What matters now' /tmp/hearth.html
+      - name: Preserve Build 007 World catalog
         run: |
           curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/worlds > /tmp/worlds.html
           grep 'Stories that respond with permission' /tmp/worlds.html
-          grep 'Epic Ordinary' /tmp/worlds.html
-          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/worlds/epic-ordinary > /tmp/world.html
-          grep 'Content notice' /tmp/world.html
-          grep 'Accessibility' /tmp/world.html
-          grep 'Quest occurrence completed' /tmp/world.html
-          grep 'Granted' /tmp/world.html
-      - name: Revoke permission and suppress World reaction
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/worlds/epic-ordinary | grep 'Quest occurrence completed'
+      - name: Simulate extended absence and stale occurrences
         run: |
-          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/world.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" http://127.0.0.1:8080/worlds/epic-ordinary/permissions/quest-completed/revoke > /tmp/revoked.html
-          grep 'Quest completion access revoked' /tmp/revoked.html
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT granted FROM world_fact_permissions p JOIN world_installations i ON i.id=p.installation_id WHERE i.world_key='epic-ordinary' AND p.fact_key='quest.completed'" | grep '^0$'
-          BEFORE=$(mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_reactions")
-          EVENT_ID='70000000-0000-4000-8000-000000000001'
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "INSERT INTO platform_outbox (id,event_name,event_version,account_id,payload_json,status,attempts,available_at,occurred_at,created_at) VALUES ('$EVENT_ID','Quests.QuestCompleted',1,'00000000-0000-4000-8000-000000000001',JSON_OBJECT('quest_id','00000000-0000-4000-8000-000000000101','occurrence_id','00000000-0000-4000-8000-000000000102','scheduled_date',CURRENT_DATE(),'recurring',false,'title','Permission test','quest_type','action'),'pending',0,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())"
-          php tools/worker.php 10 | grep '"failed": 0'
-          AFTER=$(mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_reactions")
-          test "$BEFORE" = "$AFTER"
-      - name: Grant permission and resume reactions
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "UPDATE account_activity SET last_seen_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 12 DAY),return_pending=0"
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "UPDATE quest_occurrences SET scheduled_for=DATE_SUB(CURRENT_DATE(),INTERVAL 10 DAY),status='available' WHERE id='00000000-0000-4000-8000-000000000102'"
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies http://127.0.0.1:8080/hearth > /tmp/return.html
+          grep 'A few things changed while you were away' /tmp/return.html
+          grep 'Does this still matter' /tmp/return.html
+          grep 'Nothing here is a failure' /tmp/return.html
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM platform_outbox WHERE event_name='Platform.PlayerReturned'" | grep '^1$'
+      - name: Skip stale occurrence without changing recurrence
         run: |
-          curl -sS -b /tmp/cookies http://127.0.0.1:8080/worlds/epic-ordinary > /tmp/world-revoked.html
-          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/world-revoked.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" http://127.0.0.1:8080/worlds/epic-ordinary/permissions/quest-completed/grant > /tmp/granted.html
-          grep 'Quest completion access granted' /tmp/granted.html
-          EVENT_ID='70000000-0000-4000-8000-000000000002'
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "INSERT INTO platform_outbox (id,event_name,event_version,account_id,payload_json,status,attempts,available_at,occurred_at,created_at) VALUES ('$EVENT_ID','Quests.QuestCompleted',1,'00000000-0000-4000-8000-000000000001',JSON_OBJECT('quest_id','00000000-0000-4000-8000-000000000101','occurrence_id','00000000-0000-4000-8000-000000000102','scheduled_date',CURRENT_DATE(),'recurring',false,'title','Permission restored','quest_type','action'),'pending',0,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())"
-          php tools/worker.php 10 | grep '"failed": 0'
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_reactions WHERE source_event_id='$EVENT_ID'" | grep '^1$'
-      - name: Verify suspend resume and retained state
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/return.html | head -1 | sed 's/.*value="//;s/"$//')
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" http://127.0.0.1:8080/return/occurrences/00000000-0000-4000-8000-000000000102/skip > /tmp/after-skip.html
+          grep 'That intention has been updated' /tmp/after-skip.html
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT status FROM quest_occurrences WHERE id='00000000-0000-4000-8000-000000000102'" | grep '^skipped$'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM quest_recurrence_rules" | grep -E '^[0-9]+$'
+      - name: Process return reaction and continue
         run: |
-          STATE_BEFORE=$(mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_state")
-          curl -sS -b /tmp/cookies http://127.0.0.1:8080/worlds/epic-ordinary > /tmp/world-active.html
-          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/world-active.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" http://127.0.0.1:8080/worlds/epic-ordinary/suspend > /tmp/suspended.html
-          grep 'World suspended' /tmp/suspended.html
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT status FROM world_installations WHERE world_key='epic-ordinary'" | grep '^suspended$'
-          STATE_AFTER=$(mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_state")
-          test "$STATE_BEFORE" = "$STATE_AFTER"
-          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/suspended.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" http://127.0.0.1:8080/worlds/epic-ordinary/resume > /tmp/resumed.html
-          grep 'World resumed' /tmp/resumed.html
+          php tools/worker.php 20 | grep '"failed": 0'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_reactions WHERE title='The light was left on'" | grep '^1$'
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/after-skip.html | head -1 | sed 's/.*value="//;s/"$//')
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" http://127.0.0.1:8080/return/continue > /tmp/hearth-returned.html
+          grep 'What matters now' /tmp/hearth-returned.html
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT return_pending FROM account_activity" | grep '^0$'
       - name: Preserve structured Quest regression
         run: |
-          curl -sS -b /tmp/cookies http://127.0.0.1:8080/quests/create > /tmp/create.html
-          grep 'Journey' /tmp/create.html
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM quest_milestones" | grep -E '^[0-9]+$'
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/quests/create | grep 'Journey'
           php tools/worker.php 10 | grep '"processed": 0'
