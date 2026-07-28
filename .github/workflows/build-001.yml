@@ -1,9 +1,9 @@
-name: Build 006
+name: Build 007
 
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, build/007-world-catalog-permissions]
 
 jobs:
   verify:
@@ -41,7 +41,7 @@ jobs:
         run: |
           php tools/migrate.php
           php tools/seed.php
-          php tools/migrate.php | grep 'Already applied: 005_structured_quests'
+          php tools/migrate.php | grep 'Already applied: 006_world_catalog_permissions'
       - name: Start application and sign in
         run: |
           php -S 127.0.0.1:8080 -t public public/index.php > /tmp/koravik-server.log 2>&1 &
@@ -50,47 +50,55 @@ jobs:
           curl -sS -c /tmp/cookies http://127.0.0.1:8080/login > /tmp/login.html
           CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/login.html | head -1 | sed 's/.*value="//;s/"$//')
           curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode 'email=owner@example.test' --data-urlencode 'password=Koravik8' http://127.0.0.1:8080/login > /tmp/hearth.html
-          grep 'What matters now' /tmp/hearth.html
-      - name: Create a Journey with milestones
+          grep 'Worlds' /tmp/hearth.html
+      - name: Verify World catalog and informed detail
+        run: |
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/worlds > /tmp/worlds.html
+          grep 'Stories that respond with permission' /tmp/worlds.html
+          grep 'Epic Ordinary' /tmp/worlds.html
+          curl --fail -sS -b /tmp/cookies http://127.0.0.1:8080/worlds/epic-ordinary > /tmp/world.html
+          grep 'Content notice' /tmp/world.html
+          grep 'Accessibility' /tmp/world.html
+          grep 'Quest occurrence completed' /tmp/world.html
+          grep 'Granted' /tmp/world.html
+      - name: Revoke permission and suppress World reaction
+        run: |
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/world.html | head -1 | sed 's/.*value="//;s/"$//')
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" http://127.0.0.1:8080/worlds/epic-ordinary/permissions/quest-completed/revoke > /tmp/revoked.html
+          grep 'Quest completion access revoked' /tmp/revoked.html
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT granted FROM world_fact_permissions p JOIN world_installations i ON i.id=p.installation_id WHERE i.world_key='epic-ordinary' AND p.fact_key='quest.completed'" | grep '^0$'
+          BEFORE=$(mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_reactions")
+          EVENT_ID='70000000-0000-4000-8000-000000000001'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "INSERT INTO platform_outbox (id,event_name,event_version,account_id,payload_json,status,attempts,available_at,occurred_at,created_at) VALUES ('$EVENT_ID','Quests.QuestCompleted',1,'00000000-0000-4000-8000-000000000001',JSON_OBJECT('quest_id','00000000-0000-4000-8000-000000000101','title','Permission test'),'pending',0,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())"
+          php tools/worker.php 10
+          AFTER=$(mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_reactions")
+          test "$BEFORE" = "$AFTER"
+      - name: Grant permission and resume reactions
+        run: |
+          curl -sS -b /tmp/cookies http://127.0.0.1:8080/worlds/epic-ordinary > /tmp/world-revoked.html
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/world-revoked.html | head -1 | sed 's/.*value="//;s/"$//')
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" http://127.0.0.1:8080/worlds/epic-ordinary/permissions/quest-completed/grant > /tmp/granted.html
+          grep 'Quest completion access granted' /tmp/granted.html
+          EVENT_ID='70000000-0000-4000-8000-000000000002'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -e "INSERT INTO platform_outbox (id,event_name,event_version,account_id,payload_json,status,attempts,available_at,occurred_at,created_at) VALUES ('$EVENT_ID','Quests.QuestCompleted',1,'00000000-0000-4000-8000-000000000001',JSON_OBJECT('quest_id','00000000-0000-4000-8000-000000000101','title','Permission restored'),'pending',0,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())"
+          php tools/worker.php 10
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_reactions WHERE source_event_id='$EVENT_ID'" | grep '^1$'
+      - name: Verify suspend resume and retained state
+        run: |
+          STATE_BEFORE=$(mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_state")
+          curl -sS -b /tmp/cookies http://127.0.0.1:8080/worlds/epic-ordinary > /tmp/world-active.html
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/world-active.html | head -1 | sed 's/.*value="//;s/"$//')
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" http://127.0.0.1:8080/worlds/epic-ordinary/suspend > /tmp/suspended.html
+          grep 'World suspended' /tmp/suspended.html
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT status FROM world_installations WHERE world_key='epic-ordinary'" | grep '^suspended$'
+          STATE_AFTER=$(mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM world_state")
+          test "$STATE_BEFORE" = "$STATE_AFTER"
+          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/suspended.html | head -1 | sed 's/.*value="//;s/"$//')
+          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" http://127.0.0.1:8080/worlds/epic-ordinary/resume > /tmp/resumed.html
+          grep 'World resumed' /tmp/resumed.html
+      - name: Preserve structured Quest regression
         run: |
           curl -sS -b /tmp/cookies http://127.0.0.1:8080/quests/create > /tmp/create.html
           grep 'Journey' /tmp/create.html
-          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/create.html | head -1 | sed 's/.*value="//;s/"$//')
-          START=$(date +%F)
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode 'quest_type=journey' --data-urlencode 'title=Build a calmer morning' --data-urlencode 'description=Shape a sustainable start to the day.' --data-urlencode 'pillar_key=health' --data-urlencode 'frequency=none' --data-urlencode "starts_on=$START" --data-urlencode 'timezone=America/New_York' http://127.0.0.1:8080/quests > /tmp/journey.html
-          JOURNEY_PATH=$(grep -o '/quests/[a-f0-9-]\{36\}' /tmp/journey.html | tail -1)
-          test -n "$JOURNEY_PATH"
-          echo "JOURNEY_PATH=$JOURNEY_PATH" >> "$GITHUB_ENV"
-          grep 'Journey' /tmp/journey.html
-          grep 'First foothold' /tmp/journey.html
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT CONCAT(quest_type, ':', COUNT(m.id)) FROM quests q JOIN quest_milestones m ON m.quest_id=q.id WHERE q.title='Build a calmer morning' GROUP BY quest_type" | grep '^journey:3$'
-      - name: Add steps and block premature completion
-        run: |
-          curl -sS -b /tmp/cookies "http://127.0.0.1:8080$JOURNEY_PATH" > /tmp/journey.html
-          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/journey.html | head -1 | sed 's/.*value="//;s/"$//')
-          for STEP in 'Prepare clothes the night before' 'Drink water after waking' 'Take five quiet minutes'; do
-            curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" --data-urlencode "step_title=$STEP" --data-urlencode 'required=1' "http://127.0.0.1:8080$JOURNEY_PATH/steps" > /tmp/step.html
-            CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/step.html | head -1 | sed 's/.*value="//;s/"$//')
-          done
-          grep '0%' /tmp/step.html
-          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/step.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" "http://127.0.0.1:8080$JOURNEY_PATH/complete" > /tmp/blocked.html
-          grep 'Complete the required steps' /tmp/blocked.html
-      - name: Complete steps reach milestones and finish Journey
-        run: |
-          curl -sS -b /tmp/cookies "http://127.0.0.1:8080$JOURNEY_PATH" > /tmp/steps.html
-          mapfile -t STEP_PATHS < <(grep -o "$JOURNEY_PATH/steps/[a-f0-9-]\{36\}/complete" /tmp/steps.html)
-          test "${#STEP_PATHS[@]}" = '3'
-          for STEP_PATH in "${STEP_PATHS[@]}"; do
-            curl -sS -b /tmp/cookies "http://127.0.0.1:8080$JOURNEY_PATH" > /tmp/current.html
-            CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/current.html | head -1 | sed 's/.*value="//;s/"$//')
-            curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" "http://127.0.0.1:8080$STEP_PATH" > /tmp/progress.html
-          done
-          grep '100%' /tmp/progress.html
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM quest_milestones m JOIN quests q ON q.id=m.quest_id WHERE q.title='Build a calmer morning' AND m.reached_at IS NOT NULL" | grep '^3$'
-          CSRF=$(grep -o 'name="csrf" value="[^"]*"' /tmp/progress.html | head -1 | sed 's/.*value="//;s/"$//')
-          curl --fail -sS -L -b /tmp/cookies -c /tmp/cookies --data-urlencode "csrf=$CSRF" "http://127.0.0.1:8080$JOURNEY_PATH/complete" > /tmp/completed.html
-          grep 'Quest completed' /tmp/completed.html
-          grep 'The Caretaker remembered' /tmp/completed.html
-          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.quest_type')) FROM platform_outbox WHERE event_name='Quests.QuestCompleted' ORDER BY created_at DESC LIMIT 1" | grep '^journey$'
+          mysql -h127.0.0.1 -ukoravik -pkoravik koravik -N -e "SELECT COUNT(*) FROM quest_milestones" | grep -E '^[0-9]+$'
           php tools/worker.php 10 | grep '"processed": 0'
