@@ -1,0 +1,11 @@
+/.env
+/.env.*
+!/\.env.example
+/vendor/
+/node_modules/
+/storage/cache/
+/storage/logs/
+/storage/sessions/
+*.log
+.DS_Store
+Thumbs.db
