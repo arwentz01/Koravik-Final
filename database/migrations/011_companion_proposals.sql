@@ -1,0 +1,22 @@
+CREATE TABLE companion_proposals (
+  id CHAR(36) PRIMARY KEY,
+  account_id CHAR(36) NOT NULL,
+  proposal_type VARCHAR(50) NOT NULL,
+  status VARCHAR(30) NOT NULL DEFAULT 'awaiting_approval',
+  version INT NOT NULL DEFAULT 1,
+  request_text TEXT NOT NULL,
+  title VARCHAR(180) NOT NULL,
+  proposed_payload_json JSON NOT NULL,
+  reasoning TEXT NOT NULL,
+  source_context TEXT NOT NULL,
+  owning_module VARCHAR(80) NOT NULL,
+  consequence TEXT NOT NULL,
+  approved_version INT NULL,
+  approved_at DATETIME NULL,
+  dismissed_at DATETIME NULL,
+  expires_at DATETIME NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  INDEX idx_companion_account_status (account_id,status,created_at),
+  CONSTRAINT fk_companion_account FOREIGN KEY (account_id) REFERENCES platform_accounts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
