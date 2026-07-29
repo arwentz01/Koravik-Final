@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Build 052 implemented on `main`  
-**Version:** 1.52  
+**Status:** Builds 053–057 implemented on `main`  
+**Version:** 1.57  
 **Baseline date:** July 29, 2026  
 **Authoritative branch:** `main`
 
@@ -9,9 +9,7 @@
 
 This handoff applies only to `arwentz01/Koravik-Final`. Do not import code, schemas, routes, build numbers, deployment assumptions, or framework conventions from earlier Koravik repositories or unrelated projects.
 
-## Mandatory reading order
-
-Before implementation, read `README.md`, `docs/README.md`, `docs/FOUNDATIONAL_DECISIONS.md`, all canonical documents, affected Product and Engineering Blueprint contracts, the ADR register, and this handoff. The documentation authority order in `docs/README.md` controls conflicts. Focused ownership authority includes `docs/canonical/PLATFORM_CAPABILITY_MAP.md`.
+Before implementation, read `README.md`, `docs/README.md`, `docs/FOUNDATIONAL_DECISIONS.md`, all canonical documents, affected Product and Engineering Blueprint contracts, the ADR register, and this handoff. The documentation authority order in `docs/README.md` controls conflicts.
 
 ## Architecture baseline
 
@@ -19,9 +17,8 @@ Koravik-Final is a PHP 8.3+ custom modular monolith using MySQL or MariaDB throu
 
 - Districts own real-life truth.
 - Hearth composes but does not own source records.
-- Beacon owns short links, QR definitions, public pages, link hubs, digital cards, Wi-Fi cards, and privacy-aware distribution data.
-- Gather owns events, schedules, RSVP, guest parties, signup slots, volunteer shifts, potluck and requested-item commitments, waitlists, attendance, communications, and follow-up.
-- A cohesive workflow may cross Beacon and Gather without exposing technical seams.
+- Beacon owns domains, short links, QR definitions, public pages, link hubs, digital cards, Wi-Fi cards, and privacy-aware distribution data.
+- Gather owns events, agendas, RSVP, guest parties, signup slots, volunteer shifts, potluck and requested-item commitments, waitlists, attendance, reminders, communications, closeout, and event-outcome proposals.
 - Worlds interpret approved minimized facts into independent fictional World State.
 - Companion owns proposals and approved Companion memory, not destination records.
 - Chronicle owns saved personal and approved reflections.
@@ -38,29 +35,29 @@ Platform identity, Hearth, Quests, Chronicle, Companion, Notifications, Search, 
 
 ### Builds 036–041 — Beacon and Gather foundation
 
-Beacon sharing capabilities, Gather events, guest registration, party capacity, secure RSVP management, event and signup waitlists, and planning signups. See:
-
-- `docs/builds/BUILD_036_040_BEACON_GATHER.md`
-- `docs/builds/BUILD_041_GATHER_GUEST_REGISTRATION.md`
+Beacon sharing capabilities, Gather events, guest registration, party capacity, secure RSVP management, event and signup waitlists, and planning signups.
 
 ### Builds 042–046 — Gather operational core
 
-Authenticated SMTP, Platform Mail queue and finite worker, restricted-event access grants, guest RSVP self-service, event and signup waitlist workflows, promotion offers, and signup rules. See `docs/builds/BUILD_042_046_GATHER_OPERATIONAL_CORE.md`.
+Authenticated SMTP, Platform Mail queue and finite worker, restricted-event access grants, guest RSVP self-service, event and signup waitlist workflows, promotion offers, and signup rules.
 
 ### Builds 047–051 — Gather event operations
 
-Organizer command center, event settings, attendance summaries, party-aware check-in and correction history, durable announcements, targeted audiences, and event-linked mail delivery visibility. The original fast implementation was reconciled through a dedicated stabilization pass. See:
-
-- `docs/builds/BUILD_047_051_GATHER_EVENT_OPERATIONS.md`
-- `docs/builds/BUILD_051_STABILIZATION.md`
+Organizer command center, event settings, attendance summaries, party-aware check-in and correction history, durable announcements, targeted audiences, and event-linked mail delivery visibility.
 
 ### Build 052 — Platform Mail operations
 
-Owner/Admin mail operations home, queue-health metrics, delivery details, retry, cancellation, resend lineage, test delivery, stale-processing recovery, and redacted diagnostics. See `docs/builds/BUILD_052_PLATFORM_MAIL_OPERATIONS.md`.
+Owner/Admin mail operations home, queue-health metrics, delivery details, retry, cancellation, resend lineage, test delivery, stale-processing recovery, and redacted diagnostics.
 
-## Current product loop
+### Builds 053–057 — Gather lifecycle and Beacon domains
 
-`Create a Gather event → Gather provisions Beacon sharing tools → guests register or join a waitlist → participants claim shifts, potluck needs, items, and tasks → organizers configure access and capacity → organizers communicate with bounded audiences → staff check in attending parties → Platform Mail provides authorized delivery operations → approved outcomes may later connect to Quests, Chronicle, Journey, or Worlds through their existing consent and ownership boundaries.`
+- Build 053: host-aware Beacon domains, `krvk.nl` default links, root redirect to `koravik.com`, public agenda presentation, and domain-neutral link identity.
+- Build 054: attendee search, walk-in registration, and mobile-oriented day-of operations.
+- Build 055: personal agenda favorites, explicit reminders, and a finite reminder worker.
+- Build 056: completed/cancelled/archived event closeout with preserved operational history.
+- Build 057: consent-gated outcome proposals for Chronicle, Quests, Journey, and minimized World facts.
+
+See `docs/builds/BUILD_053_057_GATHER_LIFECYCLE.md`.
 
 ## Current migrations
 
@@ -72,6 +69,7 @@ Production deployment must apply every file in `database/migrations`, including:
 027_031_gather_delivery_access_management_waitlists_rules.sql
 032_036_gather_operational_ui_checkin_communications.sql
 037_platform_mail_operations.sql
+038_042_gather_lifecycle_beacon_domains.sql
 ```
 
 Run:
@@ -80,61 +78,72 @@ Run:
 php tools/migrate.php
 ```
 
-## Current Gather routes
+## Background workers
 
-- `GET /gather`
-- `POST /gather/events`
-- `GET /gather/events/{id}`
-- `GET /gather/events/{id}/command`
-- `POST /gather/events/{id}/settings`
-- `POST /gather/events/{id}/guest-rsvp`
-- `POST /gather/events/{id}/slots`
-- `POST /gather/events/{id}/check-in`
-- `POST /gather/events/{id}/check-in/correct`
-- `POST /gather/events/{id}/announce`
-- `POST /gather/rsvp/lookup`
-- `GET|POST /gather/rsvp/manage/{token}`
-- `POST /gather/slots/{id}/claim`
-
-## Platform Mail operations
-
-Configure authenticated SMTP with environment variables documented in `docs/builds/BUILD_042_046_GATHER_OPERATIONAL_CORE.md`. Run the finite queue worker through cron, for example:
+Platform Mail:
 
 ```bash
 php tools/mail-worker.php 20
 ```
 
-Owner and Admin accounts may open `/system/mail` to inspect queue health, queue a test delivery, recover stale processing claims, and perform bounded retry, cancellation, or resend operations. A queued message is not represented as sent until the SMTP adapter succeeds and the delivery record is updated.
+Gather agenda reminders:
+
+```bash
+php tools/gather-reminder-worker.php 100
+```
+
+Both workers are finite and cron compatible.
+
+## Beacon domain rules
+
+- `krvk.nl` is the default verified platform short-link domain.
+- `https://krvk.nl/` permanently redirects to `https://koravik.com/`.
+- `https://krvk.nl/{slug}` resolves through Beacon.
+- Beacon records retain stable UUID identity independent of hostname.
+- Future organization domains must be verified before activation.
+- Removing or suspending a custom domain must not destroy the underlying Beacon record or its platform fallback.
+- Deployment must route both `koravik.com` and `krvk.nl` to the application while preserving the incoming `Host` header and TLS.
+
+## Current Gather lifecycle routes
+
+- `GET|POST /gather/events/{id}/agenda`
+- `POST /gather/agenda/{id}/favorite`
+- `GET /gather/events/{id}/day-of`
+- `POST /gather/events/{id}/walk-ins`
+- `GET|POST /gather/events/{id}/closeout`
+- `GET /gather/events/{id}/reflect`
+- `POST /gather/events/{id}/outcomes`
+- `GET /gather/outcomes/{id}/review`
+- `POST /gather/outcomes/{id}/approve`
 
 ## Explicit current boundaries
 
 - Beacon does not own events, RSVP, signup, attendance, schedules, or event lifecycle.
-- Gather does not own general redirects, QR definitions, digital business cards, Wi-Fi cards, or link hubs.
+- Gather does not own domain verification, general redirects, QR definitions, digital business cards, Wi-Fi cards, or link hubs.
 - Restricted Gather events may not become public through Beacon.
 - Guest registration does not create a Koravik account.
-- Management-token hashes are stored; raw tokens are not persisted.
-- Organizer communications are bounded by event ownership and explicit audience selection.
-- Check-in correction preserves operational provenance instead of deleting evidence.
-- Platform Mail cancellation and resend preserve delivery history and lineage.
-- Platform Mail operations are restricted to authenticated Owner and Admin roles.
-- Dedicated attendee search, walk-ins, kiosk mode, and camera-based QR scanning remain Build 054 work.
-- Public event redesign, schedules, agenda favorites, reminders, and closeout remain later vertical slices.
-- Household, Organization, payments, external calendar synchronization, and full collaborative authorization remain deferred unless separately approved.
-- Companion does not autonomously monitor behavior or directly mutate Quest or Chronicle source records.
-- Worlds receive only approved minimized facts and never mutate District truth.
+- Reminder delivery requires an explicit favorite/reminder choice.
+- Camera QR capture is not considered complete merely because a route or QR record exists; manual lookup remains the implemented fallback.
+- Event closeout never deletes RSVP, attendance, signup, announcement, or mail history.
+- Outcome approval does not directly mutate Chronicle, Quest, Journey, Companion, or World records; destination application remains a separately authorized workflow.
+- Organization-domain self-service verification and certificate automation remain future work.
+- Household, Organization, payments, and external calendar synchronization remain deferred unless separately approved.
 
 ## Validation
 
-The repository's consolidated validation workflow must lint PHP, verify migration inventory, and validate the current health checkpoint. Build 052 additionally requires migration `037_platform_mail_operations.sql`, the authorized `/system/mail` routes, CSRF-protected mutations, redacted diagnostics, resend lineage, cancellation provenance, and stale-claim recovery.
+The single consolidated workflow at `.github/workflows/validate.yml` must lint PHP and validate:
+
+- migration `038_042_gather_lifecycle_beacon_domains.sql`;
+- `krvk.nl` and `koravik.com` root redirect configuration;
+- host-aware Beacon resolution;
+- agenda, day-of, walk-in, reminder, closeout, and outcome routes;
+- the finite reminder worker;
+- the Build 057 health checkpoint.
 
 ## Next build
 
-Build 053 should deliver the next coherent Gather experience slice without entering the Build 054 day-of tooling boundary. Recommended focus: a clearer public event page with schedule/agenda presentation and participant-facing favorites or reminders only where the governing documents support them.
+Build 058 should stabilize and complete the new lifecycle arc before expanding scope. Recommended priorities are end-to-end migration testing on MySQL/MariaDB, owner authorization review, reminder cancellation/unsubscribe, QR camera implementation only if HTTPS/browser support is validated, and destination adapters that apply approved outcome proposals without crossing ownership boundaries.
 
 ## Build workflow
 
 For every build: inspect current `main`, read affected authority, identify the player-visible outcome and visual home, implement one coherent vertical slice, validate it, update affected documentation, and land one cohesive milestone.
-
-## Change control
-
-When implementation reveals a blueprint flaw, stop at the affected boundary and resolve it through an explicit ADR or deliberate document revision before continuing.
