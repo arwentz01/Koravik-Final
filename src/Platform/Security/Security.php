@@ -29,7 +29,12 @@ final class Security
             return false;
         }
         $pdo->prepare('INSERT INTO auth_security_state (account_id,failed_attempts,locked_until,session_version,last_success_at,updated_at) VALUES (:account_id,0,NULL,1,UTC_TIMESTAMP(),UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE failed_attempts=0,locked_until=NULL,last_success_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP()')->execute(['account_id'=>$account['id']]);
-        self::startSession();session_regenerate_id(true);$_SESSION['account']=['id'=>(string)$account['id'],'display_name'=>(string)$account['display_name'],'role'=>(string)$account['role'],'session_version'=>(int)$account['session_version']];return true;
+        self::establishAccount(['id'=>(string)$account['id'],'display_name'=>(string)$account['display_name'],'role'=>(string)$account['role'],'session_version'=>(int)$account['session_version']]);return true;
+    }
+    public static function establishAccount(array $account):void
+    {
+        self::startSession();session_regenerate_id(true);unset($_SESSION['csrf']);
+        $_SESSION['account']=['id'=>(string)$account['id'],'display_name'=>(string)$account['display_name'],'role'=>(string)($account['role']??'user'),'session_version'=>(int)($account['session_version']??1)];
     }
     public static function account():?array
     {
