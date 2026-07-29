@@ -1,0 +1,32 @@
+name: Build 046
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - name: Lint PHP
+        run: find src public tools -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Validate operational Gather core
+        run: |
+          test -f database/migrations/027_031_gather_delivery_access_management_waitlists_rules.sql
+          test -f src/Platform/Mail/MailQueue.php
+          test -f src/Platform/Mail/SmtpMailer.php
+          test -f tools/mail-worker.php
+          test -f src/Districts/Gather/GatherWorkflowService.php
+          grep -q 'platform_mail_deliveries' database/migrations/027_031_gather_delivery_access_management_waitlists_rules.sql
+          grep -q 'gather_event_access_grants' database/migrations/027_031_gather_delivery_access_management_waitlists_rules.sql
+          grep -q 'management_token_expires_at' database/migrations/027_031_gather_delivery_access_management_waitlists_rules.sql
+          grep -q 'waitlist_offer_status' database/migrations/027_031_gather_delivery_access_management_waitlists_rules.sql
+          grep -q 'overlapping_shifts_allowed' src/Districts/Gather/GatherWorkflowService.php
+          grep -q "hash('sha256'" src/Districts/Gather/GatherWorkflowService.php
+          grep -q 'AUTH LOGIN' src/Platform/Mail/SmtpMailer.php
+          grep -q 'status="retry"' tools/mail-worker.php
