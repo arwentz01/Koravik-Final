@@ -42,16 +42,21 @@ jobs:
           test -f database/migrations/038_042_gather_lifecycle_beacon_domains.sql
           grep -q "krvk.nl" database/migrations/038_042_gather_lifecycle_beacon_domains.sql
           grep -q "https://koravik.com/" database/migrations/038_042_gather_lifecycle_beacon_domains.sql
-          grep -q "beacon_domains" src/Districts/Beacon/BeaconDomainService.php
-          grep -q "root_redirect_url" src/Districts/Beacon/BeaconController.php
           grep -q "/agenda" src/Districts/Gather/GatherLifecycleController.php
           grep -q "/day-of" src/Districts/Gather/GatherLifecycleController.php
-          grep -q "gather_walkins" src/Districts/Gather/GatherLifecycleService.php
-          grep -q "queueDueReminders" src/Districts/Gather/GatherLifecycleService.php
-          grep -q "/closeout" src/Districts/Gather/GatherCloseoutController.php
-          grep -q "outcome_proposals" src/Districts/Gather/GatherLifecycleService.php
-          grep -q "'build'=>'057'" public/index.php
           test -f tools/gather-reminder-worker.php
+      - name: Validate Builds 058-062
+        run: |
+          test -f database/migrations/043_047_lifecycle_stabilization_beacon_management.sql
+          grep -q "unsubscribe_token_hash" database/migrations/043_047_lifecycle_stabilization_beacon_management.sql
+          grep -q "gather_outcome_applications" database/migrations/043_047_lifecycle_stabilization_beacon_management.sql
+          grep -q "beacon_link_revisions" database/migrations/043_047_lifecycle_stabilization_beacon_management.sql
+          grep -q "unsubscribe" src/Districts/Gather/GatherCompletionController.php
+          grep -q "applyApprovedOutcome" src/Districts/Gather/GatherLifecycleService.php
+          grep -q "BarcodeDetector" src/Districts/Gather/GatherCompletionController.php
+          grep -q "/beacon/manage" src/Districts/Beacon/BeaconManagementController.php
+          grep -q "reserved" src/Districts/Beacon/BeaconManagementService.php
+          grep -q "'build'=>'062'" public/index.php
       - name: Run repository tests
         shell: bash
         run: |
