@@ -1,0 +1,34 @@
+name: Build 051
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - name: Lint PHP
+        run: find src public tools -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Validate Gather operations schema
+        run: |
+          test -f database/migrations/032_036_gather_operational_ui_checkin_communications.sql
+          grep -q "gather_announcements" database/migrations/032_036_gather_operational_ui_checkin_communications.sql
+          grep -q "party_count" database/migrations/032_036_gather_operational_ui_checkin_communications.sql
+          grep -q "event_id CHAR(36)" database/migrations/032_036_gather_operational_ui_checkin_communications.sql
+      - name: Validate routes and ownership
+        run: |
+          grep -q "/command" src/Districts/Gather/GatherOperationsController.php
+          grep -q "/check-in" src/Districts/Gather/GatherOperationsController.php
+          grep -q "/announce" src/Districts/Gather/GatherOperationsController.php
+          grep -q "account_id=:owner" src/Districts/Gather/GatherCommandService.php
+          grep -q "account_id=:owner" src/Districts/Gather/GatherDayOfService.php
+          grep -q "account_id=:owner" src/Districts/Gather/GatherCommunicationService.php
+      - name: Validate health checkpoint
+        run: grep -q "'build'=>'051'" public/index.php
