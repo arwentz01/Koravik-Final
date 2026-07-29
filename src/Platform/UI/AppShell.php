@@ -11,7 +11,7 @@ final class AppShell
     {
         if(!$account||!str_contains($html,'<body')) return $html;
         if(!str_contains($html,'app-shell.css'))$html=str_replace('</head>','<link rel="stylesheet" href="/assets/app-shell.css"></head>',$html);
-        $primary=['/home'=>'Home','/journey'=>'Journey','/quests'=>'Quests','/chronicle'=>'Chronicle','/worlds'=>'Worlds','/companion'=>'Companion'];
+        $primary=['/home'=>'Home','/journey'=>'Journey','/quests'=>'Quests','/gather'=>'Gather','/beacon'=>'Beacon','/chronicle'=>'Chronicle','/worlds'=>'Worlds','/companion'=>'Companion'];
         $primaryHtml='';foreach($primary as $href=>$label)$primaryHtml.=$this->link($href,$label,$path);
         $count=(new NotificationService(\database()))->unreadCount((string)$account['id']);
         $badge=$count?'<span class="notification-badge" aria-label="'.$count.' unread notifications">'.($count>9?'9+':$count).'</span>':'';
