@@ -12,6 +12,7 @@ use Koravik\Platform\Experience\ChronicleManagementController;
 use Koravik\Platform\Hearth\HearthLayoutController;
 use Koravik\Platform\Hearth\HearthLayoutService;
 use Koravik\Platform\Journey\HealingHomeController;
+use Koravik\Platform\Journey\JourneyArcController;
 use Koravik\Platform\Notifications\NotificationController;
 use Koravik\Platform\Orientation\OrientationController;
 use Koravik\Platform\Privacy\PrivacyController;
@@ -27,7 +28,7 @@ use Koravik\Worlds\EpicOrdinary\WorldProgressController;
 use Koravik\Worlds\WorldLifecycleController;
 
 $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');$path=parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/';
-if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'030'],JSON_THROW_ON_ERROR);return;}
+if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'035'],JSON_THROW_ON_ERROR);return;}
 Security::startSession();ob_start();
 $handled=(new OrientationController(database()))->handle($method,$path);
 if(!$handled)$handled=(new GuideController())->handle($method,$path);
@@ -39,6 +40,7 @@ if(!$handled)$handled=(new CompanionLifecycleController(database()))->handle($me
 if(!$handled)$handled=(new CompanionController(database()))->handle($method,$path);
 if(!$handled)$handled=(new HearthLayoutController(database()))->handle($method,$path);
 if(!$handled)$handled=(new HealingHomeController(database()))->handle($method,$path);
+if(!$handled)$handled=(new JourneyArcController(database()))->handle($method,$path);
 if(!$handled)$handled=(new LivingQuestController(database()))->handle($method,$path);
 if(!$handled)$handled=(new SettingsController(database()))->handle($method,$path);
 if(!$handled)$handled=(new PrivacyController(database()))->handle($method,$path);
