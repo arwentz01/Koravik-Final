@@ -1,0 +1,29 @@
+name: Build 030
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax
+        run: find src public tools -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Build checkpoint
+        run: grep -q "'build'=>'030'" public/index.php
+      - name: Reflection and relationship contracts
+        run: |
+          grep -q 'CREATE TABLE healing_home_changes' database/migrations/023_reflection_relationships.sql
+          grep -q 'CREATE TABLE healing_home_keepsakes' database/migrations/023_reflection_relationships.sql
+          grep -q 'CREATE TABLE journey_relationships' database/migrations/023_reflection_relationships.sql
+          grep -q 'CREATE TABLE journey_relationship_memories' database/migrations/023_reflection_relationships.sql
+          grep -q 'INSERT IGNORE INTO healing_home_changes' src/Platform/Journey/JourneyService.php
+          grep -q 'INSERT IGNORE INTO journey_relationship_memories' src/Platform/Journey/JourneyService.php
+          grep -q 'There are no streak penalties' docs/product/REFLECTION_AND_RELATIONSHIPS.md
+      - name: Boundary checks
+        run: |
+          ! grep -RniE 'affection meter|relationship purchase|inactivity penalty' src database/migrations
+          grep -q 'Quest owns the real commitment' docs/product/REFLECTION_AND_RELATIONSHIPS.md
