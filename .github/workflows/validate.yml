@@ -55,7 +55,7 @@ jobs:
           grep -q "applyApprovedOutcome" src/Districts/Gather/GatherLifecycleService.php
           grep -q "BarcodeDetector" src/Districts/Gather/GatherCompletionController.php
           grep -q "/beacon/manage" src/Districts/Beacon/BeaconManagementController.php
-          grep -q "reserved" src/Districts/Beacon/BeaconManagementService.php
+          grep -q "Choose a different slug" src/Districts/Beacon/BeaconManagementService.php
           grep -q "'build'=>'062'" public/index.php
       - name: Run repository tests
         shell: bash
