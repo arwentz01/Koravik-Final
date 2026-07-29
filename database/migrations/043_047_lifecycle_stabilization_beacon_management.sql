@@ -4,7 +4,6 @@ ALTER TABLE gather_agenda_favorites
     ADD UNIQUE KEY uq_gather_favorite_unsubscribe (unsubscribe_token_hash);
 
 ALTER TABLE gather_outcome_proposals
-    ADD COLUMN applied_at DATETIME NULL AFTER approved_at,
     ADD COLUMN application_status ENUM('not_ready','pending','applied','failed','revoked') NOT NULL DEFAULT 'not_ready' AFTER applied_at,
     ADD COLUMN application_reference VARCHAR(255) NULL AFTER application_status,
     ADD COLUMN application_error VARCHAR(500) NULL AFTER application_reference;
@@ -25,17 +24,13 @@ CREATE TABLE IF NOT EXISTS gather_outcome_applications (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 ALTER TABLE beacon_domains
-    ADD COLUMN verification_token_hash CHAR(64) NULL AFTER verification_status,
-    ADD COLUMN verified_at DATETIME NULL AFTER verification_token_hash,
-    ADD COLUMN suspended_at DATETIME NULL AFTER verified_at,
-    ADD COLUMN root_redirect_url VARCHAR(2048) NULL AFTER root_redirect_status;
+    ADD COLUMN suspended_at DATETIME NULL AFTER verified_at;
 
 ALTER TABLE beacon_short_links
     ADD COLUMN preferred_domain_id CHAR(36) NULL AFTER domain_id,
     ADD COLUMN archived_at DATETIME NULL AFTER status,
     ADD COLUMN last_destination_check_at DATETIME NULL AFTER archived_at,
     ADD COLUMN destination_health ENUM('unknown','healthy','warning','failed') NOT NULL DEFAULT 'unknown' AFTER last_destination_check_at,
-    ADD UNIQUE KEY uq_beacon_domain_slug (domain_id,slug),
     ADD KEY idx_beacon_link_status (status,updated_at);
 
 CREATE TABLE IF NOT EXISTS beacon_link_revisions (
