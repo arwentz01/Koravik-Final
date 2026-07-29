@@ -15,6 +15,7 @@ use Koravik\Platform\Hearth\HearthLayoutController;
 use Koravik\Platform\Hearth\HearthLayoutService;
 use Koravik\Platform\Journey\HealingHomeController;
 use Koravik\Platform\Journey\JourneyArcController;
+use Koravik\Platform\Mail\MailOperationsController;
 use Koravik\Platform\Notifications\NotificationController;
 use Koravik\Platform\Orientation\OrientationController;
 use Koravik\Platform\Privacy\PrivacyController;
@@ -30,9 +31,10 @@ use Koravik\Worlds\EpicOrdinary\WorldProgressController;
 use Koravik\Worlds\WorldLifecycleController;
 
 $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');$path=parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/';
-if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'051'],JSON_THROW_ON_ERROR);return;}
+if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'052'],JSON_THROW_ON_ERROR);return;}
 Security::startSession();ob_start();
-$handled=(new BeaconController(database()))->handle($method,$path);
+$handled=(new MailOperationsController(database()))->handle($method,$path);
+if(!$handled)$handled=(new BeaconController(database()))->handle($method,$path);
 if(!$handled)$handled=(new GatherController(database()))->handle($method,$path);
 if(!$handled)$handled=(new OrientationController(database()))->handle($method,$path);
 if(!$handled)$handled=(new GuideController())->handle($method,$path);
@@ -67,7 +69,7 @@ if(!$account&&$method==='GET'&&$path==='/login'){
 }
 if($account&&$method==='GET'&&$path==='/hearth')$html=(new HearthLayoutService(database()))->apply($html,(string)$account['id']);
 if($account&&$method==='GET'&&$path==='/chronicle')$html=str_replace('<section class="page-heading">','<section class="page-heading"><p class="local-actions"><a class="button" href="/chronicle/new">New entry</a> <a href="/chronicle/manage">Manage Chronicle</a></p>',$html);
-if($account&&$method==='GET'&&$path==='/settings'){$html=str_replace('Account export and deletion execution are not yet available; Koravik does not pretend otherwise.','Account export and staged account closure are available from <a href="/settings/data">Data controls</a>.',$html);if(!str_contains($html,'/settings/security'))$html=str_replace('</main>','<section class="settings-card trust-panel"><h2>Security</h2><p>Change your password and invalidate older sessions.</p><a href="/settings/security">Open security settings</a></section></main>',$html);}
+if($account&&$method==='GET'&&$path==='/settings'){$html=str_replace('Account export and deletion execution are not yet available; Koravik does not pretend otherwise.','Account export and staged account closure are available from <a href="/settings/data">Data controls</a>.',$html);if(!str_contains($html,'/settings/security'))$html=str_replace('</main>','<section class="settings-card trust-panel"><h2>Security</h2><p>Change your password and invalidate older sessions.</p><a href="/settings/security">Open security settings</a></section></main>',$html);if(in_array((string)($account['role']??''),['owner','admin'],true)&&!str_contains($html,'/system/mail'))$html=str_replace('</main>','<section class="settings-card"><h2>System operations</h2><p>Review Platform Mail queue health and delivery diagnostics.</p><a href="/system/mail">Open Platform Mail</a></section></main>',$html);}
 if($account&&$method==='GET'&&$path==='/worlds')$html=$replaceFirst('</section>','<p class="local-actions"><a href="/worlds/installed">Manage installed Worlds</a></p></section>',$html);
 if($account&&$method==='GET'&&$path==='/worlds/epic-ordinary'&&str_contains($html,'Status: Active')&&!str_contains($html,'/worlds/epic-ordinary/play'))$html=$replaceFirst('</section>','<p class="local-actions"><a class="button" href="/worlds/epic-ordinary/play">Continue story</a><a href="/worlds/epic-ordinary/progress">View progress</a><a href="/worlds/epic-ordinary/manage">Manage World</a></p></section>',$html);
 $html=(new AppShell())->apply($html,$account,$path);
