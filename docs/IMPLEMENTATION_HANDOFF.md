@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Builds 058–062 implemented on `main`  
-**Version:** 1.62  
+**Status:** Builds 063–067 implemented on `main`  
+**Version:** 1.67  
 **Baseline date:** July 29, 2026  
 **Authoritative branch:** `main`
 
@@ -15,39 +15,41 @@ Before implementation, read `README.md`, `docs/README.md`, `docs/FOUNDATIONAL_DE
 
 Koravik-Final is a PHP 8.3+ custom modular monolith using MySQL or MariaDB through PDO and an Apache-compatible shared-hosting model.
 
-- Districts own real-life truth.
-- Hearth composes but does not own source records.
-- Beacon owns domains, short links, QR definitions, public pages, link hubs, digital cards, Wi-Fi cards, and privacy-aware distribution data.
-- Gather owns events, agendas, RSVP, guest parties, signup slots, waitlists, attendance, reminders, communications, closeout, and event-outcome proposals.
-- Worlds interpret approved minimized facts into independent fictional World State.
-- Chronicle, Quests, Journey, and Worlds own records created from approved outcome handoffs.
+- Personal participation does not require an Organization or Household.
+- Organizations are optional contextual operating spaces.
+- Platform account roles and Organization membership roles are separate.
+- Districts retain ownership of their domain truth.
+- Hearth composes but does not absorb Organization records.
+- Beacon owns domains, links, pages, and QR definitions even when an Organization owns the resource context.
+- Gather owns event truth even when an Organization owns the event context.
 - Authorization is capability-based and contextual.
 - Background work is finite, idempotent, lock-safe, and cron compatible.
 
 ## Completed implementation arc
 
-### Builds 001–052
+### Builds 001–057
 
-Platform identity and security, Hearth, Quests, Chronicle, Companion, Notifications, Search, Privacy and Audit, account-data lifecycle, Epic Ordinary and World lifecycle, first-use orientation, Journey experiences, Beacon/Gather foundation, authenticated Platform Mail, Gather waitlists and operational tooling, organizer communications, check-in, and Platform Mail operations.
+Platform identity and security, Hearth, Quests, Chronicle, Companion, Notifications, Search, Privacy and Audit, account-data lifecycle, Epic Ordinary and World lifecycle, first-use orientation, Journey experiences, Beacon/Gather foundation, Platform Mail, Gather operational tooling, agendas, reminders, day-of operations, closeout, Beacon domains, and consent-gated outcomes.
 
-### Builds 053–057 — Gather lifecycle and Beacon domains
-
-- host-aware Beacon domains and `krvk.nl` root redirect;
-- public agendas, favorites, reminders, day-of search and walk-ins;
-- closeout and preserved history;
-- consent-gated outcome proposals.
-
-See `docs/builds/BUILD_053_057_GATHER_LIFECYCLE.md`.
-
-### Builds 058–062 — Stabilization and completion
+### Builds 058–062 — Stabilization and Beacon completion
 
 - reminder cancellation and unsubscribe;
-- idempotent approved-outcome application ledger;
-- Owner/Admin Beacon domain administration;
-- editable, pausable, archivable Beacon links with revision history;
-- secure-context QR camera scanning with manual fallback.
+- approved-outcome application ledger;
+- Beacon domain administration;
+- Beacon link management and revision history;
+- secure-context camera QR scanning with manual fallback.
 
 See `docs/builds/BUILD_058_062_STABILIZATION_BEACON_COMPLETION.md`.
+
+### Builds 063–067 — Organization foundation
+
+- Build 063: optional Organization identity and profile lifecycle;
+- Build 064: contextual Owner, Admin, Creator, and Member roles with invitations and membership controls;
+- Build 065: Organization-owned Gather events and contextual command-center authorization;
+- Build 066: Organization-owned Beacon links with stable platform fallback;
+- Build 067: Organization operating home with members, invitations, events, links, activity, and capability-aware actions.
+
+See `docs/builds/BUILD_063_067_ORGANIZATION_FOUNDATION.md`.
 
 ## Current migrations
 
@@ -57,6 +59,7 @@ Production deployment must apply every file in `database/migrations`, including:
 037_platform_mail_operations.sql
 038_042_gather_lifecycle_beacon_domains.sql
 043_047_lifecycle_stabilization_beacon_management.sql
+048_052_organization_foundation.sql
 ```
 
 Run:
@@ -72,46 +75,54 @@ php tools/mail-worker.php 20
 php tools/gather-reminder-worker.php 100
 ```
 
+## Organization routes
+
+- `GET|POST /organizations`
+- `GET /organizations/{id}`
+- `GET /organizations/invitations/{token}`
+- `POST /organizations/{id}/invitations`
+- `POST /organizations/{id}/members/{membershipId}/role`
+- `POST /organizations/{id}/members/{membershipId}/remove`
+- `POST /organizations/{id}/ownership/{membershipId}`
+- `POST /organizations/{id}/events`
+- `POST /organizations/{id}/links`
+
+## Organization rules
+
+- Organization membership is optional.
+- Creating an Organization creates one active Owner membership for the creator.
+- Organization role never grants a platform-wide role.
+- The final Owner cannot be removed by ordinary membership controls.
+- Ownership transfer is atomic and leaves one active Owner.
+- Organization-owned resources survive member departure.
+- Personal records do not transfer into Organizations.
+- Organization invitations are email-bound, expiring, and token-hashed.
+- Organization-created Gather and Beacon resources retain their District ownership boundaries.
+
 ## Beacon domain rules
 
-- `krvk.nl` is the default verified platform short-link domain.
+- `krvk.nl` remains the default verified platform short-link domain.
 - `https://krvk.nl/` permanently redirects to `https://koravik.com/`.
-- `https://krvk.nl/{slug}` resolves through Beacon.
-- Beacon records retain stable UUID identity independent of hostname.
 - Custom hostnames require verification before activation.
-- Domain suspension or disconnection never deletes the underlying Beacon item.
-- Deployment must route `koravik.com`, `krvk.nl`, and future verified hosts to the application with TLS and the incoming Host header preserved.
-- Application verification does not automatically provision DNS or certificates.
-
-## Current completion routes
-
-- `GET /gather/reminders/unsubscribe/{token}`
-- `POST /gather/outcomes/{id}/apply`
-- `GET /gather/events/{id}/scan`
-- `GET /beacon/manage`
-- `POST /beacon/domains`
-- `POST /beacon/domains/{id}/verify`
-- `POST /beacon/links/{id}`
-- `POST /beacon/links/{id}/{active|paused|archived}`
+- Organization-owned Beacon records keep stable UUID identity and a platform fallback.
+- DNS and certificate provisioning remain hosting responsibilities.
 
 ## Explicit current boundaries
 
-- Beacon does not own events, RSVP, signup, attendance, schedules, or event lifecycle.
-- Gather does not own DNS, certificate provisioning, general redirect infrastructure, or final destination records.
-- Restricted Gather events may not become public through Beacon.
-- Guest registration does not create a Koravik account.
-- Reminder delivery requires an explicit favorite/reminder choice and supports cancellation.
-- Camera scanning requires HTTPS and browser support; manual lookup remains required.
-- Outcome application records an approved handoff and stable reference. Rich destination-specific draft/review screens remain future work.
-- Organization membership, organization roles, household membership, payments, and external calendar synchronization remain deferred unless separately approved.
+- Remaining legacy Gather day-of and communication ownership predicates still require reconciliation with `GatherAuthorization` before full multi-manager Organization event operations are declared complete.
+- Invitation creation currently exposes a secure acceptance path to the authorized inviter; Platform Mail delivery of Organization invitations remains future work.
+- Organization lifecycle editing, suspension, archive recovery, and ownership-safe deletion are not yet exposed visually.
+- Organization domains use the existing Beacon domain administration foundation; Organization-scoped domain selection needs a focused integration pass.
+- Household remains separate, independent, and optional.
+- Payments and external calendar synchronization remain deferred unless separately approved.
 
 ## Validation
 
-The single workflow at `.github/workflows/validate.yml` must lint PHP and validate migration `043_047_lifecycle_stabilization_beacon_management.sql`, reminder unsubscribe, outcome application, Beacon administration and revision history, QR camera capability detection, and the Build 062 health checkpoint.
+The single workflow at `.github/workflows/validate.yml` must lint PHP and validate migration `048_052_organization_foundation.sql`, contextual membership roles, Organization-owned Gather and Beacon creation, Organization operating routes, `GatherAuthorization`, and the Build 067 health checkpoint.
 
 ## Next build
 
-Build 063 should begin the Organization foundation only after Build 062 validation is green. Recommended arc: neutral Organizations and memberships, contextual roles/capabilities, organization-owned Gather/Beacon resources, branded verified domains, and organization operating surfaces. Household remains independent and optional rather than a prerequisite for participation.
+Build 068 should stabilize Organization operations before broadening scope. Recommended arc: complete contextual authorization across Gather day-of and communications, automate invitation delivery and acceptance management, implement Organization lifecycle/settings, integrate Organization-scoped Beacon domains and branding, and add audit/recovery controls.
 
 ## Build workflow
 
