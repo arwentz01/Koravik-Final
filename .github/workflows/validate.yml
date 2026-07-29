@@ -52,7 +52,17 @@ jobs:
             src/Districts/Gather/GatherOperationsController.php
           grep -q "/announce" \
             src/Districts/Gather/GatherOperationsController.php
-          grep -q "'build'=>'051'" public/index.php
+
+      - name: Validate Platform Mail operations
+        run: |
+          test -f database/migrations/037_platform_mail_operations.sql
+          grep -q "cancelled_by_account_id" database/migrations/037_platform_mail_operations.sql
+          grep -q "recoverStale" src/Platform/Mail/MailOperationsService.php
+          grep -q "/system/mail/test" src/Platform/Mail/MailOperationsController.php
+          grep -q "/system/mail/recover" src/Platform/Mail/MailOperationsController.php
+          grep -q "resend_of_id" src/Platform/Mail/MailOperationsService.php
+          grep -q "\['owner','admin'\]" src/Platform/Mail/MailOperationsController.php
+          grep -q "'build'=>'052'" public/index.php
 
       - name: Run repository tests
         shell: bash
