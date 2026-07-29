@@ -1,0 +1,64 @@
+name: Koravik Validation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate Koravik
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Configure PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+
+      - name: Validate PHP syntax
+        run: |
+          find src public tools -name '*.php' -print0 \
+            | xargs -0 -n1 php -l
+
+      - name: Validate migration inventory
+        run: |
+          test -d database/migrations
+          test "$(find database/migrations -maxdepth 1 -type f -name '*.sql' | wc -l)" -gt 0
+
+      - name: Validate current Gather checkpoint
+        run: |
+          test -f database/migrations/032_036_gather_operational_ui_checkin_communications.sql
+          grep -q "gather_announcements" \
+            database/migrations/032_036_gather_operational_ui_checkin_communications.sql
+          grep -q "/command" \
+            src/Districts/Gather/GatherOperationsController.php
+          grep -q "/check-in" \
+            src/Districts/Gather/GatherOperationsController.php
+          grep -q "/announce" \
+            src/Districts/Gather/GatherOperationsController.php
+          grep -q "'build'=>'051'" public/index.php
+
+      - name: Run repository tests
+        shell: bash
+        run: |
+          if [ -f tools/test.php ]; then
+            php tools/test.php
+          else
+            echo "No unified tools/test.php runner exists yet."
+          fi
