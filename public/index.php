@@ -57,15 +57,19 @@ if(!$handled)$handled=(new ChapterTwoController())->handle($method,$path);
 if(!$handled)$handled=(new Koravik\Worlds\WorldController())->handle($method,$path);
 if(!$handled)(new Koravik\Application())->run();
 $html=(string)ob_get_clean();$account=Security::account();
+$replaceFirst=static function(string $search,string $replacement,string $subject): string {
+    $position=strpos($subject,$search);
+    return $position===false?$subject:substr_replace($subject,$replacement,$position,strlen($search));
+};
 if(!$account&&$method==='GET'&&$path==='/login'){
     if(!str_contains($html,'href="/recover"'))$html=str_replace('</form>','</form><p><a href="/recover">Forgot your password?</a></p>',$html);
-    if(!str_contains($html,'href="/register"'))$html=str_replace('</section>','<p><a class="button secondary" href="/register">Create an account</a></p></section>',$html,1);
+    if(!str_contains($html,'href="/register"'))$html=$replaceFirst('</section>','<p><a class="button secondary" href="/register">Create an account</a></p></section>',$html);
 }
 if($account&&$method==='GET'&&$path==='/hearth')$html=(new HearthLayoutService(database()))->apply($html,(string)$account['id']);
 if($account&&$method==='GET'&&$path==='/chronicle')$html=str_replace('<section class="page-heading">','<section class="page-heading"><p class="local-actions"><a class="button" href="/chronicle/new">New entry</a> <a href="/chronicle/manage">Manage Chronicle</a></p>',$html);
 if($account&&$method==='GET'&&$path==='/settings'){$html=str_replace('Account export and deletion execution are not yet available; Koravik does not pretend otherwise.','Account export and staged account closure are available from <a href="/settings/data">Data controls</a>.',$html);if(!str_contains($html,'/settings/security'))$html=str_replace('</main>','<section class="settings-card trust-panel"><h2>Security</h2><p>Change your password and invalidate older sessions.</p><a href="/settings/security">Open security settings</a></section></main>',$html);}
-if($account&&$method==='GET'&&$path==='/worlds')$html=str_replace('</section>','<p class="local-actions"><a href="/worlds/installed">Manage installed Worlds</a></p></section>',$html,1);
-if($account&&$method==='GET'&&$path==='/worlds/epic-ordinary'&&str_contains($html,'Status: Active')&&!str_contains($html,'/worlds/epic-ordinary/play'))$html=str_replace('</section>','<p class="local-actions"><a class="button" href="/worlds/epic-ordinary/play">Continue story</a><a href="/worlds/epic-ordinary/progress">View progress</a><a href="/worlds/epic-ordinary/manage">Manage World</a></p></section>',$html,1);
+if($account&&$method==='GET'&&$path==='/worlds')$html=$replaceFirst('</section>','<p class="local-actions"><a href="/worlds/installed">Manage installed Worlds</a></p></section>',$html);
+if($account&&$method==='GET'&&$path==='/worlds/epic-ordinary'&&str_contains($html,'Status: Active')&&!str_contains($html,'/worlds/epic-ordinary/play'))$html=$replaceFirst('</section>','<p class="local-actions"><a class="button" href="/worlds/epic-ordinary/play">Continue story</a><a href="/worlds/epic-ordinary/progress">View progress</a><a href="/worlds/epic-ordinary/manage">Manage World</a></p></section>',$html);
 $html=(new AppShell())->apply($html,$account,$path);
 $html=(new VisualSystem())->apply($html,$account,$path);
 echo $html;
