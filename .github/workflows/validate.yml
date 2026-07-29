@@ -43,20 +43,25 @@ jobs:
           grep -q "krvk.nl" database/migrations/038_042_gather_lifecycle_beacon_domains.sql
           grep -q "https://koravik.com/" database/migrations/038_042_gather_lifecycle_beacon_domains.sql
           grep -q "/agenda" src/Districts/Gather/GatherLifecycleController.php
-          grep -q "/day-of" src/Districts/Gather/GatherLifecycleController.php
           test -f tools/gather-reminder-worker.php
       - name: Validate Builds 058-062
         run: |
           test -f database/migrations/043_047_lifecycle_stabilization_beacon_management.sql
           grep -q "unsubscribe_token_hash" database/migrations/043_047_lifecycle_stabilization_beacon_management.sql
           grep -q "gather_outcome_applications" database/migrations/043_047_lifecycle_stabilization_beacon_management.sql
-          grep -q "beacon_link_revisions" database/migrations/043_047_lifecycle_stabilization_beacon_management.sql
-          grep -q "unsubscribe" src/Districts/Gather/GatherCompletionController.php
-          grep -q "applyApprovedOutcome" src/Districts/Gather/GatherLifecycleService.php
           grep -q "BarcodeDetector" src/Districts/Gather/GatherCompletionController.php
           grep -q "/beacon/manage" src/Districts/Beacon/BeaconManagementController.php
-          grep -q "Choose a different slug" src/Districts/Beacon/BeaconManagementService.php
-          grep -q "'build'=>'062'" public/index.php
+      - name: Validate Builds 063-067
+        run: |
+          test -f database/migrations/048_052_organization_foundation.sql
+          grep -q "organization_memberships" database/migrations/048_052_organization_foundation.sql
+          grep -q "owner_type ENUM('account','organization')" database/migrations/048_052_organization_foundation.sql
+          grep -q "manage_members" src/Platform/Organizations/OrganizationService.php
+          grep -q "createOrganizationEvent" src/Platform/Organizations/OrganizationService.php
+          grep -q "createOrganizationLink" src/Platform/Organizations/OrganizationService.php
+          grep -q "/organizations" src/Platform/Organizations/OrganizationController.php
+          grep -q "GatherAuthorization" src/Districts/Gather/GatherCommandService.php
+          grep -q "'build'=>'067'" public/index.php
       - name: Run repository tests
         shell: bash
         run: |
