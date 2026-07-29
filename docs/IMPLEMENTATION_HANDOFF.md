@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Build 051 stabilized on `main`  
-**Version:** 1.51  
+**Status:** Build 052 implemented on `main`  
+**Version:** 1.52  
 **Baseline date:** July 29, 2026  
 **Authoritative branch:** `main`
 
@@ -54,9 +54,13 @@ Organizer command center, event settings, attendance summaries, party-aware chec
 - `docs/builds/BUILD_047_051_GATHER_EVENT_OPERATIONS.md`
 - `docs/builds/BUILD_051_STABILIZATION.md`
 
+### Build 052 — Platform Mail operations
+
+Owner/Admin mail operations home, queue-health metrics, delivery details, retry, cancellation, resend lineage, test delivery, stale-processing recovery, and redacted diagnostics. See `docs/builds/BUILD_052_PLATFORM_MAIL_OPERATIONS.md`.
+
 ## Current product loop
 
-`Create a Gather event → Gather provisions Beacon sharing tools → guests register or join a waitlist → participants claim shifts, potluck needs, items, and tasks → organizers configure access and capacity → organizers communicate with bounded audiences → staff check in attending parties → approved outcomes may later connect to Quests, Chronicle, Journey, or Worlds through their existing consent and ownership boundaries.`
+`Create a Gather event → Gather provisions Beacon sharing tools → guests register or join a waitlist → participants claim shifts, potluck needs, items, and tasks → organizers configure access and capacity → organizers communicate with bounded audiences → staff check in attending parties → Platform Mail provides authorized delivery operations → approved outcomes may later connect to Quests, Chronicle, Journey, or Worlds through their existing consent and ownership boundaries.`
 
 ## Current migrations
 
@@ -67,6 +71,7 @@ Production deployment must apply every file in `database/migrations`, including:
 026_gather_guest_registration_capacity.sql
 027_031_gather_delivery_access_management_waitlists_rules.sql
 032_036_gather_operational_ui_checkin_communications.sql
+037_platform_mail_operations.sql
 ```
 
 Run:
@@ -91,7 +96,7 @@ php tools/migrate.php
 - `GET|POST /gather/rsvp/manage/{token}`
 - `POST /gather/slots/{id}/claim`
 
-## Platform Mail deployment
+## Platform Mail operations
 
 Configure authenticated SMTP with environment variables documented in `docs/builds/BUILD_042_046_GATHER_OPERATIONAL_CORE.md`. Run the finite queue worker through cron, for example:
 
@@ -99,7 +104,7 @@ Configure authenticated SMTP with environment variables documented in `docs/buil
 php tools/mail-worker.php 20
 ```
 
-A queued message is not represented as sent until the SMTP adapter succeeds and the delivery record is updated.
+Owner and Admin accounts may open `/system/mail` to inspect queue health, queue a test delivery, recover stale processing claims, and perform bounded retry, cancellation, or resend operations. A queued message is not represented as sent until the SMTP adapter succeeds and the delivery record is updated.
 
 ## Explicit current boundaries
 
@@ -110,7 +115,8 @@ A queued message is not represented as sent until the SMTP adapter succeeds and 
 - Management-token hashes are stored; raw tokens are not persisted.
 - Organizer communications are bounded by event ownership and explicit audience selection.
 - Check-in correction preserves operational provenance instead of deleting evidence.
-- Mail resend, cancel, test-send, queue recovery, and delivery-detail tools remain Build 052 work.
+- Platform Mail cancellation and resend preserve delivery history and lineage.
+- Platform Mail operations are restricted to authenticated Owner and Admin roles.
 - Dedicated attendee search, walk-ins, kiosk mode, and camera-based QR scanning remain Build 054 work.
 - Public event redesign, schedules, agenda favorites, reminders, and closeout remain later vertical slices.
 - Household, Organization, payments, external calendar synchronization, and full collaborative authorization remain deferred unless separately approved.
@@ -119,11 +125,11 @@ A queued message is not represented as sent until the SMTP adapter succeeds and 
 
 ## Validation
 
-`.github/workflows/build-051.yml` lints PHP and validates the stabilized schema, organizer correction path, current check-in state, announcement history, slot targeting, direct-signup communication, ownership predicates, routing, and the Build 051 health checkpoint. A successful run must be confirmed before this checkpoint is treated as release-ready.
+The repository's consolidated validation workflow must lint PHP, verify migration inventory, and validate the current health checkpoint. Build 052 additionally requires migration `037_platform_mail_operations.sql`, the authorized `/system/mail` routes, CSRF-protected mutations, redacted diagnostics, resend lineage, cancellation provenance, and stale-claim recovery.
 
 ## Next build
 
-Build 052 should implement Platform Mail operations as one coherent vertical slice: queue health, delivery details, retry/resend, cancellation, test delivery, stale-processing recovery, redacted diagnostics, and an authorized visual home.
+Build 053 should deliver the next coherent Gather experience slice without entering the Build 054 day-of tooling boundary. Recommended focus: a clearer public event page with schedule/agenda presentation and participant-facing favorites or reminders only where the governing documents support them.
 
 ## Build workflow
 
