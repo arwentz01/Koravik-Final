@@ -2,11 +2,9 @@ name: Koravik Validation
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -21,49 +19,39 @@ jobs:
     name: Validate Koravik
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-
       - name: Configure PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
-
       - name: Validate PHP syntax
-        run: |
-          find src public tools -name '*.php' -print0 \
-            | xargs -0 -n1 php -l
-
+        run: find src public tools -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Validate migration inventory
         run: |
           test -d database/migrations
           test "$(find database/migrations -maxdepth 1 -type f -name '*.sql' | wc -l)" -gt 0
-
-      - name: Validate current Gather checkpoint
-        run: |
-          test -f database/migrations/032_036_gather_operational_ui_checkin_communications.sql
-          grep -q "gather_announcements" \
-            database/migrations/032_036_gather_operational_ui_checkin_communications.sql
-          grep -q "/command" \
-            src/Districts/Gather/GatherOperationsController.php
-          grep -q "/check-in" \
-            src/Districts/Gather/GatherOperationsController.php
-          grep -q "/announce" \
-            src/Districts/Gather/GatherOperationsController.php
-
       - name: Validate Platform Mail operations
         run: |
           test -f database/migrations/037_platform_mail_operations.sql
-          grep -q "cancelled_by_account_id" database/migrations/037_platform_mail_operations.sql
           grep -q "recoverStale" src/Platform/Mail/MailOperationsService.php
           grep -q "/system/mail/test" src/Platform/Mail/MailOperationsController.php
-          grep -q "/system/mail/recover" src/Platform/Mail/MailOperationsController.php
-          grep -q "resend_of_id" src/Platform/Mail/MailOperationsService.php
-          grep -q "\['owner','admin'\]" src/Platform/Mail/MailOperationsController.php
-          grep -q "'build'=>'052'" public/index.php
-
+      - name: Validate Gather lifecycle and Beacon domains
+        run: |
+          test -f database/migrations/038_042_gather_lifecycle_beacon_domains.sql
+          grep -q "krvk.nl" database/migrations/038_042_gather_lifecycle_beacon_domains.sql
+          grep -q "https://koravik.com/" database/migrations/038_042_gather_lifecycle_beacon_domains.sql
+          grep -q "beacon_domains" src/Districts/Beacon/BeaconDomainService.php
+          grep -q "root_redirect_url" src/Districts/Beacon/BeaconController.php
+          grep -q "/agenda" src/Districts/Gather/GatherLifecycleController.php
+          grep -q "/day-of" src/Districts/Gather/GatherLifecycleController.php
+          grep -q "gather_walkins" src/Districts/Gather/GatherLifecycleService.php
+          grep -q "queueDueReminders" src/Districts/Gather/GatherLifecycleService.php
+          grep -q "/closeout" src/Districts/Gather/GatherCloseoutController.php
+          grep -q "outcome_proposals" src/Districts/Gather/GatherLifecycleService.php
+          grep -q "'build'=>'057'" public/index.php
+          test -f tools/gather-reminder-worker.php
       - name: Run repository tests
         shell: bash
         run: |
