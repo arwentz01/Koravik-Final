@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Build 035 implemented on `main`  
-**Version:** 1.35  
+**Status:** Build 040 implemented on `main`  
+**Version:** 1.40  
 **Baseline date:** July 28, 2026  
 **Authoritative branch:** `main`
 
@@ -13,6 +13,8 @@ This handoff applies only to `arwentz01/Koravik-Final`. Do not import code, sche
 
 Before implementation, read `README.md`, `docs/README.md`, `docs/FOUNDATIONAL_DECISIONS.md`, all canonical documents, Project Zero, affected Product and Engineering Blueprint contracts, the ADR register, and this handoff. The documentation authority order in `docs/README.md` controls conflicts.
 
+Focused ownership authority now includes `docs/canonical/PLATFORM_CAPABILITY_MAP.md`.
+
 ## Architecture baseline
 
 Koravik-Final is a PHP 8.3+ custom modular monolith using MySQL or MariaDB through PDO and an Apache-compatible shared-hosting model.
@@ -20,8 +22,10 @@ Koravik-Final is a PHP 8.3+ custom modular monolith using MySQL or MariaDB throu
 - Districts own real-life truth.
 - Hearth composes but does not own source records.
 - Healing Home and Journey orient, acknowledge, and connect experiences without taking ownership from Quests, Chronicle, Worlds, Companion, Beacon, or Gather.
+- Beacon owns short links, QR definitions, public pages, link hubs, digital cards, Wi-Fi cards, and privacy-aware distribution data.
+- Gather owns events, schedules, RSVP, signup slots, volunteer shifts, potluck and requested-item commitments, attendance, and follow-up.
+- A cohesive workflow may cross Beacon and Gather without exposing technical seams.
 - Worlds interpret approved minimized facts into independent fictional World State.
-- World objectives, choices, keepsakes, relationships, reactions, and lifecycle history remain fictional and account-scoped.
 - Companion owns proposals and approved Companion memory, not destination records.
 - Chronicle owns saved personal and approved reflections.
 - Search and Notifications are non-owning utilities.
@@ -31,72 +35,53 @@ Koravik-Final is a PHP 8.3+ custom modular monolith using MySQL or MariaDB throu
 
 ## Completed implementation arc
 
-### Builds 001–005 — Foundation and first vertical slice
+### Builds 001–025 — Platform, Companion, Chronicle, security, visual system, and Worlds
 
-Secure authentication, Hearth, personal Quests, recurrence, Pillars, Chronicle completion moments, transactional outbox, bounded worker, Epic Ordinary reactions, World State, relationship continuity, and audit history.
+Secure identity, Hearth, Quests, Chronicle, Companion consent and execution, Notifications, Search, Privacy and Audit, account-data lifecycle, authentication recovery, unified visual shell, Epic Ordinary, World progress and reactions, and installed World lifecycle.
 
-### Builds 006–013 — Core platform breadth
+### Builds 026–030 — First use, Living Quests, Healing Home, reflection, and relationships
 
-Structured Quests, World catalog and consent, return and resume, Notifications, Search, Privacy and Audit, Account Settings, and bounded Hearth customization.
+Secure registration and orientation, Quest purpose and provenance, non-binary outcomes, Healing Home rooms and atmosphere, keepsakes, Caretaker relationship state, shared memories, and readable relationship history.
 
-### Builds 014–020 — Companion, Chronicle, account data, and security
+### Builds 031–035 — Journey invitation arc
 
-Versioned Companion proposals and execution, approved context and memory, Chronicle ownership and lifecycle, account export and closure, authentication recovery, password change, session invalidation, and security audit history.
+Story invitations, accept/decline/snooze consent, Garden and Library presentation, Caretaker conversations, consent-gated Beacon and Gather source proposals, and cooperative invitation foundations.
 
-### Builds 021–025 — Visual release candidate and World lifecycle
+### Build 036 — Beacon Core
 
-Unified authenticated shell, visual information architecture, appearance accessibility controls, Epic Ordinary Chapter Two, World progress and explainable reactions, installed World management, suspend/uninstall/restart/delete boundaries, and durable lifecycle history.
+Account-owned short links, redirect resolution, visit counts, link hubs, business cards, Wi-Fi cards, event landing pages, QR definitions, `/beacon`, `/b/{slug}`, and `/p/{page-key}`.
 
-### Build 026 — Registration and first-use orientation
+### Build 037 — Gather Event Engine
 
-Secure account registration and bounded first-use orientation foundation.
+Account-owned events with description, venue, schedule, timezone, visibility, lifecycle, capacity, event list, and planning view.
 
-### Builds 027–028 — Living Quests and Healing Home
+### Build 038 — Gather Planning Toolkit
 
-Quest purpose, next meaningful step, provenance, non-binary resolution history, `/home`, initial rooms, atmosphere, Quest focus, Chronicle memory, World reaction, and visible future-room foundations.
+RSVPs, volunteer shifts, potluck needs, requested items, planning tasks, quantity limits, and signup commitments.
 
-### Builds 029–030 — Reflection and relationships
+### Build 039 — Beacon × Gather integration
 
-Idempotent Home changes, account-scoped keepsakes, Caretaker relationship records, approved shared memories, qualitative relationship stages, and readable relationship history without score bars or punishment mechanics.
+Creating a Gather event provisions a Beacon short link, event landing page, and QR definition while preserving separate ownership.
 
-### Build 031 — Story invitations
+### Build 040 — Journey integration and capability map
 
-Epic Ordinary invitations support accept, decline, and snooze. Only explicit acceptance creates a real-life Quest, with durable `story` provenance.
+The existing consent-gated proposal contract remains the path from Beacon or Gather into Quests. `docs/canonical/PLATFORM_CAPABILITY_MAP.md` now defines one owner per capability and the approved cross-domain boundaries.
 
-### Build 032 — Healing Home expansion
+See `docs/builds/BUILD_036_040_BEACON_GATHER.md`.
 
-Garden and Library open as presentation spaces. Keepsakes support account-scoped, source-idempotent room placement. Remaining rooms stay visible extension points.
+## Current product loop
 
-### Build 033 — Relationship conversations
-
-The Caretaker supports gratitude, repair, disagreement, and quiet companionship with readable account-scoped conversation history and no correct dialogue path.
-
-### Build 034 — Beacon Quest integration contract
-
-Beacon event activity may create consent-gated Quest proposals for preparation, attendance, volunteering, or follow-up. Beacon retains event ownership; Quests owns accepted commitments.
-
-### Build 035 — Gather Quest integration contract
-
-Gather collaboration may create consent-gated Quest proposals with Gather provenance. Cooperative invitation persistence establishes future contribution boundaries without implementing Household or Organization ownership.
-
-See `docs/builds/BUILD_031_035_JOURNEY_ARC.md` for the current arc contract.
-
-## Current player loop
-
-`World or supporting domain proposes → player accepts, declines, or snoozes → Quests owns the accepted commitment → real action and reflection occur → Healing Home and relationships may acknowledge approved outcomes.`
+`Create a Gather event → Gather provisions Beacon sharing tools → people RSVP or claim shifts, potluck needs, items, and tasks → Beacon and Gather may propose meaningful action → explicit acceptance creates a Quest → reflection and Journey experiences may acknowledge approved outcomes.`
 
 ## Current database migrations
 
-Production deployment must apply all migrations in `database/migrations`, including the current sequence:
+Production deployment must apply all migrations in `database/migrations`, including:
 
 ```text
-018_epic_ordinary_chapter_two
-019_world_progress_reactions
-020_world_lifecycle
-021_first_use_registration
 022_living_quests_healing_home
 023_reflection_relationships
 024_journey_arc_invitations_rooms_conversations
+025_beacon_gather_capabilities
 ```
 
 Run:
@@ -105,39 +90,38 @@ Run:
 php tools/migrate.php
 ```
 
-## Current routes added by the Journey arc
+## Current routes added by Builds 036–040
 
-- `/home` and `/healing-home`
-- `/journey`
-- `/journey/invitations/{id}/accept`
-- `/journey/invitations/{id}/decline`
-- `/journey/invitations/{id}/snooze`
-- `/journey/caretaker/converse`
-- `/journey/source-proposals`
-- `/journey/source-proposals/{id}/accept`
-- `/journey/source-proposals/{id}/decline`
+- `/beacon`
+- `/beacon/links`
+- `/beacon/pages`
+- `/b/{slug}`
+- `/p/{page-key}`
+- `/gather`
+- `/gather/events`
+- `/gather/events/{id}`
+- `/gather/events/{id}/rsvp`
+- `/gather/events/{id}/slots`
+- `/gather/slots/{id}/claim`
 
 ## Explicit current boundaries
 
+- Beacon does not own events, RSVP, signup, attendance, schedules, or event lifecycle.
+- Gather does not own general redirects, QR definitions, digital business cards, Wi-Fi cards, or link hubs.
+- Private Gather events may not become public through Beacon.
+- QR image rendering and downloadable printable assets remain a renderer/adaptor follow-up; canonical QR definitions are implemented.
+- Public anonymous RSVP and signup tokens are not implemented in this slice; current participation requires authentication.
 - Companion does not autonomously monitor behavior or scan private records.
 - Companion does not directly own or mutate Quest or Chronicle source records.
 - Approval and execution remain separate actions.
-- External AI-provider integration remains deferred.
-- Household, Organization, messaging, email sending, and full collaborative authorization remain deferred.
-- Cooperative Quest invitations are foundations only and do not imply shared-account access.
-- Provider-specific authentication email delivery remains an adapter concern.
-- Passkeys, social login, and multifactor authentication remain deferred.
-- Epic Ordinary receives only currently permitted minimized facts.
-- World reactions do not expose Quest notes, Chronicle prose, Companion memory, account secrets, or unrelated private records.
-- Fictional World objectives and invitations never become duplicate real-life Quests without explicit consent.
-- Declining or snoozing an invitation has no relationship or Home penalty.
-- Beacon and Gather retain ownership of their source records; Quests owns accepted commitments.
-- Restart and deletion affect only selected account-specific World State.
-- Shared World catalog and package definitions are never deleted through player lifecycle controls.
+- Household, Organization, messaging, email sending, payments, external calendar synchronization, and full collaborative authorization remain deferred.
+- Accepted commitments belong to Quests; source records remain with Beacon or Gather.
+- Chronicle memory creation remains user-controlled.
+- Worlds receive only approved minimized facts and never mutate District truth.
 
 ## Validation
 
-Build 035 adds `.github/workflows/build-035.yml`, which lints PHP and checks migration, consent, provenance, source-domain, and agency boundaries. A successful GitHub Actions run must be confirmed before treating the checkpoint as release-ready.
+Build 040 adds `.github/workflows/build-040.yml`, which must lint PHP and validate migration, capability-map, ownership, routing, and consent boundaries. A successful GitHub Actions run must be confirmed before treating this checkpoint as release-ready.
 
 ## Build workflow
 
