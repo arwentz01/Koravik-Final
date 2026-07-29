@@ -4,6 +4,7 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/bootstrap.php';
 
 use Koravik\Districts\Beacon\BeaconController;
+use Koravik\Districts\Gather\GatherCloseoutController;
 use Koravik\Districts\Gather\GatherController;
 use Koravik\Districts\Gather\GatherLifecycleController;
 use Koravik\Districts\Quests\LivingQuestController;
@@ -36,6 +37,7 @@ if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; c
 Security::startSession();ob_start();
 $handled=(new MailOperationsController(database()))->handle($method,$path);
 if(!$handled)$handled=(new BeaconController(database()))->handle($method,$path);
+if(!$handled)$handled=(new GatherCloseoutController(database()))->handle($method,$path);
 if(!$handled)$handled=(new GatherLifecycleController(database()))->handle($method,$path);
 if(!$handled)$handled=(new GatherController(database()))->handle($method,$path);
 if(!$handled)$handled=(new OrientationController(database()))->handle($method,$path);
@@ -68,7 +70,8 @@ if($account&&$method==='GET'&&$path==='/chronicle')$html=str_replace('<section c
 if($account&&$method==='GET'&&$path==='/settings'){$html=str_replace('Account export and deletion execution are not yet available; Koravik does not pretend otherwise.','Account export and staged account closure are available from <a href="/settings/data">Data controls</a>.',$html);if(!str_contains($html,'/settings/security'))$html=str_replace('</main>','<section class="settings-card trust-panel"><h2>Security</h2><p>Change your password and invalidate older sessions.</p><a href="/settings/security">Open security settings</a></section></main>',$html);if(in_array((string)($account['role']??''),['owner','admin'],true)&&!str_contains($html,'/system/mail'))$html=str_replace('</main>','<section class="settings-card"><h2>System operations</h2><p>Review Platform Mail queue health and delivery diagnostics.</p><a href="/system/mail">Open Platform Mail</a></section></main>',$html);}
 if($account&&$method==='GET'&&$path==='/worlds')$html=$replaceFirst('</section>','<p class="local-actions"><a href="/worlds/installed">Manage installed Worlds</a></p></section>',$html);
 if($account&&$method==='GET'&&$path==='/worlds/epic-ordinary'&&str_contains($html,'Status: Active')&&!str_contains($html,'/worlds/epic-ordinary/play'))$html=$replaceFirst('</section>','<p class="local-actions"><a class="button" href="/worlds/epic-ordinary/play">Continue story</a><a href="/worlds/epic-ordinary/progress">View progress</a><a href="/worlds/epic-ordinary/manage">Manage World</a></p></section>',$html);
-if($method==='GET'&&preg_match('#^/gather/events/([a-f0-9-]{36})$#',$path,$m)&&!str_contains($html,'/agenda')){$id=htmlspecialchars($m[1],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');$actions='<section class="surface"><h2>Event tools</h2><p class="local-actions"><a class="button" href="/gather/events/'.$id.'/agenda">Agenda</a>'.($account?'<a class="button secondary" href="/gather/events/'.$id.'/day-of">Day-of</a><a class="button secondary" href="/gather/events/'.$id.'/reflect">Reflect</a>':'').'</p></section>';$html=str_replace('</main>',$actions.'</main>',$html);}
+if($method==='GET'&&preg_match('#^/gather/events/([a-f0-9-]{36})$#',$path,$m)&&!str_contains($html,'/agenda')){$id=htmlspecialchars($m[1],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');$actions='<section class="surface"><h2>Event tools</h2><p class="local-actions"><a class="button" href="/gather/events/'.$id.'/agenda">Agenda</a>'.($account?'<a class="button secondary" href="/gather/events/'.$id.'/day-of">Day-of</a><a class="button secondary" href="/gather/events/'.$id.'/closeout">Closeout</a><a class="button secondary" href="/gather/events/'.$id.'/reflect">Reflect</a>':'').'</p></section>';$html=str_replace('</main>',$actions.'</main>',$html);}
+if($method==='GET'&&preg_match('#^/gather/events/([a-f0-9-]{36})/reflect$#',$path)&&isset($_GET['proposal'])){$proposal=preg_replace('/[^a-f0-9-]/','',(string)$_GET['proposal']);if(strlen($proposal)===36)$html=str_replace('</main>','<section class="surface"><h2>Proposal ready for review</h2><p><a class="button" href="/gather/outcomes/'.htmlspecialchars($proposal,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8').'/review">Review minimized data and approve</a></p></section></main>',$html);}
 $html=(new AppShell())->apply($html,$account,$path);
 $html=(new VisualSystem())->apply($html,$account,$path);
 echo $html;
