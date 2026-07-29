@@ -1,10 +1,9 @@
-ALTER TABLE quests
-    ADD COLUMN purpose TEXT NULL AFTER description,
-    ADD COLUMN next_step VARCHAR(180) NULL AFTER purpose,
-    ADD COLUMN origin_type VARCHAR(40) NOT NULL DEFAULT 'personal' AFTER quest_type,
-    ADD COLUMN origin_reference VARCHAR(180) NULL AFTER origin_type;
+ALTER TABLE quests ADD COLUMN purpose TEXT NULL AFTER description;
+ALTER TABLE quests ADD COLUMN next_step VARCHAR(180) NULL AFTER purpose;
+ALTER TABLE quests ADD COLUMN origin_type VARCHAR(40) NOT NULL DEFAULT 'personal' AFTER quest_type;
+ALTER TABLE quests ADD COLUMN origin_reference VARCHAR(180) NULL AFTER origin_type;
 
-CREATE TABLE quest_resolutions (
+CREATE TABLE IF NOT EXISTS quest_resolutions (
     id CHAR(36) PRIMARY KEY,
     quest_id CHAR(36) NOT NULL,
     account_id CHAR(36) NOT NULL,
@@ -18,7 +17,7 @@ CREATE TABLE quest_resolutions (
     CONSTRAINT fk_quest_resolutions_account FOREIGN KEY (account_id) REFERENCES platform_accounts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE healing_home_state (
+CREATE TABLE IF NOT EXISTS healing_home_state (
     account_id CHAR(36) PRIMARY KEY,
     atmosphere VARCHAR(40) NOT NULL DEFAULT 'quiet_morning',
     current_room VARCHAR(80) NOT NULL DEFAULT 'entry_hall',
@@ -28,7 +27,7 @@ CREATE TABLE healing_home_state (
     CONSTRAINT fk_healing_home_account FOREIGN KEY (account_id) REFERENCES platform_accounts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE healing_home_rooms (
+CREATE TABLE IF NOT EXISTS healing_home_rooms (
     id CHAR(36) PRIMARY KEY,
     account_id CHAR(36) NOT NULL,
     room_key VARCHAR(80) NOT NULL,
