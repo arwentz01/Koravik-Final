@@ -1,0 +1,39 @@
+name: Build 026
+on:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: koravik
+          MYSQL_USER: koravik
+          MYSQL_PASSWORD: koravik
+          MYSQL_ROOT_PASSWORD: root
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      SEED_EMAIL: owner@example.test
+      SEED_PASSWORD: password123
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with: {php-version: '8.3', extensions: pdo_mysql, coverage: none}
+      - name: PHP syntax
+        run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+      - name: Configure and migrate
+        run: |
+          cp .env.example .env
+          sed -i 's/^DB_PASS=.*/DB_PASS=koravik/' .env
+          php tools/migrate.php
+          php tools/migrate.php
+          php tools/seed.php
+      - name: Exercise first-use boundaries
+        run: |
+          php -r 'require "bootstrap.php"; $s=new Koravik\Platform\Orientation\OrientationService(database()); $a=$s->register("New Person","new-person@example.test","password123"); if(!$s->pending($a["id"])) exit(1); $next=$s->complete($a["id"],"hearth"); if($next!=="/hearth"||$s->pending($a["id"])) exit(1); $s->complete($a["id"],"hearth"); $hash=database()->pdo()->prepare("SELECT password_hash FROM auth_credentials WHERE account_id=:id"); $hash->execute(["id"=>$a["id"]]); if(!password_verify("password123",(string)$hash->fetchColumn())) exit(1); $worlds=database()->pdo()->prepare("SELECT COUNT(*) FROM world_installations WHERE account_id=:id"); $worlds->execute(["id"=>$a["id"]]); $quests=database()->pdo()->prepare("SELECT COUNT(*) FROM quests WHERE account_id=:id"); $quests->execute(["id"=>$a["id"]]); if((int)$worlds->fetchColumn()!==0||(int)$quests->fetchColumn()!==0) exit(1); echo "First-use checks passed\n";'
+          grep -q 'simply enter Hearth' docs/product/FIRST_USE_ORIENTATION.md
