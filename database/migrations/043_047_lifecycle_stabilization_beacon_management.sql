@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS gather_outcome_applications (
 ALTER TABLE beacon_domains
     ADD COLUMN suspended_at DATETIME NULL AFTER verified_at;
 
+ALTER TABLE beacon_short_links DROP INDEX uq_beacon_slug;
+ALTER TABLE beacon_short_links MODIFY COLUMN status ENUM('active','disabled','paused','archived') NOT NULL DEFAULT 'active';
 ALTER TABLE beacon_short_links
     ADD COLUMN preferred_domain_id CHAR(36) NULL AFTER domain_id,
     ADD COLUMN archived_at DATETIME NULL AFTER status,
