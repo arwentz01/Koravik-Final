@@ -1,8 +1,8 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Build 041 implemented on `main`  
-**Version:** 1.41  
-**Baseline date:** July 28, 2026  
+**Status:** Build 051 stabilized on `main`  
+**Version:** 1.51  
+**Baseline date:** July 29, 2026  
 **Authoritative branch:** `main`
 
 ## Repository authority
@@ -11,9 +11,7 @@ This handoff applies only to `arwentz01/Koravik-Final`. Do not import code, sche
 
 ## Mandatory reading order
 
-Before implementation, read `README.md`, `docs/README.md`, `docs/FOUNDATIONAL_DECISIONS.md`, all canonical documents, Project Zero, affected Product and Engineering Blueprint contracts, the ADR register, and this handoff. The documentation authority order in `docs/README.md` controls conflicts.
-
-Focused ownership authority includes `docs/canonical/PLATFORM_CAPABILITY_MAP.md`.
+Before implementation, read `README.md`, `docs/README.md`, `docs/FOUNDATIONAL_DECISIONS.md`, all canonical documents, affected Product and Engineering Blueprint contracts, the ADR register, and this handoff. The documentation authority order in `docs/README.md` controls conflicts. Focused ownership authority includes `docs/canonical/PLATFORM_CAPABILITY_MAP.md`.
 
 ## Architecture baseline
 
@@ -21,9 +19,8 @@ Koravik-Final is a PHP 8.3+ custom modular monolith using MySQL or MariaDB throu
 
 - Districts own real-life truth.
 - Hearth composes but does not own source records.
-- Healing Home and Journey orient, acknowledge, and connect experiences without taking ownership from Quests, Chronicle, Worlds, Companion, Beacon, or Gather.
 - Beacon owns short links, QR definitions, public pages, link hubs, digital cards, Wi-Fi cards, and privacy-aware distribution data.
-- Gather owns events, schedules, RSVP, guest parties, signup slots, volunteer shifts, potluck and requested-item commitments, waitlists, attendance, and follow-up.
+- Gather owns events, schedules, RSVP, guest parties, signup slots, volunteer shifts, potluck and requested-item commitments, waitlists, attendance, communications, and follow-up.
 - A cohesive workflow may cross Beacon and Gather without exposing technical seams.
 - Worlds interpret approved minimized facts into independent fictional World State.
 - Companion owns proposals and approved Companion memory, not destination records.
@@ -35,44 +32,41 @@ Koravik-Final is a PHP 8.3+ custom modular monolith using MySQL or MariaDB throu
 
 ## Completed implementation arc
 
-### Builds 001–025 — Platform, Companion, Chronicle, security, visual system, and Worlds
+### Builds 001–035
 
-Secure identity, Hearth, Quests, Chronicle, Companion consent and execution, Notifications, Search, Privacy and Audit, account-data lifecycle, authentication recovery, unified visual shell, Epic Ordinary, World progress and reactions, and installed World lifecycle.
+Platform identity, Hearth, Quests, Chronicle, Companion, Notifications, Search, Privacy and Audit, account-data lifecycle, authentication recovery, unified visual shell, Epic Ordinary, World lifecycle, first-use orientation, Living Quests, Healing Home, relationships, and Journey invitation experiences.
 
-### Builds 026–030 — First use, Living Quests, Healing Home, reflection, and relationships
+### Builds 036–041 — Beacon and Gather foundation
 
-Secure registration and orientation, Quest purpose and provenance, non-binary outcomes, Healing Home rooms and atmosphere, keepsakes, Caretaker relationship state, shared memories, and readable relationship history.
+Beacon sharing capabilities, Gather events, guest registration, party capacity, secure RSVP management, event and signup waitlists, and planning signups. See:
 
-### Builds 031–035 — Journey invitation arc
+- `docs/builds/BUILD_036_040_BEACON_GATHER.md`
+- `docs/builds/BUILD_041_GATHER_GUEST_REGISTRATION.md`
 
-Story invitations, accept/decline/snooze consent, Garden and Library presentation, Caretaker conversations, consent-gated Beacon and Gather source proposals, and cooperative invitation foundations.
+### Builds 042–046 — Gather operational core
 
-### Builds 036–040 — Beacon and Gather foundation
+Authenticated SMTP, Platform Mail queue and finite worker, restricted-event access grants, guest RSVP self-service, event and signup waitlist workflows, promotion offers, and signup rules. See `docs/builds/BUILD_042_046_GATHER_OPERATIONAL_CORE.md`.
 
-Beacon short links, public pages, cards, Wi-Fi sharing, QR definitions, Gather events, RSVPs, planning signups, Beacon × Gather provisioning, Journey proposal boundaries, and the canonical capability map.
+### Builds 047–051 — Gather event operations
 
-See `docs/builds/BUILD_036_040_BEACON_GATHER.md`.
+Organizer command center, event settings, attendance summaries, party-aware check-in and correction history, durable announcements, targeted audiences, and event-linked mail delivery visibility. The original fast implementation was reconciled through a dedicated stabilization pass. See:
 
-### Build 041 — Gather guest registration and capacity
-
-Unlisted and public events support registration without a Koravik account using name and email. Registrations represent whole parties, additional guests may be disabled or limited, total capacity counts every attendee, event and signup waitlists are independent, and shifts or food items may allow configurable multiple commitments. Secure RSVP-management tokens are stored hashed, and neutral email lookup queues provider-neutral management-link deliveries.
-
-See `docs/builds/BUILD_041_GATHER_GUEST_REGISTRATION.md`.
+- `docs/builds/BUILD_047_051_GATHER_EVENT_OPERATIONS.md`
+- `docs/builds/BUILD_051_STABILIZATION.md`
 
 ## Current product loop
 
-`Create a Gather event → Gather provisions Beacon sharing tools → guests register or join a waitlist → participants claim shifts, potluck needs, items, and tasks under organizer-defined limits → Beacon and Gather may propose meaningful action → explicit acceptance creates a Quest → reflection and Journey experiences may acknowledge approved outcomes.`
+`Create a Gather event → Gather provisions Beacon sharing tools → guests register or join a waitlist → participants claim shifts, potluck needs, items, and tasks → organizers configure access and capacity → organizers communicate with bounded audiences → staff check in attending parties → approved outcomes may later connect to Quests, Chronicle, Journey, or Worlds through their existing consent and ownership boundaries.`
 
-## Current database migrations
+## Current migrations
 
-Production deployment must apply all migrations in `database/migrations`, including:
+Production deployment must apply every file in `database/migrations`, including:
 
 ```text
-022_living_quests_healing_home
-023_reflection_relationships
-024_journey_arc_invitations_rooms_conversations
-025_beacon_gather_capabilities
-026_gather_guest_registration_capacity
+025_beacon_gather_capabilities.sql
+026_gather_guest_registration_capacity.sql
+027_031_gather_delivery_access_management_waitlists_rules.sql
+032_036_gather_operational_ui_checkin_communications.sql
 ```
 
 Run:
@@ -81,45 +75,55 @@ Run:
 php tools/migrate.php
 ```
 
-## Current Beacon and Gather routes
+## Current Gather routes
 
-- `/beacon`
-- `/beacon/links`
-- `/beacon/pages`
-- `/b/{slug}`
-- `/p/{page-key}`
-- `/gather`
-- `/gather/events`
-- `/gather/events/{id}`
-- `/gather/events/{id}/guest-rsvp`
-- `/gather/events/{id}/slots`
-- `/gather/rsvp/lookup`
-- `/gather/rsvp/manage/{token}`
-- `/gather/slots/{id}/claim`
+- `GET /gather`
+- `POST /gather/events`
+- `GET /gather/events/{id}`
+- `GET /gather/events/{id}/command`
+- `POST /gather/events/{id}/settings`
+- `POST /gather/events/{id}/guest-rsvp`
+- `POST /gather/events/{id}/slots`
+- `POST /gather/events/{id}/check-in`
+- `POST /gather/events/{id}/check-in/correct`
+- `POST /gather/events/{id}/announce`
+- `POST /gather/rsvp/lookup`
+- `GET|POST /gather/rsvp/manage/{token}`
+- `POST /gather/slots/{id}/claim`
+
+## Platform Mail deployment
+
+Configure authenticated SMTP with environment variables documented in `docs/builds/BUILD_042_046_GATHER_OPERATIONAL_CORE.md`. Run the finite queue worker through cron, for example:
+
+```bash
+php tools/mail-worker.php 20
+```
+
+A queued message is not represented as sent until the SMTP adapter succeeds and the delivery record is updated.
 
 ## Explicit current boundaries
 
 - Beacon does not own events, RSVP, signup, attendance, schedules, or event lifecycle.
 - Gather does not own general redirects, QR definitions, digital business cards, Wi-Fi cards, or link hubs.
 - Restricted Gather events may not become public through Beacon.
-- QR image rendering and downloadable printable assets remain a renderer/adaptor follow-up; canonical QR definitions are implemented.
 - Guest registration does not create a Koravik account.
 - Management-token hashes are stored; raw tokens are not persisted.
-- Actual SMTP/provider delivery remains deferred to the delivery adapter. Queueing a management-link delivery is not represented as a successfully sent email.
-- Restricted-event eligibility for friends, invitations, Households, and Organizations remains deferred.
-- Automatic event and signup waitlist promotion remains deferred.
-- Overlapping-shift policy is persisted, but full conflict evaluation remains deferred.
-- Companion does not autonomously monitor behavior or scan private records.
-- Companion does not directly own or mutate Quest or Chronicle source records.
-- Approval and execution remain separate actions.
-- Household, Organization, messaging, payments, external calendar synchronization, and full collaborative authorization remain deferred.
-- Accepted commitments belong to Quests; source records remain with Beacon or Gather.
-- Chronicle memory creation remains user-controlled.
+- Organizer communications are bounded by event ownership and explicit audience selection.
+- Check-in correction preserves operational provenance instead of deleting evidence.
+- Mail resend, cancel, test-send, queue recovery, and delivery-detail tools remain Build 052 work.
+- Dedicated attendee search, walk-ins, kiosk mode, and camera-based QR scanning remain Build 054 work.
+- Public event redesign, schedules, agenda favorites, reminders, and closeout remain later vertical slices.
+- Household, Organization, payments, external calendar synchronization, and full collaborative authorization remain deferred unless separately approved.
+- Companion does not autonomously monitor behavior or directly mutate Quest or Chronicle source records.
 - Worlds receive only approved minimized facts and never mutate District truth.
 
 ## Validation
 
-Build 041 adds `.github/workflows/build-041.yml`, which must lint PHP and validate migration, token hashing, visibility, party capacity, waitlist, signup-limit, routing, and ownership boundaries. A successful GitHub Actions run must be confirmed before treating this checkpoint as release-ready.
+`.github/workflows/build-051.yml` lints PHP and validates the stabilized schema, organizer correction path, current check-in state, announcement history, slot targeting, direct-signup communication, ownership predicates, routing, and the Build 051 health checkpoint. A successful run must be confirmed before this checkpoint is treated as release-ready.
+
+## Next build
+
+Build 052 should implement Platform Mail operations as one coherent vertical slice: queue health, delivery details, retry/resend, cancellation, test delivery, stale-processing recovery, redacted diagnostics, and an authorized visual home.
 
 ## Build workflow
 
