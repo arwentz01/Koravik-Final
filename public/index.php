@@ -3,6 +3,7 @@
 declare(strict_types=1);
 require dirname(__DIR__) . '/bootstrap.php';
 
+use Koravik\Districts\Quests\LivingQuestController;
 use Koravik\Platform\AccountData\AccountDataController;
 use Koravik\Platform\Companion\CompanionContextController;
 use Koravik\Platform\Companion\CompanionController;
@@ -38,6 +39,7 @@ if(!$handled)$handled=(new CompanionLifecycleController(database()))->handle($me
 if(!$handled)$handled=(new CompanionController(database()))->handle($method,$path);
 if(!$handled)$handled=(new HearthLayoutController(database()))->handle($method,$path);
 if(!$handled)$handled=(new HealingHomeController(database()))->handle($method,$path);
+if(!$handled)$handled=(new LivingQuestController(database()))->handle($method,$path);
 if(!$handled)$handled=(new SettingsController(database()))->handle($method,$path);
 if(!$handled)$handled=(new PrivacyController(database()))->handle($method,$path);
 if(!$handled)$handled=(new SearchController(database()))->handle($method,$path);
