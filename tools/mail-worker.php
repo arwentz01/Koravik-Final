@@ -1,12 +1,14 @@
 <?php
 
 declare(strict_types=1);
-
 require dirname(__DIR__).'/bootstrap.php';
 
+use Koravik\Platform\Mail\MailOperationsService;
 use Koravik\Platform\Mail\SmtpMailer;
 
 $limit=max(1,min(100,(int)($argv[1]??20)));$pdo=database()->pdo();$mailer=new SmtpMailer();
+$recovered=(new MailOperationsService(database()))->recoverStale();
+if($recovered>0)echo 'Recovered '.$recovered.' stale mail claim(s).'.PHP_EOL;
 $stmt=$pdo->prepare('SELECT * FROM platform_mail_deliveries WHERE status IN ("pending","retry") AND available_at<=UTC_TIMESTAMP() ORDER BY created_at LIMIT '.$limit);
 $stmt->execute();$messages=$stmt->fetchAll();
 foreach($messages as $message){
