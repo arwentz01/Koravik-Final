@@ -3,6 +3,8 @@
 declare(strict_types=1);
 require dirname(__DIR__) . '/bootstrap.php';
 
+use Koravik\Districts\Beacon\BeaconController;
+use Koravik\Districts\Gather\GatherController;
 use Koravik\Districts\Quests\LivingQuestController;
 use Koravik\Platform\AccountData\AccountDataController;
 use Koravik\Platform\Companion\CompanionContextController;
@@ -28,9 +30,11 @@ use Koravik\Worlds\EpicOrdinary\WorldProgressController;
 use Koravik\Worlds\WorldLifecycleController;
 
 $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');$path=parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/';
-if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'035'],JSON_THROW_ON_ERROR);return;}
+if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'040'],JSON_THROW_ON_ERROR);return;}
 Security::startSession();ob_start();
-$handled=(new OrientationController(database()))->handle($method,$path);
+$handled=(new BeaconController(database()))->handle($method,$path);
+if(!$handled)$handled=(new GatherController(database()))->handle($method,$path);
+if(!$handled)$handled=(new OrientationController(database()))->handle($method,$path);
 if(!$handled)$handled=(new GuideController())->handle($method,$path);
 if(!$handled)$handled=(new AuthRecoveryController(database()))->handle($method,$path);
 if(!$handled)$handled=(new AccountDataController(database()))->handle($method,$path);
