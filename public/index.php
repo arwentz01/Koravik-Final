@@ -30,7 +30,7 @@ use Koravik\Worlds\EpicOrdinary\WorldProgressController;
 use Koravik\Worlds\WorldLifecycleController;
 
 $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');$path=parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/';
-if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'040'],JSON_THROW_ON_ERROR);return;}
+if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'041'],JSON_THROW_ON_ERROR);return;}
 Security::startSession();ob_start();
 $handled=(new BeaconController(database()))->handle($method,$path);
 if(!$handled)$handled=(new GatherController(database()))->handle($method,$path);
