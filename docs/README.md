@@ -1,7 +1,7 @@
 # Documentation Authority
 
 **Status:** Approved for Blueprint v1.0  
-**Version:** 1.3
+**Version:** 1.4
 
 ## Authority order
 
@@ -44,16 +44,19 @@ The implementation handoff may narrow current work but may not override higher-o
 
 ### Product Blueprint
 
-`product/` defines interaction behavior, shell, components, user flows, screen inventory, Epic Ordinary direction, Companion proposals, consent-scoped Companion context and memory, Chronicle ownership, and visual placement.
+`product/` defines interaction behavior, shell, components, user flows, screen inventory, Epic Ordinary direction, Companion proposals, consent-scoped Companion context and memory, Chronicle ownership, visual placement, installed World lifecycle, and first-use orientation.
 
 Focused contracts include:
 
+- `product/FIRST_USE_ORIENTATION.md`
 - `product/COMPANION_PROPOSALS.md`
 - `product/COMPANION_CONTEXT_AND_MEMORY.md`
 - `product/CHRONICLE_OWNERSHIP.md`
 - `product/VISUAL_INFORMATION_ARCHITECTURE.md`
 - `product/ROUTE_VISUAL_INVENTORY.md`
 - `product/EPIC_ORDINARY_CHAPTER_TWO.md`
+- `product/WORLD_PROGRESS_AND_REACTIONS.md`
+- `product/INSTALLED_WORLD_LIFECYCLE.md`
 
 ### Engineering Blueprint
 
@@ -98,4 +101,4 @@ The `archive/` directory is non-authoritative. Legacy roadmaps and handoffs must
 
 ## Current state
 
-Project Zero and Blueprint v1.0 remain authoritative. Builds 001 through 023 are merged. Begin work from `IMPLEMENTATION_HANDOFF.md` and read the focused visual-system and Epic Ordinary contracts when those areas are affected.
+Project Zero and Blueprint v1.0 remain authoritative. Builds 001 through 025 are merged. Build 026 is in review on `agent/build-026-first-use` and adds secure account registration plus bounded first-use orientation.
