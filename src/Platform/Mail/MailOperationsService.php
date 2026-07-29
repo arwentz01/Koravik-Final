@@ -69,8 +69,8 @@ final class MailOperationsService
     public function recoverStale(int $minutes=15): int
     {
         $minutes=max(5,min(1440,$minutes));
-        $s=$this->database->pdo()->prepare('UPDATE platform_mail_deliveries SET status="retry",available_at=UTC_TIMESTAMP(),claimed_at=NULL,recovered_at=UTC_TIMESTAMP(),failure_reason="Recovered after stale processing claim",updated_at=UTC_TIMESTAMP() WHERE status="processing" AND claimed_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL :minutes MINUTE)');
-        $s->bindValue('minutes',$minutes,\PDO::PARAM_INT);$s->execute();
+        $sql='UPDATE platform_mail_deliveries SET status="retry",available_at=UTC_TIMESTAMP(),claimed_at=NULL,recovered_at=UTC_TIMESTAMP(),failure_reason="Recovered after stale processing claim",updated_at=UTC_TIMESTAMP() WHERE status="processing" AND claimed_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL '.$minutes.' MINUTE)';
+        $s=$this->database->pdo()->prepare($sql);$s->execute();
         return $s->rowCount();
     }
 
