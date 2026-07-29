@@ -11,6 +11,8 @@ use RuntimeException;
 final class QuestService
 {
     private const TYPES = ['action', 'habit', 'project', 'journey', 'responsibility', 'world_objective'];
+    private const ORIGINS = ['personal', 'story', 'health', 'beacon', 'gather', 'companion'];
+    private const OUTCOMES = ['completed', 'partial', 'changed_direction', 'released', 'paused', 'deferred'];
 
     public function __construct(private readonly Database $database)
     {
@@ -20,17 +22,24 @@ final class QuestService
     {
         $title = trim($title);
         $description = trim($description);
+        $purpose = trim((string) ($options['purpose'] ?? ''));
+        $nextStep = trim((string) ($options['next_step'] ?? ''));
         $type = strtolower((string) ($options['quest_type'] ?? 'action'));
+        $origin = strtolower((string) ($options['origin_type'] ?? 'personal'));
+        $originReference = trim((string) ($options['origin_reference'] ?? ''));
         if ($title === '') throw new RuntimeException('Give this Quest a title.');
         if (mb_strlen($title) > 180) throw new RuntimeException('Quest titles must be 180 characters or fewer.');
         if (mb_strlen($description) > 4000) throw new RuntimeException('Quest notes must be 4,000 characters or fewer.');
+        if (mb_strlen($purpose) > 2000) throw new RuntimeException('Why this matters must be 2,000 characters or fewer.');
+        if (mb_strlen($nextStep) > 180) throw new RuntimeException('The next step must be 180 characters or fewer.');
         if (!in_array($type, self::TYPES, true)) throw new RuntimeException('Choose a valid Quest type.');
+        if (!in_array($origin, self::ORIGINS, true)) throw new RuntimeException('Choose a valid Quest origin.');
 
-        return $this->database->transaction(function (PDO $pdo) use ($accountId, $title, $description, $options, $type): string {
+        return $this->database->transaction(function (PDO $pdo) use ($accountId, $title, $description, $purpose, $nextStep, $options, $type, $origin, $originReference): string {
             $questId = self::uuid();
             $now = gmdate('Y-m-d H:i:s');
-            $statement = $pdo->prepare('INSERT INTO quests (id, account_id, title, description, quest_type, status, lifecycle_status, created_at, updated_at) VALUES (:id, :account_id, :title, :description, :quest_type, "active", "active", :created_at, :updated_at)');
-            $statement->execute(['id'=>$questId,'account_id'=>$accountId,'title'=>$title,'description'=>$description,'quest_type'=>$type,'created_at'=>$now,'updated_at'=>$now]);
+            $statement = $pdo->prepare('INSERT INTO quests (id, account_id, title, description, purpose, next_step, quest_type, origin_type, origin_reference, status, lifecycle_status, created_at, updated_at) VALUES (:id, :account_id, :title, :description, :purpose, :next_step, :quest_type, :origin_type, :origin_reference, "active", "active", :created_at, :updated_at)');
+            $statement->execute(['id'=>$questId,'account_id'=>$accountId,'title'=>$title,'description'=>$description,'purpose'=>$purpose !== '' ? $purpose : null,'next_step'=>$nextStep !== '' ? $nextStep : null,'quest_type'=>$type,'origin_type'=>$origin,'origin_reference'=>$originReference !== '' ? $originReference : null,'created_at'=>$now,'updated_at'=>$now]);
 
             $frequency = strtolower((string) ($options['frequency'] ?? 'none'));
             if ($frequency === 'none') {
@@ -53,21 +62,52 @@ final class QuestService
 
     public function getForAccount(string $questId, string $accountId): ?array
     {
-        $statement = $this->database->pdo()->prepare('SELECT q.id, q.title, q.description, q.quest_type, q.status, q.lifecycle_status, r.frequency, r.interval_count, r.starts_on, r.ends_on, (SELECT GROUP_CONCAT(w.weekday ORDER BY w.weekday) FROM quest_recurrence_weekdays w WHERE w.quest_id = q.id) AS weekdays, (SELECT qo.id FROM quest_occurrences qo WHERE qo.quest_id = q.id AND qo.account_id = :occurrence_account AND qo.status IN ("available", "scheduled") ORDER BY qo.scheduled_for ASC LIMIT 1) AS next_occurrence_id, (SELECT qo.scheduled_for FROM quest_occurrences qo WHERE qo.quest_id = q.id AND qo.account_id = :date_account AND qo.status IN ("available", "scheduled") ORDER BY qo.scheduled_for ASC LIMIT 1) AS next_scheduled_for, CASE WHEN EXISTS (SELECT 1 FROM quest_occurrences qo WHERE qo.quest_id = q.id AND qo.status IN ("available", "scheduled")) THEN 0 ELSE 1 END AS completed FROM quests q LEFT JOIN quest_recurrence_rules r ON r.quest_id = q.id WHERE q.id = :quest_id AND q.account_id = :quest_account LIMIT 1');
+        $statement = $this->database->pdo()->prepare('SELECT q.id, q.title, q.description, q.purpose, q.next_step, q.quest_type, q.origin_type, q.origin_reference, q.status, q.lifecycle_status, r.frequency, r.interval_count, r.starts_on, r.ends_on, (SELECT GROUP_CONCAT(w.weekday ORDER BY w.weekday) FROM quest_recurrence_weekdays w WHERE w.quest_id = q.id) AS weekdays, (SELECT qo.id FROM quest_occurrences qo WHERE qo.quest_id = q.id AND qo.account_id = :occurrence_account AND qo.status IN ("available", "scheduled") ORDER BY qo.scheduled_for ASC LIMIT 1) AS next_occurrence_id, (SELECT qo.scheduled_for FROM quest_occurrences qo WHERE qo.quest_id = q.id AND qo.account_id = :date_account AND qo.status IN ("available", "scheduled") ORDER BY qo.scheduled_for ASC LIMIT 1) AS next_scheduled_for, CASE WHEN EXISTS (SELECT 1 FROM quest_occurrences qo WHERE qo.quest_id = q.id AND qo.status IN ("available", "scheduled")) THEN 0 ELSE 1 END AS completed FROM quests q LEFT JOIN quest_recurrence_rules r ON r.quest_id = q.id WHERE q.id = :quest_id AND q.account_id = :quest_account LIMIT 1');
         $statement->execute(['quest_id'=>$questId,'occurrence_account'=>$accountId,'date_account'=>$accountId,'quest_account'=>$accountId]);
         $quest = $statement->fetch();
         if (!$quest) return null;
         $quest['steps'] = $this->steps($questId, $accountId);
         $quest['progress_percent'] = $this->progressPercent($quest['steps']);
         $quest['milestones'] = $this->milestones($questId);
+        $quest['resolutions'] = $this->resolutions($questId, $accountId);
         return $quest;
     }
 
     public function listForAccount(string $accountId): array
     {
-        $statement = $this->database->pdo()->prepare('SELECT q.id, q.title, q.description, q.quest_type, q.lifecycle_status, r.frequency, r.interval_count, MIN(CASE WHEN qo.status IN ("available", "scheduled") THEN qo.scheduled_for END) AS next_scheduled_for, CASE WHEN SUM(CASE WHEN qo.status IN ("available", "scheduled") THEN 1 ELSE 0 END) = 0 THEN 1 ELSE 0 END AS completed, (SELECT COUNT(*) FROM quest_steps qs WHERE qs.quest_id = q.id) AS step_count, (SELECT COUNT(*) FROM quest_steps qs WHERE qs.quest_id = q.id AND qs.status = "completed") AS completed_step_count FROM quests q LEFT JOIN quest_recurrence_rules r ON r.quest_id = q.id LEFT JOIN quest_occurrences qo ON qo.quest_id = q.id AND qo.account_id = :occurrence_account WHERE q.account_id = :quest_account AND q.lifecycle_status <> "archived" GROUP BY q.id, q.title, q.description, q.quest_type, q.lifecycle_status, r.frequency, r.interval_count, q.created_at ORDER BY completed ASC, next_scheduled_for ASC, q.created_at DESC');
+        $statement = $this->database->pdo()->prepare('SELECT q.id, q.title, q.description, q.purpose, q.next_step, q.quest_type, q.origin_type, q.lifecycle_status, r.frequency, r.interval_count, MIN(CASE WHEN qo.status IN ("available", "scheduled") THEN qo.scheduled_for END) AS next_scheduled_for, CASE WHEN SUM(CASE WHEN qo.status IN ("available", "scheduled") THEN 1 ELSE 0 END) = 0 THEN 1 ELSE 0 END AS completed, (SELECT COUNT(*) FROM quest_steps qs WHERE qs.quest_id = q.id) AS step_count, (SELECT COUNT(*) FROM quest_steps qs WHERE qs.quest_id = q.id AND qs.status = "completed") AS completed_step_count FROM quests q LEFT JOIN quest_recurrence_rules r ON r.quest_id = q.id LEFT JOIN quest_occurrences qo ON qo.quest_id = q.id AND qo.account_id = :occurrence_account WHERE q.account_id = :quest_account AND q.lifecycle_status <> "archived" GROUP BY q.id, q.title, q.description, q.purpose, q.next_step, q.quest_type, q.origin_type, q.lifecycle_status, r.frequency, r.interval_count, q.created_at ORDER BY completed ASC, next_scheduled_for ASC, q.created_at DESC');
         $statement->execute(['occurrence_account'=>$accountId,'quest_account'=>$accountId]);
         return $statement->fetchAll();
+    }
+
+    public function updateFocus(string $questId, string $accountId, string $purpose, string $nextStep): void
+    {
+        $purpose = trim($purpose);
+        $nextStep = trim($nextStep);
+        if (mb_strlen($purpose) > 2000) throw new RuntimeException('Why this matters must be 2,000 characters or fewer.');
+        if (mb_strlen($nextStep) > 180) throw new RuntimeException('The next step must be 180 characters or fewer.');
+        $statement = $this->database->pdo()->prepare('UPDATE quests SET purpose = :purpose, next_step = :next_step, updated_at = UTC_TIMESTAMP() WHERE id = :id AND account_id = :account_id');
+        $statement->execute(['purpose'=>$purpose !== '' ? $purpose : null,'next_step'=>$nextStep !== '' ? $nextStep : null,'id'=>$questId,'account_id'=>$accountId]);
+        if ($statement->rowCount() !== 1) throw new RuntimeException('Quest not found or unavailable.');
+    }
+
+    public function resolve(string $questId, string $accountId, string $outcome, string $reflection = ''): void
+    {
+        $outcome = strtolower(trim($outcome));
+        $reflection = trim($reflection);
+        if (!in_array($outcome, self::OUTCOMES, true)) throw new RuntimeException('Choose a valid Quest outcome.');
+        if (mb_strlen($reflection) > 4000) throw new RuntimeException('Reflection must be 4,000 characters or fewer.');
+
+        $this->database->transaction(function (PDO $pdo) use ($questId, $accountId, $outcome, $reflection): void {
+            $quest = $pdo->prepare('SELECT id FROM quests WHERE id = :id AND account_id = :account_id FOR UPDATE');
+            $quest->execute(['id'=>$questId,'account_id'=>$accountId]);
+            if (!$quest->fetchColumn()) throw new RuntimeException('Quest not found or unavailable.');
+            $now = gmdate('Y-m-d H:i:s');
+            $pdo->prepare('INSERT INTO quest_resolutions (id, quest_id, account_id, outcome, reflection, resolved_at, created_at) VALUES (:id, :quest_id, :account_id, :outcome, :reflection, :resolved_at, :created_at)')->execute(['id'=>self::uuid(),'quest_id'=>$questId,'account_id'=>$accountId,'outcome'=>$outcome,'reflection'=>$reflection !== '' ? $reflection : null,'resolved_at'=>$now,'created_at'=>$now]);
+            $lifecycle = match ($outcome) {'paused'=>'paused','released'=>'archived',default=>'active'};
+            $pdo->prepare('UPDATE quests SET lifecycle_status = :lifecycle, archived_at = :archived_at, updated_at = :updated_at WHERE id = :id AND account_id = :account_id')->execute(['lifecycle'=>$lifecycle,'archived_at'=>$lifecycle === 'archived' ? $now : null,'updated_at'=>$now,'id'=>$questId,'account_id'=>$accountId]);
+            $this->audit($pdo, $accountId, 'quest.resolved.' . $outcome, $questId, $now);
+        });
     }
 
     public function addStep(string $questId, string $accountId, string $title, bool $required = true): string
@@ -157,6 +197,11 @@ final class QuestService
         return match ($type) {'habit'=>'Habit','project'=>'Project','journey'=>'Journey','responsibility'=>'Responsibility','world_objective'=>'World objective',default=>'Action'};
     }
 
+    public static function originLabel(string $origin): string
+    {
+        return match ($origin) {'story'=>'Story invitation','health'=>'Health','beacon'=>'Beacon','gather'=>'Gather','companion'=>'Companion',default=>'Personal'};
+    }
+
     private function steps(string $questId, string $accountId): array
     {
         $statement = $this->database->pdo()->prepare('SELECT qs.id, qs.title, qs.is_required, qs.sort_order, qs.status, qs.completed_at FROM quest_steps qs JOIN quests q ON q.id = qs.quest_id WHERE qs.quest_id = :quest_id AND q.account_id = :account_id ORDER BY qs.sort_order');
@@ -166,36 +211,44 @@ final class QuestService
 
     private function milestones(string $questId): array
     {
-        $statement = $this->database->pdo()->prepare('SELECT title, threshold_percent, reached_at FROM quest_milestones WHERE quest_id = :quest_id ORDER BY threshold_percent');
+        $statement = $this->database->pdo()->prepare('SELECT id, title, threshold_percent, reached_at FROM quest_milestones WHERE quest_id = :quest_id ORDER BY threshold_percent');
         $statement->execute(['quest_id'=>$questId]);
+        return $statement->fetchAll();
+    }
+
+    private function resolutions(string $questId, string $accountId): array
+    {
+        $statement = $this->database->pdo()->prepare('SELECT outcome, reflection, resolved_at FROM quest_resolutions WHERE quest_id = :quest_id AND account_id = :account_id ORDER BY resolved_at DESC LIMIT 20');
+        $statement->execute(['quest_id'=>$questId,'account_id'=>$accountId]);
         return $statement->fetchAll();
     }
 
     private function progressPercent(array $steps): int
     {
-        if (!$steps) return 0;
-        $required = array_values(array_filter($steps, static fn(array $step): bool => (bool)$step['is_required']));
-        $basis = $required ?: $steps;
-        $done = count(array_filter($basis, static fn(array $step): bool => $step['status'] === 'completed'));
-        return (int) floor(($done / count($basis)) * 100);
+        if ($steps === []) return 0;
+        $complete = count(array_filter($steps, static fn(array $step): bool => $step['status'] === 'completed'));
+        return (int) round(($complete / count($steps)) * 100);
     }
 
     private function refreshMilestones(PDO $pdo, string $questId): void
     {
-        $steps = $pdo->prepare('SELECT is_required, status FROM quest_steps WHERE quest_id = :quest_id');
-        $steps->execute(['quest_id'=>$questId]);
-        $percent = $this->progressPercent($steps->fetchAll());
+        $statement = $pdo->prepare('SELECT COUNT(*) AS total, SUM(status = "completed") AS completed FROM quest_steps WHERE quest_id = :quest_id');
+        $statement->execute(['quest_id'=>$questId]);
+        $counts = $statement->fetch();
+        $percent = (int)($counts['total'] ?? 0) > 0 ? (int)round(((int)$counts['completed'] / (int)$counts['total']) * 100) : 0;
         $pdo->prepare('UPDATE quest_milestones SET reached_at = CASE WHEN threshold_percent <= :percent THEN COALESCE(reached_at, UTC_TIMESTAMP()) ELSE NULL END WHERE quest_id = :quest_id')->execute(['percent'=>$percent,'quest_id'=>$questId]);
     }
 
-    private function audit(PDO $pdo, string $accountId, string $action, string $subjectId, string $now): void
+    private function audit(PDO $pdo, string $accountId, string $action, string $subjectId, string $occurredAt): void
     {
-        $pdo->prepare('INSERT INTO audit_log (id, account_id, action, subject_type, subject_id, occurred_at) VALUES (:id, :account_id, :action, "quest", :subject_id, :occurred_at)')->execute(['id'=>self::uuid(),'account_id'=>$accountId,'action'=>$action,'subject_id'=>$subjectId,'occurred_at'=>$now]);
+        $pdo->prepare('INSERT INTO audit_log (id, account_id, action, subject_type, subject_id, occurred_at) VALUES (:id, :account_id, :action, "quest", :subject_id, :occurred_at)')->execute(['id'=>self::uuid(),'account_id'=>$accountId,'action'=>$action,'subject_id'=>$subjectId,'occurred_at'=>$occurredAt]);
     }
 
     private static function uuid(): string
     {
-        $bytes = random_bytes(16); $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40); $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
-        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($bytes), 4));
+        $data = random_bytes(16);
+        $data[6] = chr((ord($data[6]) & 0x0f) | 0x40);
+        $data[8] = chr((ord($data[8]) & 0x3f) | 0x80);
+        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
     }
 }
