@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Build 025 complete and merged  
-**Version:** 1.25  
+**Status:** Build 035 implemented on `main`  
+**Version:** 1.35  
 **Baseline date:** July 28, 2026  
 **Authoritative branch:** `main`
 
@@ -11,26 +11,7 @@ This handoff applies only to `arwentz01/Koravik-Final`. Do not import code, sche
 
 ## Mandatory reading order
 
-Before implementation, read `README.md`, `docs/README.md`, `docs/FOUNDATIONAL_DECISIONS.md`, all canonical documents, Project Zero, affected product and engineering contracts, the ADR register, and this handoff.
-
-Focused contracts now include:
-
-- `docs/canonical/COMPANION_GOVERNANCE.md`;
-- `docs/product/COMPANION_PROPOSALS.md`;
-- `docs/product/COMPANION_CONTEXT_AND_MEMORY.md`;
-- `docs/product/CHRONICLE_OWNERSHIP.md`;
-- `docs/product/VISUAL_INFORMATION_ARCHITECTURE.md`;
-- `docs/product/ROUTE_VISUAL_INVENTORY.md`;
-- `docs/product/EPIC_ORDINARY_CHAPTER_TWO.md`;
-- `docs/product/WORLD_PROGRESS_AND_REACTIONS.md`;
-- `docs/product/INSTALLED_WORLD_LIFECYCLE.md`;
-- `docs/engineering/COMPANION_EXECUTION.md`;
-- `docs/engineering/COMPANION_LIFECYCLE.md`;
-- `docs/engineering/ACCOUNT_DATA_LIFECYCLE.md`;
-- `docs/engineering/AUTHENTICATION_RECOVERY.md`;
-- `docs/engineering/RELEASE_CANDIDATE_CHECKLIST.md`;
-- `docs/engineering/VISUAL_SYSTEM.md`;
-- `docs/engineering/EPIC_ORDINARY_RUNTIME.md`.
+Before implementation, read `README.md`, `docs/README.md`, `docs/FOUNDATIONAL_DECISIONS.md`, all canonical documents, Project Zero, affected Product and Engineering Blueprint contracts, the ADR register, and this handoff. The documentation authority order in `docs/README.md` controls conflicts.
 
 ## Architecture baseline
 
@@ -38,21 +19,17 @@ Koravik-Final is a PHP 8.3+ custom modular monolith using MySQL or MariaDB throu
 
 - Districts own real-life truth.
 - Hearth composes but does not own source records.
-- Worlds interpret approved minimized facts into independent World State.
+- Healing Home and Journey orient, acknowledge, and connect experiences without taking ownership from Quests, Chronicle, Worlds, Companion, Beacon, or Gather.
+- Worlds interpret approved minimized facts into independent fictional World State.
 - World objectives, choices, keepsakes, relationships, reactions, and lifecycle history remain fictional and account-scoped.
-- World lifecycle operations affect only the selected installation and never mutate District truth, another World, or shared catalog/package definitions.
 - Companion owns proposals and approved Companion memory, not destination records.
 - Chronicle owns saved personal and approved reflections.
 - Search and Notifications are non-owning utilities.
-- Account export and closure coordinate owner-specific handlers.
-- Authentication recovery stores only hashed, expiring, single-use tokens.
-- Authenticated pages receive one shared application shell and visual system.
-- Appearance, reduced-motion, and increased-contrast preferences affect rendering.
 - Platform events describe committed facts and use a transactional outbox.
 - Authorization is capability-based and contextual.
 - Background work is finite, idempotent, lock-safe, and cron compatible.
 
-## Completed builds
+## Completed implementation arc
 
 ### Builds 001–005 — Foundation and first vertical slice
 
@@ -62,90 +39,64 @@ Secure authentication, Hearth, personal Quests, recurrence, Pillars, Chronicle c
 
 Structured Quests, World catalog and consent, return and resume, Notifications, Search, Privacy and Audit, Account Settings, and bounded Hearth customization.
 
-### Builds 014–017 — Companion agency and consent
+### Builds 014–020 — Companion, Chronicle, account data, and security
 
-Versioned proposals, explicit approval, destination-owned Quest and Chronicle execution, execution receipts, lifecycle recovery and events, selected context, and approved revocable Companion memory.
+Versioned Companion proposals and execution, approved context and memory, Chronicle ownership and lifecycle, account export and closure, authentication recovery, password change, session invalidation, and security audit history.
 
-### Build 018 — Chronicle ownership and lifecycle
+### Builds 021–025 — Visual release candidate and World lifecycle
 
-Direct personal entries, provenance, tags, editing, archive, restore, eligible deletion, and read-only protection for generated historical entries.
+Unified authenticated shell, visual information architecture, appearance accessibility controls, Epic Ordinary Chapter Two, World progress and explainable reactions, installed World management, suspend/uninstall/restart/delete boundaries, and durable lifecycle history.
 
-**Checkpoint:** `3f73749d0a2f89fbd139ebe77f8e106a06f0476a`
+### Build 026 — Registration and first-use orientation
 
-### Build 019 — Data export, account closure, and retention
+Secure account registration and bounded first-use orientation foundation.
 
-Account-scoped export manifests, secret exclusions, seven-day export expiry, staged cancellable closure, owner-specific processing, credential revocation, identity anonymization, and retention ledger.
+### Builds 027–028 — Living Quests and Healing Home
 
-**Checkpoint:** `36b32f917c00a2dad1d4a91ce61ad293fcf200f5`
+Quest purpose, next meaningful step, provenance, non-binary resolution history, `/home`, initial rooms, atmosphere, Quest focus, Chronicle memory, World reaction, and visible future-room foundations.
 
-### Build 020 — Authentication recovery and session security
+### Builds 029–030 — Reflection and relationships
 
-Generic recovery responses, hashed single-use recovery tokens, thirty-minute expiry, bounded requests, queued delivery abstraction, password reset and change, session-version invalidation, session regeneration, failed-attempt lockout, audit history, and security entry points.
+Idempotent Home changes, account-scoped keepsakes, Caretaker relationship records, approved shared memories, qualitative relationship stages, and readable relationship history without score bars or punishment mechanics.
 
-**Checkpoint:** `043288b5eeedf7e1ea60ef7392089b4c2e998a4e`
+### Build 031 — Story invitations
 
-### Build 021 — Release candidate shell and visual information architecture
+Epic Ordinary invitations support accept, decline, and snooze. Only explicit acceptance creates a real-life Quest, with durable `story` provenance.
 
-One shared authenticated shell; stable primary places; distinct utilities; account and trust controls; semantic active states; responsive navigation; `/guide`; approved visual information architecture; and release-candidate checklist.
+### Build 032 — Healing Home expansion
 
-**Checkpoint:** `ff9396f90ee923acb4f4579189d72e4a52684ffa`
+Garden and Library open as presentation spaces. Keepsakes support account-scoped, source-idempotent room placement. Remaining rooms stay visible extension points.
 
-### Build 022 — Visual system consolidation and route-state audit
+### Build 033 — Relationship conversations
 
-Shared visual-system normalization; saved appearance, reduced-motion, and increased-contrast enforcement; contextual location navigation; shared template vocabulary; route visual inventory; and validation.
+The Caretaker supports gratitude, repair, disagreement, and quiet companionship with readable account-scoped conversation history and no correct dialogue path.
 
-**Checkpoint:** `298ab019944d65f148d70d948f22159a0192afb8`
+### Build 034 — Beacon Quest integration contract
 
-### Build 023 — Epic Ordinary Chapter Two and World experience home
+Beacon event activity may create consent-gated Quest proposals for preparation, attendance, volunteering, or follow-up. Beacon retains event ownership; Quests owns accepted commitments.
 
-`/worlds/epic-ordinary/play`, Chapter Two **The Eastern Room**, World-owned objectives and keepsakes, transactional narrative progression, idempotent choices, and proof that fictional progress does not mutate real-life Quests.
+### Build 035 — Gather Quest integration contract
 
-**Checkpoint:** `381959e1c4536b6ae8236448a6f9f89b0682377c`
+Gather collaboration may create consent-gated Quest proposals with Gather provenance. Cooperative invitation persistence establishes future contribution boundaries without implementing Household or Organization ownership.
 
-### Build 024 — World progress, reactions, and story history
+See `docs/builds/BUILD_031_035_JOURNEY_ARC.md` for the current arc contract.
 
-Delivered:
+## Current player loop
 
-- `/worlds/epic-ordinary/progress`;
-- account-scoped chapter, scene, objective, choice, relationship, keepsake, reaction, permission, and package presentation;
-- `/worlds/epic-ordinary/reactions/{id}` explainability;
-- minimized fact, rule, interpretation-time, and deliberate-exclusion fields;
-- durable readable World story history;
-- cross-account failure and private-data exclusion validation.
-
-**Checkpoint:** `be8bec7ac12126c944222c806a8c0ca0e283de37`
-
-### Build 025 — Installed Worlds and safe lifecycle controls
-
-Delivered:
-
-- `/worlds/installed` and `/worlds/{world-key}/manage`;
-- activate/resume while preserving other Worlds;
-- suspend while retaining state;
-- uninstall with retained recoverable state;
-- exact-confirmation restart scoped to one World;
-- exact-confirmation deletion of eligible account-specific World State;
-- installed and available package-version foundation;
-- durable lifecycle revisions and consequence history;
-- proof that repeated operations are safe and real-life Quest records remain unchanged.
-
-**Checkpoint:** `afff879f6abe52a795392aa70c61f7c2098fd717`
+`World or supporting domain proposes → player accepts, declines, or snoozes → Quests owns the accepted commitment → real action and reflection occur → Healing Home and relationships may acknowledge approved outcomes.`
 
 ## Current database migrations
 
-Production deployments through Build 025 must apply all migrations, including:
+Production deployment must apply all migrations in `database/migrations`, including the current sequence:
 
 ```text
-011_companion_proposals
-012_companion_execution
-013_companion_lifecycle
-014_companion_context_memory
-015_chronicle_ownership
-016_data_export_account_closure
-017_auth_recovery
 018_epic_ordinary_chapter_two
 019_world_progress_reactions
 020_world_lifecycle
+021_first_use_registration
+022_living_quests_healing_home
+023_reflection_relationships
+024_journey_arc_invitations_rooms_conversations
 ```
 
 Run:
@@ -154,15 +105,17 @@ Run:
 php tools/migrate.php
 ```
 
-Account closure processing remains bounded:
+## Current routes added by the Journey arc
 
-```bash
-php tools/process_account_closures.php 5
-```
-
-## Visual-home rule
-
-Every new capability must identify its visual home before implementation. Hearth may preview and orient, but it may not duplicate full source lifecycle controls.
+- `/home` and `/healing-home`
+- `/journey`
+- `/journey/invitations/{id}/accept`
+- `/journey/invitations/{id}/decline`
+- `/journey/invitations/{id}/snooze`
+- `/journey/caretaker/converse`
+- `/journey/source-proposals`
+- `/journey/source-proposals/{id}/accept`
+- `/journey/source-proposals/{id}/decline`
 
 ## Explicit current boundaries
 
@@ -170,19 +123,26 @@ Every new capability must identify its visual home before implementation. Hearth
 - Companion does not directly own or mutate Quest or Chronicle source records.
 - Approval and execution remain separate actions.
 - External AI-provider integration remains deferred.
-- Household, Organization, messaging, email sending, and other collaborative domains remain deferred.
+- Household, Organization, messaging, email sending, and full collaborative authorization remain deferred.
+- Cooperative Quest invitations are foundations only and do not imply shared-account access.
 - Provider-specific authentication email delivery remains an adapter concern.
 - Passkeys, social login, and multifactor authentication remain deferred.
 - Epic Ordinary receives only currently permitted minimized facts.
 - World reactions do not expose Quest notes, Chronicle prose, Companion memory, account secrets, or unrelated private records.
-- Fictional World objectives never become duplicate real-life Quests.
-- Restart and deletion affect only the selected account-specific World State.
+- Fictional World objectives and invitations never become duplicate real-life Quests without explicit consent.
+- Declining or snoozing an invitation has no relationship or Home penalty.
+- Beacon and Gather retain ownership of their source records; Quests owns accepted commitments.
+- Restart and deletion affect only selected account-specific World State.
 - Shared World catalog and package definitions are never deleted through player lifecycle controls.
+
+## Validation
+
+Build 035 adds `.github/workflows/build-035.yml`, which lints PHP and checks migration, consent, provenance, source-domain, and agency boundaries. A successful GitHub Actions run must be confirmed before treating the checkpoint as release-ready.
 
 ## Build workflow
 
-For every build: inspect current `main`, read affected authority, identify the player-visible outcome and visual home, implement one coherent vertical slice, validate it, update all affected documentation, and merge one cohesive milestone.
+For every build: inspect current `main`, read affected authority, identify the player-visible outcome and visual home, implement one coherent vertical slice, validate it, update affected documentation, and land one cohesive milestone.
 
 ## Change control
 
-When implementation reveals a blueprint flaw, stop at the affected boundary and resolve it through an explicit document revision or ADR before continuing.
+When implementation reveals a blueprint flaw, stop at the affected boundary and resolve it through an explicit ADR or deliberate document revision before continuing.
