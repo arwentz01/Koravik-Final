@@ -120,8 +120,13 @@ jobs:
           test -f docs/builds/BUILD_088_097_RELEASE_VERIFICATION.md
           test -f database/migrations/073_082_accessibility_personalization.sql
           test -f database/migrations/083_092_workflow_resilience.sql
+          test -f database/migrations/093_hearth_daily_focus.sql
+          test -f database/migrations/094_hearth_daily_focus_lifecycle.sql
           test -f public/assets/accessibility.css
+          test -f public/assets/hearth-focus.css
+          test -f docs/features/HEARTH_DAILY_FOCUS.md
           grep -q "'build'=>'117'" public/index.php
+          grep -q "'slice'=>'hearth-daily-focus'" public/index.php
       - name: Prepare release-verification database
         run: php tools/migrate.php
       - name: Start release-verification server

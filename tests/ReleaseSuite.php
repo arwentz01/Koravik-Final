@@ -10,6 +10,11 @@ use Koravik\Platform\Security\Security;
 use Koravik\Platform\Settings\AccessibilityService;
 use Koravik\Platform\Resilience\FormErrors;
 use Koravik\Platform\Resilience\ResilienceService;
+use Koravik\Platform\Hearth\DailyFocus;
+use Koravik\Platform\Hearth\DailyFocusService;
+use Koravik\Platform\Hearth\DailyFocusView;
+use Koravik\Districts\Quests\QuestService;
+use Koravik\Platform\AccountData\AccountDataService;
 use PDO;
 
 final class ReleaseSuite
@@ -30,6 +35,7 @@ final class ReleaseSuite
         $this->runner->test('workers remain explicitly bounded', fn() => $this->workers());
         $this->runner->test('accessibility preferences persist, validate, and reset', fn() => $this->accessibility());
         $this->runner->test('workflow recovery is bounded and duplicate-safe', fn() => $this->resilience());
+        $this->runner->test('Hearth daily focus composes only owned Quests', fn() => $this->dailyFocus());
     }
 
     private function migrations(): void
@@ -117,7 +123,7 @@ final class ReleaseSuite
     {
         [$status,$body]=$this->http('/health');
         $payload=json_decode($body,true);
-        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='117', 'Health checkpoint is not Build 117.');
+        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='117' && ($payload['slice']??'')==='hearth-daily-focus', 'Health checkpoint does not identify the Hearth Daily Focus slice.');
     }
 
     private function operations(): void
@@ -194,6 +200,44 @@ final class ReleaseSuite
             $this->runner->assert(str_contains($summary,'role="alert"')&&str_contains($summary,'href="#title"'), 'Accessible error summary contract failed.');
         } finally {
             $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+        }
+    }
+
+    private function dailyFocus(): void
+    {
+        $account='94000000-0000-4000-8000-000000000001';$other='94000000-0000-4000-8000-000000000002';
+        try {
+            $this->pdo->prepare('DELETE FROM audit_log WHERE account_id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
+            $this->account($account,'focus@test.invalid');$this->account($other,'focus-other@test.invalid');
+            $quests=new QuestService(\database());
+            $first=$quests->create($account,'Call the person I miss','',['starts_on'=>gmdate('Y-m-d')]);
+            $second=$quests->create($account,'Make dinner slowly','',['starts_on'=>gmdate('Y-m-d')]);
+            $foreign=$quests->create($other,'Private other Quest','',['starts_on'=>gmdate('Y-m-d')]);
+            $lookup=$this->pdo->prepare('SELECT id FROM quest_occurrences WHERE quest_id=:quest');
+            $lookup->execute(['quest'=>$first]);$firstOccurrence=(string)$lookup->fetchColumn();
+            $lookup->execute(['quest'=>$second]);$secondOccurrence=(string)$lookup->fetchColumn();
+            $lookup->execute(['quest'=>$foreign]);$foreignOccurrence=(string)$lookup->fetchColumn();
+            $service=new DailyFocusService(\database());
+            $service->save($account,'Show up with care',[$secondOccurrence,$firstOccurrence]);
+            $dashboard=$service->dashboard($account);
+            $this->runner->assert(($dashboard['focus']['intention']??'')==='Show up with care','Daily intention was not saved.');
+            $this->runner->assert(array_column($dashboard['focus']['entries'],'quest_id')===[$second,$first],'Daily priorities did not preserve their order.');
+            $html=(new DailyFocusView())->homePanel($dashboard);
+            foreach(['aria-labelledby="daily-focus-title"','Quest','Adjust focus','/quests/'.$second] as $needle)$this->runner->assert(str_contains($html,$needle),"Daily Focus UI is missing {$needle}.");
+            $exportId=(new AccountDataService(\database()))->requestExport($account,'json');
+            $export=(new AccountDataService(\database()))->export($account,$exportId);
+            $exportData=json_decode((string)$export['export_json'],true);
+            $this->runner->assert(count($exportData['hearth_daily_focus']??[])===1 && count($exportData['hearth_daily_focus_entries']??[])===2,'Account export omitted Daily Focus data.');
+            try{$service->save($account,'Must not cross ownership',[$foreignOccurrence]);$denied=false;}catch(\RuntimeException){$denied=true;}
+            $this->runner->assert($denied,'Daily Focus accepted another account’s Quest occurrence.');
+            try{DailyFocus::normalize('',array_fill(0,4,$firstOccurrence));$bounded=false;}catch(\RuntimeException){$bounded=true;}
+            $this->runner->assert($bounded,'Daily Focus accepted more than three priorities.');
+            $service->clear($account);
+            $this->runner->assert($service->dashboard($account)['focus']===null,'Daily Focus did not clear.');
+        } finally {
+            $this->pdo->prepare('DELETE FROM audit_log WHERE account_id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
         }
     }
 

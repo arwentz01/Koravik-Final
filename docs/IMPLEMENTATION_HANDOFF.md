@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Builds 108–117 workflow resilience candidate in the current working tree
-**Version:** 2.17
+**Status:** Hearth Daily Focus vertical product slice in the current working tree
+**Version:** 2.18
 **Baseline date:** July 30, 2026
 **Authoritative branch:** `main`
 
@@ -108,6 +108,17 @@ See `docs/builds/BUILD_098_107_ACCESSIBILITY_PERSONALIZATION.md`.
 
 See `docs/builds/BUILD_108_117_WORKFLOW_RESILIENCE.md`.
 
+### Hearth Daily Focus — complete vertical slice
+
+- Account-local daily intention and up to three ordered Quest references;
+- ownership and availability validation inside one Hearth transaction;
+- complete empty, editor, validation, success, revision, clear, and failure states;
+- responsive Hearth composition and JavaScript-independent editor;
+- Account export and closure lifecycle coverage;
+- service, authorization, rendering, limit, and browser-journey verification.
+
+See `docs/features/HEARTH_DAILY_FOCUS.md`.
+
 ## Current migrations
 
 Production deployment must apply every file in `database/migrations`, including:
@@ -121,6 +132,8 @@ Production deployment must apply every file in `database/migrations`, including:
 063_072_household_foundation.sql
 073_082_accessibility_personalization.sql
 083_092_workflow_resilience.sql
+093_hearth_daily_focus.sql
+094_hearth_daily_focus_lifecycle.sql
 ```
 
 Run:
@@ -166,6 +179,12 @@ php tools/worker.php 10
 - `POST /households/{id}/quest-proposals`
 - `POST /households/quest-proposals/{proposalId}/{accepted|declined}`
 
+## Hearth Daily Focus routes
+
+- `GET /hearth/focus`
+- `POST /hearth/focus`
+- `POST /hearth/focus/clear`
+
 ## Organization rules
 
 - Organization membership is optional.
@@ -201,11 +220,11 @@ php tools/worker.php 10
 
 ## Validation
 
-The single workflow at `.github/workflows/validate.yml` must lint PHP, migrate an isolated MySQL database, start the application, and run `php tools/test.php`. The release suite verifies migration inventory, critical schema, security primitives, Organization and Household capabilities, Gather authorization boundaries, subdirectory routing, accessibility preferences, Platform Mail operations, workflow recovery, duplicate protection, session revocation, bounded workers, and the Build 117 health checkpoint.
+The single workflow at `.github/workflows/validate.yml` must lint PHP, migrate an isolated MySQL database, start the application, and run `php tools/test.php`. The release suite verifies migration inventory, critical schema, security primitives, Organization and Household capabilities, Gather authorization boundaries, subdirectory routing, accessibility preferences, Platform Mail operations, workflow recovery, duplicate protection, session revocation, bounded workers, the Build 117 checkpoint, and Hearth Daily Focus ownership, limits, ordering, rendering, and clearing.
 
 ## Next build
 
-Build 118 begins the forward-facing product phase. Prioritize Hearth, navigation, dashboards, District screens, Epic Ordinary presentation, responsive refinement, and cohesive interaction polish; add backend work only when a visible workflow requires it.
+Continue the forward-facing product phase with another complete vertical slice. Prioritize navigation, Organization or Household dashboards, District screens, Epic Ordinary presentation, responsive refinement, and cohesive interaction polish; add backend work only when the selected visible workflow requires it.
 
 ## Build workflow
 

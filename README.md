@@ -8,11 +8,11 @@ This repository is the clean-start authority for the final Koravik implementatio
 
 ## Current status
 
-**Blueprint v1.0 complete. Build 117 workflow resilience candidate in the current working tree.**
+**Blueprint v1.0 complete. Hearth Daily Focus vertical slice in the current working tree.**
 
 The platform now proves secure identity, Quests-owned real-life action, Chronicle preservation, Companion proposals and consent, explainable persistent World State, installed World lifecycle, and a bounded first-use journey that lets a new person begin without forced commitments.
 
-The current implementation includes secure personal participation, Worlds and Companion consent, Gather and Beacon operations, optional Organization operating spaces, private optional Households, accessibility personalization, and workflow recovery through Build 117.
+The current implementation includes secure personal participation, Worlds and Companion consent, Gather and Beacon operations, optional Organization operating spaces, private optional Households, accessibility personalization, workflow recovery, and a complete forward-facing Hearth Daily Focus experience.
 
 ## Documentation entry points
 
