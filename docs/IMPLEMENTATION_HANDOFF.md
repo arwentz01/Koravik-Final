@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Worlds Home and Reaction Review vertical product slice in the current working tree
-**Version:** 2.19
+**Status:** Healing Home Visual Foundation vertical product slice in the current working tree
+**Version:** 2.20
 **Baseline date:** July 30, 2026
 **Authoritative branch:** `main`
 
@@ -131,6 +131,20 @@ See `docs/features/HEARTH_DAILY_FOCUS.md`.
 
 See `docs/features/WORLDS_HOME_AND_REACTION_REVIEW.md`.
 
+### Healing Home Visual Foundation — implemented vertical slice
+
+- illustrated `/home` and `/healing-home` room composition with Quest Board,
+  Fireplace, Journal Table, Keepsake Shelf, relationship memory, Companion
+  Chair, and visible unopened rooms;
+- account-scoped materialization of owned World changes and Caretaker
+  continuity through existing Journey persistence;
+- durable return presentation through `last_returned_at` without guilt,
+  punishment, streak framing, or source ownership drift;
+- accessible room labels, meaningful illustration alternative text,
+  responsive single-column reflow, and source-owner links for full workflows.
+
+See `docs/features/HEALING_HOME_VISUAL_FOUNDATION.md`.
+
 ## Current migrations
 
 Production deployment must apply every file in `database/migrations`, including:
@@ -238,7 +252,7 @@ php tools/worker.php 10
 
 ## Validation
 
-The single workflow at `.github/workflows/validate.yml` must lint PHP, migrate an isolated MySQL database, start the application, and run `php tools/test.php`. The release suite verifies migration inventory, critical schema, security primitives, Organization and Household capabilities, Gather authorization boundaries, subdirectory routing, accessibility preferences, Platform Mail operations, workflow recovery, duplicate protection, session revocation, bounded workers, the Build 117 checkpoint, Hearth Daily Focus, Worlds Home ownership, reaction review, rendering, and first-install initialization.
+The single workflow at `.github/workflows/validate.yml` must lint PHP, migrate an isolated MySQL database, start the application, and run `php tools/test.php`. The release suite verifies migration inventory, critical schema, security primitives, Organization and Household capabilities, Gather authorization boundaries, subdirectory routing, accessibility preferences, Platform Mail operations, workflow recovery, duplicate protection, session revocation, bounded workers, the Build 117 checkpoint, Hearth Daily Focus, Worlds Home ownership, reaction review, rendering, first-install initialization, and Healing Home owned-room continuity.
 
 ## Next build
 

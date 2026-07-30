@@ -13,6 +13,7 @@ use Koravik\Platform\Resilience\ResilienceService;
 use Koravik\Platform\Hearth\DailyFocus;
 use Koravik\Platform\Hearth\DailyFocusService;
 use Koravik\Platform\Hearth\DailyFocusView;
+use Koravik\Platform\Journey\JourneyService;
 use Koravik\Districts\Quests\QuestService;
 use Koravik\Platform\AccountData\AccountDataService;
 use Koravik\Worlds\WorldHomeService;
@@ -32,13 +33,14 @@ final class ReleaseSuite
         $this->runner->test('Household capabilities are contextual', fn() => $this->households());
         $this->runner->test('Gather management uses contextual authorization', fn() => $this->sourceContracts());
         $this->runner->test('login route is accessible and subdirectory-aware', fn() => $this->login());
-        $this->runner->test('health identifies Build 117', fn() => $this->health());
+        $this->runner->test('health identifies current slice', fn() => $this->health());
         $this->runner->test('mail and recovery operations are present', fn() => $this->operations());
         $this->runner->test('workers remain explicitly bounded', fn() => $this->workers());
         $this->runner->test('accessibility preferences persist, validate, and reset', fn() => $this->accessibility());
         $this->runner->test('workflow recovery is bounded and duplicate-safe', fn() => $this->resilience());
         $this->runner->test('Hearth daily focus composes only owned Quests', fn() => $this->dailyFocus());
         $this->runner->test('Worlds Home reviews only owned reactions', fn() => $this->worldsHome());
+        $this->runner->test('Healing Home renders owned room continuity', fn() => $this->healingHome());
     }
 
     private function migrations(): void
@@ -126,7 +128,7 @@ final class ReleaseSuite
     {
         [$status,$body]=$this->http('/health');
         $payload=json_decode($body,true);
-        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='117' && ($payload['slice']??'')==='worlds-home', 'Health checkpoint does not identify the Worlds Home slice.');
+        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='117' && ($payload['slice']??'')==='healing-home-visual-foundation', 'Health checkpoint does not identify the current slice.');
     }
 
     private function operations(): void
@@ -276,6 +278,39 @@ final class ReleaseSuite
             $initialized=$service->dashboard($freshAccount);
             $this->runner->assert(($initialized['active_world']['current_scene']??'')==='caretaker-welcome','First World install did not initialize a playable scene.');
             $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$freshAccount]);
+        } finally {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
+        }
+    }
+
+    private function healingHome(): void
+    {
+        $account='96000000-0000-4000-8000-000000000001';$other='96000000-0000-4000-8000-000000000002';
+        $installation='96000000-0000-4000-8000-000000000003';$otherInstallation='96000000-0000-4000-8000-000000000004';
+        $reaction='96000000-0000-4000-8000-000000000005';$otherReaction='96000000-0000-4000-8000-000000000006';
+        try {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
+            $this->account($account,'healing-home@test.invalid');$this->account($other,'healing-home-other@test.invalid');
+            $questId=(new QuestService(\database()))->create($account,'Tend the kitchen light','Care for the ordinary center of the day.',['purpose'=>'Keep the room usable and kind.','next_step'=>'Clear the table before dinner.','starts_on'=>gmdate('Y-m-d')]);
+            (new QuestService(\database()))->create($other,'Private other Quest','',['starts_on'=>gmdate('Y-m-d')]);
+            $installationInsert=$this->pdo->prepare('INSERT INTO world_installations (id,account_id,world_key,status,installed_at) VALUES (:id,:account,"epic-ordinary","active",UTC_TIMESTAMP())');
+            $installationInsert->execute(['id'=>$installation,'account'=>$account]);
+            $installationInsert->execute(['id'=>$otherInstallation,'account'=>$other]);
+            $reactionInsert=$this->pdo->prepare('INSERT INTO world_reactions (id,installation_id,source_event_id,title,message,explanation,source_fact_key,source_fact_summary,rule_key,interpreted_at,created_at) VALUES (:id,:installation,:event,:title,:message,"An approved completion fact matched a World rule.","quest.completed","A Quest occurrence was completed.","home-notices",UTC_TIMESTAMP(),UTC_TIMESTAMP())');
+            $reactionInsert->execute(['id'=>$reaction,'installation'=>$installation,'event'=>'96000000-0000-4000-8000-000000000007','title'=>'A lamp warmed the room','message'=>'Mara found the old mark by the mantel.']);
+            $reactionInsert->execute(['id'=>$otherReaction,'installation'=>$otherInstallation,'event'=>'96000000-0000-4000-8000-000000000008','title'=>'Other private World change','message'=>'This should stay elsewhere.']);
+            $service=new JourneyService(\database());
+            $service->homeForAccount($account);
+            $home=$service->homeForAccount($account);
+            $this->runner->assert(($home['focus_quest']['id']??'')===$questId,'Healing Home did not compose the owned focus Quest.');
+            $this->runner->assert(count($home['changes'])===1&&$home['changes'][0]['title']==='A lamp warmed the room','Healing Home exposed the wrong World change.');
+            $this->runner->assert(count($home['relationships'])===1&&$home['relationships'][0]['character_key']==='caretaker','Healing Home did not materialize Caretaker continuity.');
+            $controller=new \Koravik\Platform\Journey\HealingHomeController(\database());
+            $render=(new \ReflectionClass($controller))->getMethod('renderHome');
+            $render->setAccessible(true);
+            $html=(string)$render->invoke($controller,['id'=>$account,'display_name'=>'Test'],$home);
+            foreach(['home-illustration','aria-label="A warm cutaway room','Quest Board','Fireplace','Journal Table','Keepsake Shelf','Companion Chair','Nothing was lost while you were away'] as $needle)$this->runner->assert(str_contains($html,$needle),"Healing Home UI is missing {$needle}.");
+            $this->runner->assert($home['state']['last_returned_at']!==null,'Healing Home did not preserve return continuity.');
         } finally {
             $this->pdo->prepare('DELETE FROM platform_accounts WHERE id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
         }
