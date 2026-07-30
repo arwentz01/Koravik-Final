@@ -10,7 +10,7 @@ use Koravik\Platform\Experience\ExperienceConsumer;
 use Koravik\Platform\Notifications\NotificationConsumer;
 use Koravik\Worlds\EpicOrdinary\EpicOrdinaryConsumer;
 
-$limit = isset($argv[1]) ? (int) $argv[1] : 10;
+$limit = min(100, max(1, isset($argv[1]) ? (int) $argv[1] : 10));
 $consumer = new CompositeConsumer([
     new ExperienceConsumer(database()),
     new EpicOrdinaryConsumer(database()),

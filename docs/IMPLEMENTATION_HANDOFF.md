@@ -1,8 +1,8 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Builds 068–087 release candidate in the current working tree
-**Version:** 1.87
-**Baseline date:** July 29, 2026  
+**Status:** Builds 088–097 release verification candidate in the current working tree
+**Version:** 1.97
+**Baseline date:** July 30, 2026
 **Authoritative branch:** `main`
 
 ## Repository authority
@@ -76,6 +76,17 @@ See `docs/builds/BUILD_068_077_ORGANIZATION_OPERATIONS.md`.
 
 See `docs/builds/BUILD_078_087_HOUSEHOLD_FOUNDATION.md`.
 
+### Builds 088–097 — Release verification
+
+- unified local and CI release test runner;
+- isolated migration and critical-schema verification;
+- authentication, CSRF, Organization, Household, and Gather authorization tests;
+- live subdirectory routing and accessibility smoke checks;
+- Platform Mail, lifecycle recovery, and bounded-worker checks;
+- MySQL-backed continuous integration and Build 097 release gate.
+
+See `docs/builds/BUILD_088_097_RELEASE_VERIFICATION.md`.
+
 ## Current migrations
 
 Production deployment must apply every file in `database/migrations`, including:
@@ -100,6 +111,7 @@ php tools/migrate.php
 ```bash
 php tools/mail-worker.php 20
 php tools/gather-reminder-worker.php 100
+php tools/worker.php 10
 ```
 
 ## Organization routes
@@ -166,11 +178,11 @@ php tools/gather-reminder-worker.php 100
 
 ## Validation
 
-The single workflow at `.github/workflows/validate.yml` must lint PHP and validate migrations through `063_072_household_foundation.sql`, Organization and Household contextual Gather authorization, mail-backed invitations, lifecycle recovery, private resources, Quest proposal consent, Household notifications, and the Build 087 health checkpoint.
+The single workflow at `.github/workflows/validate.yml` must lint PHP, migrate an isolated MySQL database, start the application, and run `php tools/test.php`. The release suite verifies migration inventory, critical schema, security primitives, Organization and Household capabilities, Gather authorization boundaries, subdirectory routing, accessibility, Platform Mail operations, lifecycle recovery, bounded workers, and the Build 097 health checkpoint.
 
 ## Next build
 
-Build 088 should be planned only after Build 087 acceptance. The next arc should deepen accessibility, operational testing, and lifecycle recovery from real Organization and Household use before introducing another major domain.
+Build 098 should begin from observed product use and the Build 097 release gate. The next arc should prioritize user-visible workflow depth and accessibility findings before introducing another major domain.
 
 ## Build workflow
 

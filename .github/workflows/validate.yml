@@ -19,6 +19,31 @@ jobs:
     name: Validate Koravik
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: koravik_test
+          MYSQL_USER: koravik
+          MYSQL_PASSWORD: koravik_test
+          MYSQL_ROOT_PASSWORD: root_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot_test"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      APP_ENV: test
+      APP_DEBUG: "true"
+      APP_URL: http://127.0.0.1:8080
+      APP_KEY: test-only-key-with-at-least-32-characters
+      DB_DSN: mysql:host=127.0.0.1;port=3306;dbname=koravik_test;charset=utf8mb4
+      DB_USER: koravik
+      DB_PASS: koravik_test
+      SESSION_NAME: koravik_test_session
+      SESSION_SECURE: "false"
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -26,8 +51,9 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
+          extensions: pdo_mysql, mbstring
       - name: Validate PHP syntax
-        run: find src public tools -name '*.php' -print0 | xargs -0 -n1 php -l
+        run: find src public tools tests -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Validate migration inventory
         run: |
           test -d database/migrations
@@ -85,12 +111,27 @@ jobs:
           grep -q "household.coordination" src/Platform/Notifications/NotificationService.php
           grep -q "respond(" src/Platform/Households/HouseholdService.php
           grep -q "/households" src/Platform/Households/HouseholdController.php
-          grep -q "'build'=>'087'" public/index.php
-      - name: Run repository tests
-        shell: bash
+          test -f docs/builds/BUILD_078_087_HOUSEHOLD_FOUNDATION.md
+      - name: Validate Builds 088-097
         run: |
-          if [ -f tools/test.php ]; then
-            php tools/test.php
-          else
-            echo "No unified tools/test.php runner exists yet."
-          fi
+          test -f tools/test.php
+          test -f tests/TestRunner.php
+          test -f tests/ReleaseSuite.php
+          test -f docs/builds/BUILD_088_097_RELEASE_VERIFICATION.md
+          grep -q "'build'=>'097'" public/index.php
+      - name: Prepare release-verification database
+        run: php tools/migrate.php
+      - name: Start release-verification server
+        run: php -S 127.0.0.1:8080 -t public public/index.php >/tmp/koravik-test-server.log 2>&1 &
+      - name: Wait for release-verification server
+        run: |
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:8080/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/koravik-test-server.log
+          exit 1
+      - name: Run repository tests
+        run: php tools/test.php
