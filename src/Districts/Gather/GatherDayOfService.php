@@ -22,6 +22,6 @@ final class GatherDayOfService
         $this->assertOwner($ownerId,$eventId);$this->database->pdo()->prepare('UPDATE gather_checkins SET corrected_at=UTC_TIMESTAMP(),corrected_by_account_id=:owner,correction_note=:note WHERE event_id=:event AND rsvp_id=:rsvp')->execute(['owner'=>$ownerId,'note'=>trim($note),'event'=>$eventId,'rsvp'=>$rsvpId]);
     }
 
-    private function assertOwner(string $ownerId,string $eventId):void{$s=$this->database->pdo()->prepare('SELECT 1 FROM gather_events WHERE id=:id AND account_id=:owner');$s->execute(['id'=>$eventId,'owner'=>$ownerId]);if(!$s->fetchColumn())throw new RuntimeException('Event not found.');}
+    private function assertOwner(string $ownerId,string $eventId):void{(new GatherAuthorization($this->database))->requireManage($ownerId,$eventId);}
     private static function uuid():string{$d=random_bytes(16);$d[6]=chr((ord($d[6])&0x0f)|0x40);$d[8]=chr((ord($d[8])&0x3f)|0x80);return vsprintf('%s%s-%s-%s-%s-%s%s%s',str_split(bin2hex($d),4));}
 }

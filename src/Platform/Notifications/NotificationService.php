@@ -13,6 +13,7 @@ final class NotificationService
     public const CATEGORIES = [
         'world.reactions' => 'World reactions',
         'platform.return' => 'Welcome-back summaries',
+        'household.coordination' => 'Household coordination',
     ];
 
     public function __construct(private readonly Database $database) {}

@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Builds 063–067 implemented on `main`  
-**Version:** 1.67  
+**Status:** Builds 068–087 release candidate in the current working tree
+**Version:** 1.87
 **Baseline date:** July 29, 2026  
 **Authoritative branch:** `main`
 
@@ -51,6 +51,31 @@ See `docs/builds/BUILD_058_062_STABILIZATION_BEACON_COMPLETION.md`.
 
 See `docs/builds/BUILD_063_067_ORGANIZATION_FOUNDATION.md`.
 
+### Builds 068–077 — Organization operations
+
+- contextual Gather authorization across day-of, communication, workflow, lifecycle, and closeout;
+- Platform Mail invitation delivery with resend and revoke;
+- Organization settings, lifecycle, audit, and recovery;
+- verified Beacon domain selection and Beacon-owned public presence;
+- internal teams with non-escalating team roles;
+- consent-first Organization Quest proposals;
+- composed operational coordination and Build 077 stabilization.
+
+See `docs/builds/BUILD_068_077_ORGANIZATION_OPERATIONS.md`.
+
+### Builds 078–087 — Household foundation
+
+- Build 077 PHP 8.3 acceptance and release checks;
+- optional Household identity, preferences, and lifecycle;
+- contextual Owner, Admin, and Member roles with secure invitations;
+- consent-first one-time and recurring responsibility proposals;
+- private Household resources;
+- Household-owned private Gather events with Gather-owned truth;
+- Household home composition, notifications, audit, and recovery;
+- Build 087 stabilization.
+
+See `docs/builds/BUILD_078_087_HOUSEHOLD_FOUNDATION.md`.
+
 ## Current migrations
 
 Production deployment must apply every file in `database/migrations`, including:
@@ -60,6 +85,8 @@ Production deployment must apply every file in `database/migrations`, including:
 038_042_gather_lifecycle_beacon_domains.sql
 043_047_lifecycle_stabilization_beacon_management.sql
 048_052_organization_foundation.sql
+053_062_organization_operations.sql
+063_072_household_foundation.sql
 ```
 
 Run:
@@ -87,6 +114,23 @@ php tools/gather-reminder-worker.php 100
 - `POST /organizations/{id}/events`
 - `POST /organizations/{id}/links`
 
+## Household routes
+
+- `GET|POST /households`
+- `GET /households/{id}`
+- `GET /households/invitations/{token}`
+- `POST /households/{id}/settings`
+- `POST /households/{id}/lifecycle/{state}`
+- `POST /households/{id}/invitations`
+- `POST /households/{id}/members/{membershipId}/role`
+- `POST /households/{id}/members/{membershipId}/remove`
+- `POST /households/{id}/ownership/{membershipId}`
+- `POST /households/{id}/leave`
+- `POST /households/{id}/resources`
+- `POST /households/{id}/events`
+- `POST /households/{id}/quest-proposals`
+- `POST /households/quest-proposals/{proposalId}/{accepted|declined}`
+
 ## Organization rules
 
 - Organization membership is optional.
@@ -109,20 +153,24 @@ php tools/gather-reminder-worker.php 100
 
 ## Explicit current boundaries
 
-- Remaining legacy Gather day-of and communication ownership predicates still require reconciliation with `GatherAuthorization` before full multi-manager Organization event operations are declared complete.
-- Invitation creation currently exposes a secure acceptance path to the authorized inviter; Platform Mail delivery of Organization invitations remains future work.
-- Organization lifecycle editing, suspension, archive recovery, and ownership-safe deletion are not yet exposed visually.
-- Organization domains use the existing Beacon domain administration foundation; Organization-scoped domain selection needs a focused integration pass.
-- Household remains separate, independent, and optional.
+- Organization-owned Gather management is capability-based; participant self-service and personal outcome consent remain separate.
+- Organization invitations depend on configured Platform Mail workers and never expose stored raw tokens.
+- Archive and suspension are recoverable; destructive Organization deletion is intentionally not implemented.
+- Organization domain selection accepts only verified Organization or platform domains.
+- Team roles do not grant Organization-wide or Platform-wide capabilities.
+- Organization Quest coordination is proposal-only until the recipient explicitly accepts.
+- Household remains separate, independent, private by default, and optional.
+- Household responsibility proposals create no Quest until the recipient accepts.
+- Household Gather records remain owned by Gather, and Household resources are not public Beacon content.
 - Payments and external calendar synchronization remain deferred unless separately approved.
 
 ## Validation
 
-The single workflow at `.github/workflows/validate.yml` must lint PHP and validate migration `048_052_organization_foundation.sql`, contextual membership roles, Organization-owned Gather and Beacon creation, Organization operating routes, `GatherAuthorization`, and the Build 067 health checkpoint.
+The single workflow at `.github/workflows/validate.yml` must lint PHP and validate migrations through `063_072_household_foundation.sql`, Organization and Household contextual Gather authorization, mail-backed invitations, lifecycle recovery, private resources, Quest proposal consent, Household notifications, and the Build 087 health checkpoint.
 
 ## Next build
 
-Build 068 should stabilize Organization operations before broadening scope. Recommended arc: complete contextual authorization across Gather day-of and communications, automate invitation delivery and acceptance management, implement Organization lifecycle/settings, integrate Organization-scoped Beacon domains and branding, and add audit/recovery controls.
+Build 088 should be planned only after Build 087 acceptance. The next arc should deepen accessibility, operational testing, and lifecycle recovery from real Organization and Household use before introducing another major domain.
 
 ## Build workflow
 

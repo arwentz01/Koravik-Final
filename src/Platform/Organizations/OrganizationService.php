@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Koravik\Platform\Organizations;
 
 use Koravik\Platform\Database\Database;
+use Koravik\Platform\Mail\MailQueue;
 use RuntimeException;
 
 final class OrganizationService
@@ -13,7 +14,7 @@ final class OrganizationService
 
     public function memberships(string $accountId): array
     {
-        $s=$this->database->pdo()->prepare('SELECT o.*,m.role membership_role,m.status membership_status FROM organization_memberships m JOIN organizations o ON o.id=m.organization_id WHERE m.account_id=:account AND m.status="active" AND o.status="active" ORDER BY o.name');$s->execute(['account'=>$accountId]);return $s->fetchAll();
+        $s=$this->database->pdo()->prepare('SELECT o.*,m.role membership_role,m.status membership_status FROM organization_memberships m JOIN organizations o ON o.id=m.organization_id WHERE m.account_id=:account AND m.status="active" ORDER BY FIELD(o.status,"active","suspended","archived"),o.name');$s->execute(['account'=>$accountId]);return $s->fetchAll();
     }
 
     public function create(string $accountId,array $input): string
@@ -34,12 +35,12 @@ final class OrganizationService
 
     public function can(string $accountId,string $organizationId,string $capability): bool
     {
-        $s=$this->database->pdo()->prepare('SELECT role FROM organization_memberships WHERE organization_id=:organization AND account_id=:account AND status="active" LIMIT 1');$s->execute(['organization'=>$organizationId,'account'=>$accountId]);$role=$s->fetchColumn();if(!$role)return false;$map=['view'=>['owner','admin','creator','member'],'create_content'=>['owner','admin','creator'],'manage_content'=>['owner','admin','creator'],'manage_members'=>['owner','admin'],'manage_domains'=>['owner','admin'],'manage_organization'=>['owner']];return in_array((string)$role,$map[$capability]??[],true);
+        $s=$this->database->pdo()->prepare('SELECT m.role,o.status organization_status FROM organization_memberships m JOIN organizations o ON o.id=m.organization_id WHERE m.organization_id=:organization AND m.account_id=:account AND m.status="active" LIMIT 1');$s->execute(['organization'=>$organizationId,'account'=>$accountId]);$membership=$s->fetch();if(!$membership)return false;$role=(string)$membership['role'];if($membership['organization_status']!=='active'&&!in_array($capability,['view','manage_organization'],true))return false;$map=['view'=>['owner','admin','creator','member'],'create_content'=>['owner','admin','creator'],'manage_content'=>['owner','admin','creator'],'manage_members'=>['owner','admin'],'manage_domains'=>['owner','admin'],'manage_organization'=>['owner']];return in_array($role,$map[$capability]??[],true);
     }
 
     public function invite(string $actorId,string $organizationId,string $email,string $role): string
     {
-        if(!$this->can($actorId,$organizationId,'manage_members'))throw new RuntimeException('You cannot manage members for this organization.');$email=strtolower(trim($email));if(!filter_var($email,FILTER_VALIDATE_EMAIL))throw new RuntimeException('Enter a valid email address.');if(!in_array($role,['admin','creator','member'],true))$role='member';$raw=self::token();$id=self::uuid();$this->database->pdo()->prepare('INSERT INTO organization_invitations (id,organization_id,email,role,token_hash,status,invited_by_account_id,expires_at,created_at,updated_at) VALUES (:id,:organization,:email,:role,:hash,"pending",:actor,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 14 DAY),UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute(['id'=>$id,'organization'=>$organizationId,'email'=>$email,'role'=>$role,'hash'=>hash('sha256',$raw),'actor'=>$actorId]);$this->activity($this->database->pdo(),$organizationId,$actorId,'membership.invited','invitation',$id,['email'=>$email,'role'=>$role]);return $raw;
+        if(!$this->can($actorId,$organizationId,'manage_members'))throw new RuntimeException('You cannot manage members for this organization.');$email=strtolower(trim($email));if(!filter_var($email,FILTER_VALIDATE_EMAIL))throw new RuntimeException('Enter a valid email address.');if(!in_array($role,['admin','creator','member'],true))$role='member';$pdo=$this->database->pdo();$existing=$pdo->prepare('SELECT 1 FROM organization_memberships WHERE organization_id=:organization AND account_id IN (SELECT id FROM platform_accounts WHERE email=:email) AND status="active"');$existing->execute(['organization'=>$organizationId,'email'=>$email]);if($existing->fetchColumn())throw new RuntimeException('That person is already an active member.');$raw=self::token();$id=self::uuid();$org=$this->organization($actorId,$organizationId);$base=rtrim((string)\env('APP_URL','http://127.0.0.1:8080'),'/');$url=$base.'/organizations/invitations/'.$raw;$safe=htmlspecialchars((string)$org['name'],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');$delivery=(new MailQueue($this->database))->enqueue('organization.invitation',$email,'','Invitation to '.$org['name'],'<h1>You are invited to '.$safe.'</h1><p><a href="'.htmlspecialchars($url,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8').'">Review invitation</a></p>','You are invited to '.$org['name'].'. Review: '.$url);$pdo->prepare('INSERT INTO organization_invitations (id,organization_id,email,role,token_hash,status,invited_by_account_id,delivery_id,last_sent_at,expires_at,created_at,updated_at) VALUES (:id,:organization,:email,:role,:hash,"pending",:actor,:delivery,UTC_TIMESTAMP(),DATE_ADD(UTC_TIMESTAMP(),INTERVAL 14 DAY),UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute(['id'=>$id,'organization'=>$organizationId,'email'=>$email,'role'=>$role,'hash'=>hash('sha256',$raw),'actor'=>$actorId,'delivery'=>$delivery]);$this->activity($pdo,$organizationId,$actorId,'membership.invited','invitation',$id,['email'=>$email,'role'=>$role,'delivery_id'=>$delivery]);return $raw;
     }
 
     public function acceptInvitation(string $accountId,string $token): string

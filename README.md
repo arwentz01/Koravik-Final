@@ -8,12 +8,11 @@ This repository is the clean-start authority for the final Koravik implementatio
 
 ## Current status
 
-**Blueprint v1.0 complete. Build 026 in review.**
+**Blueprint v1.0 complete. Build 087 release candidate in the current working tree.**
 
 The platform now proves secure identity, Quests-owned real-life action, Chronicle preservation, Companion proposals and consent, explainable persistent World State, installed World lifecycle, and a bounded first-use journey that lets a new person begin without forced commitments.
 
-Latest merged checkpoint: `afff879f6abe52a795392aa70c61f7c2098fd717`  
-Build 026 branch: `agent/build-026-first-use`
+The current implementation includes secure personal participation, Worlds and Companion consent, Gather and Beacon operations, optional Organization operating spaces, and private optional Households through the Build 087 stabilization checkpoint.
 
 ## Documentation entry points
 

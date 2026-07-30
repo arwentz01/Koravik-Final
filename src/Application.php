@@ -22,7 +22,7 @@ final class Application
         $this->securityHeaders();
         Security::startSession();
         $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
-        $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+        $path = \app_request_path();
 
         try {
             if ($method === 'GET' && $path === '/') $this->redirect(Security::account() ? '/hearth' : '/login');

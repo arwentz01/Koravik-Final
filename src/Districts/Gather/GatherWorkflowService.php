@@ -64,6 +64,6 @@ final class GatherWorkflowService
     }
 
     private function queuePromotionMail(array $r,array $event):void{$base=rtrim((string)(getenv('APP_URL')?:''),'/');$url=$base.'/gather/rsvp/manage/REISSUE-LINK';$subject='A place opened for '.$event['title'];$text='A place is available for your party. Use your RSVP management link to accept before the offer expires.';$html='<p>A place is available for your party for <strong>'.htmlspecialchars($event['title'],ENT_QUOTES).'</strong>.</p><p>Use your RSVP management link to accept before the offer expires.</p>';(new MailQueue($this->database))->enqueue('gather.waitlist.offer',(string)$r['guest_email'],(string)$r['guest_name'],$subject,$html,$text,$event['organizer_reply_to_email']??null,'Event organizer');}
-    private function assertOwner(string $ownerId,string $eventId):void{$s=$this->database->pdo()->prepare('SELECT 1 FROM gather_events WHERE id=:id AND account_id=:owner');$s->execute(['id'=>$eventId,'owner'=>$ownerId]);if(!$s->fetchColumn())throw new RuntimeException('Event not found.');}
+    private function assertOwner(string $ownerId,string $eventId):void{(new GatherAuthorization($this->database))->requireManage($ownerId,$eventId);}
     private static function uuid():string{$d=random_bytes(16);$d[6]=chr((ord($d[6])&0x0f)|0x40);$d[8]=chr((ord($d[8])&0x3f)|0x80);return vsprintf('%s%s-%s-%s-%s-%s%s%s',str_split(bin2hex($d),4));}
 }

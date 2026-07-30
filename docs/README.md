@@ -95,10 +95,23 @@ When implementation reveals a contradiction or flaw:
 5. update the implementation handoff;
 6. resume only when direction is explicit.
 
+## Repository standards
+
+- `CODING_STANDARDS.md`
+- `DATABASE_STANDARDS.md`
+- `DEFINITION_OF_DONE.md`
+- `DEPLOYMENT_GUIDELINES.md`
+- `PUBLISHING_STANDARDS.md`
+
+These standards govern current and future work. Where the existing implementation
+does not yet provide an enforcement mechanism—especially automated tests,
+migration checksums, and release automation—the gap remains explicit quality
+debt and must not be represented as already satisfied.
+
 ## Archived documents
 
 The `archive/` directory is non-authoritative. Legacy roadmaps and handoffs must not guide Koravik-Final.
 
 ## Current state
 
-Project Zero and Blueprint v1.0 remain authoritative. Builds 001 through 025 are merged. Build 026 is in review on `agent/build-026-first-use` and adds secure account registration plus bounded first-use orientation.
+Project Zero and Blueprint v1.0 remain authoritative. Builds 001 through 067 are on `main`; Builds 068 through 087 form the current Organization and Household release candidate.

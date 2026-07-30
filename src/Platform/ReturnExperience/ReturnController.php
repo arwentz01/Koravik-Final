@@ -18,7 +18,7 @@ final class ReturnController
         $account=Security::account();
         if(!$account) return false;
         $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');
-        $path=parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/';
+        $path=\app_request_path();
         $service=new ReturnService($this->database);
         if($method==='GET' && $path==='/hearth') {
             $service->observe((string)$account['id']);

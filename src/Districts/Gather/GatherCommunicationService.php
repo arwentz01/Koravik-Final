@@ -64,11 +64,7 @@ final class GatherCommunicationService
 
     private function ownedEvent(string $ownerId,string $eventId):array
     {
-        $s=$this->database->pdo()->prepare('SELECT * FROM gather_events WHERE id=:id AND account_id=:owner');
-        $s->execute(['id'=>$eventId,'owner'=>$ownerId]);
-        $event=$s->fetch();
-        if(!$event)throw new RuntimeException('Event not found.');
-        return $event;
+        return (new GatherAuthorization($this->database))->requireManage($ownerId,$eventId);
     }
 
     private static function uuid():string{$d=random_bytes(16);$d[6]=chr((ord($d[6])&0x0f)|0x40);$d[8]=chr((ord($d[8])&0x3f)|0x80);return vsprintf('%s%s-%s-%s-%s-%s%s%s',str_split(bin2hex($d),4));}

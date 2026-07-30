@@ -61,7 +61,31 @@ jobs:
           grep -q "createOrganizationLink" src/Platform/Organizations/OrganizationService.php
           grep -q "/organizations" src/Platform/Organizations/OrganizationController.php
           grep -q "GatherAuthorization" src/Districts/Gather/GatherCommandService.php
-          grep -q "'build'=>'067'" public/index.php
+          test -f docs/builds/BUILD_063_067_ORGANIZATION_FOUNDATION.md
+      - name: Validate Builds 068-077
+        run: |
+          test -f database/migrations/053_062_organization_operations.sql
+          grep -q "organization_teams" database/migrations/053_062_organization_operations.sql
+          grep -q "organization_quest_proposals" database/migrations/053_062_organization_operations.sql
+          grep -q "organization_recovery_records" database/migrations/053_062_organization_operations.sql
+          grep -q "GatherAuthorization" src/Districts/Gather/GatherDayOfService.php
+          grep -q "GatherAuthorization" src/Districts/Gather/GatherCommunicationService.php
+          grep -q "organization.invitation" src/Platform/Organizations/OrganizationService.php
+          grep -q "publishPage" src/Platform/Organizations/OrganizationExpansionService.php
+          grep -q "respondToQuest" src/Platform/Organizations/OrganizationExpansionService.php
+          test -f docs/builds/BUILD_068_077_ORGANIZATION_OPERATIONS.md
+      - name: Validate Builds 078-087
+        run: |
+          test -f database/migrations/063_072_household_foundation.sql
+          grep -q "household_memberships" database/migrations/063_072_household_foundation.sql
+          grep -q "household_quest_proposals" database/migrations/063_072_household_foundation.sql
+          grep -q "household_resources" database/migrations/063_072_household_foundation.sql
+          grep -q "household_recovery_records" database/migrations/063_072_household_foundation.sql
+          grep -q "owner_type ENUM('account','organization','household')" database/migrations/063_072_household_foundation.sql
+          grep -q "household.coordination" src/Platform/Notifications/NotificationService.php
+          grep -q "respond(" src/Platform/Households/HouseholdService.php
+          grep -q "/households" src/Platform/Households/HouseholdController.php
+          grep -q "'build'=>'087'" public/index.php
       - name: Run repository tests
         shell: bash
         run: |

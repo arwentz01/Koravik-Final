@@ -44,6 +44,6 @@ final class Security
     }
     public static function requireAccount():array{$a=self::account();if($a===null){$_SESSION['intended_path']=self::safeIntendedPath();header('Location: /login',true,302);exit;}return$a;}
     public static function consumeIntendedPath():string{self::startSession();$p=(string)($_SESSION['intended_path']??'/hearth');unset($_SESSION['intended_path']);return str_starts_with($p,'/')&&!str_starts_with($p,'//')?$p:'/hearth';}
-    private static function safeIntendedPath():string{$p=parse_url($_SERVER['REQUEST_URI']??'/hearth',PHP_URL_PATH)?:'/hearth';return str_starts_with($p,'/')&&!str_starts_with($p,'//')?$p:'/hearth';}
+    private static function safeIntendedPath():string{$p=\app_request_path();return str_starts_with($p,'/')&&!str_starts_with($p,'//')?$p:'/hearth';}
     public static function logout():void{self::startSession();$_SESSION=[];if(ini_get('session.use_cookies')){$p=session_get_cookie_params();setcookie(session_name(),'',time()-42000,$p['path'],$p['domain']??'',(bool)$p['secure'],(bool)$p['httponly']);}session_destroy();}
 }
