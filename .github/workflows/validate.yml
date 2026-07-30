@@ -119,8 +119,9 @@ jobs:
           test -f tests/ReleaseSuite.php
           test -f docs/builds/BUILD_088_097_RELEASE_VERIFICATION.md
           test -f database/migrations/073_082_accessibility_personalization.sql
+          test -f database/migrations/083_092_workflow_resilience.sql
           test -f public/assets/accessibility.css
-          grep -q "'build'=>'107'" public/index.php
+          grep -q "'build'=>'117'" public/index.php
       - name: Prepare release-verification database
         run: php tools/migrate.php
       - name: Start release-verification server

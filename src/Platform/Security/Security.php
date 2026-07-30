@@ -39,7 +39,9 @@ final class Security
     public static function account():?array
     {
         self::startSession();$account=isset($_SESSION['account'])&&is_array($_SESSION['account'])?$_SESSION['account']:null;if(!$account)return null;
-        try{$s=\database()->pdo()->prepare('SELECT a.status,COALESCE(sec.session_version,1) session_version FROM platform_accounts a LEFT JOIN auth_security_state sec ON sec.account_id=a.id WHERE a.id=:id LIMIT 1');$s->execute(['id'=>$account['id']]);$state=$s->fetch();if(!$state||$state['status']!=='active'||(int)$state['session_version']!==(int)($account['session_version']??1)){self::logout();return null;}}catch(\Throwable){return $account;}
+        static $verifiedSession=null;$verificationKey=session_id().'|'.(string)$account['id'];if($verifiedSession===$verificationKey)return $account;
+        try{$s=\database()->pdo()->prepare('SELECT a.status,COALESCE(sec.session_version,1) session_version FROM platform_accounts a LEFT JOIN auth_security_state sec ON sec.account_id=a.id WHERE a.id=:id LIMIT 1');$s->execute(['id'=>$account['id']]);$state=$s->fetch();if(!$state||$state['status']!=='active'||(int)$state['session_version']!==(int)($account['session_version']??1)){self::logout();return null;}$active=(new \Koravik\Platform\Resilience\ResilienceService(\database()))->touchSession((string)$account['id'],session_id(),$_SERVER['HTTP_USER_AGENT']??null,$_SERVER['REMOTE_ADDR']??null);if(!$active){self::logout();return null;}}catch(\Throwable){return $account;}
+        $verifiedSession=$verificationKey;
         return $account;
     }
     public static function requireAccount():array{$a=self::account();if($a===null){$_SESSION['intended_path']=self::safeIntendedPath();header('Location: /login',true,302);exit;}return$a;}

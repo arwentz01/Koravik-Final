@@ -12,4 +12,7 @@
 .accessibility-preview{position:sticky;top:6rem}
 .check-row{grid-template-columns:auto minmax(0,1fr);align-items:center}
 .check-row input{min-height:1.25rem;width:1.25rem}
+.form-error-summary:focus{outline:4px solid var(--focus);outline-offset:3px}
+.form-error-summary h2{margin-top:0;font-size:1.25rem}
+.form-error-summary a{font-weight:700}
 @media(max-width:760px){.accessibility-layout{grid-template-columns:1fr}.accessibility-preview{position:static}}

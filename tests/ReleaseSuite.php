@@ -8,6 +8,8 @@ use Koravik\Platform\Households\HouseholdService;
 use Koravik\Platform\Organizations\OrganizationService;
 use Koravik\Platform\Security\Security;
 use Koravik\Platform\Settings\AccessibilityService;
+use Koravik\Platform\Resilience\FormErrors;
+use Koravik\Platform\Resilience\ResilienceService;
 use PDO;
 
 final class ReleaseSuite
@@ -23,10 +25,11 @@ final class ReleaseSuite
         $this->runner->test('Household capabilities are contextual', fn() => $this->households());
         $this->runner->test('Gather management uses contextual authorization', fn() => $this->sourceContracts());
         $this->runner->test('login route is accessible and subdirectory-aware', fn() => $this->login());
-        $this->runner->test('health identifies Build 107', fn() => $this->health());
+        $this->runner->test('health identifies Build 117', fn() => $this->health());
         $this->runner->test('mail and recovery operations are present', fn() => $this->operations());
         $this->runner->test('workers remain explicitly bounded', fn() => $this->workers());
         $this->runner->test('accessibility preferences persist, validate, and reset', fn() => $this->accessibility());
+        $this->runner->test('workflow recovery is bounded and duplicate-safe', fn() => $this->resilience());
     }
 
     private function migrations(): void
@@ -40,7 +43,7 @@ final class ReleaseSuite
 
     private function schema(): void
     {
-        foreach (['organization_teams','organization_quest_proposals','organization_recovery_records','households','household_memberships','household_quest_proposals','household_resources','household_recovery_records'] as $table) {
+        foreach (['organization_teams','organization_quest_proposals','organization_recovery_records','households','household_memberships','household_quest_proposals','household_resources','household_recovery_records','platform_form_drafts','platform_idempotency_keys','auth_sessions'] as $table) {
             $statement = $this->pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=:table');
             $statement->execute(['table'=>$table]);
             $this->runner->assert((int)$statement->fetchColumn() === 1, "Missing table {$table}.");
@@ -114,7 +117,7 @@ final class ReleaseSuite
     {
         [$status,$body]=$this->http('/health');
         $payload=json_decode($body,true);
-        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='107', 'Health checkpoint is not Build 107.');
+        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='117', 'Health checkpoint is not Build 117.');
     }
 
     private function operations(): void
@@ -163,6 +166,33 @@ final class ReleaseSuite
             }
         } finally {
             $this->pdo->prepare('DELETE FROM audit_log WHERE subject_id=:account')->execute(['account'=>$account]);
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+        }
+    }
+
+    private function resilience(): void
+    {
+        $account='93000000-0000-4000-8000-000000000001';
+        try {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+            $this->account($account,'resilience@test.invalid');
+            $service=new ResilienceService(\database());
+            $service->saveDraft($account,'quest.create',['title'=>'Keep this','password'=>'never keep this','csrf'=>'never keep this']);
+            $drafts=$service->drafts($account);
+            $this->runner->assert(count($drafts)===1 && ($drafts[0]['payload']['title']??'')==='Keep this', 'Draft content was not recovered.');
+            $this->runner->assert(!isset($drafts[0]['payload']['password'],$drafts[0]['payload']['csrf']), 'Sensitive form fields entered draft storage.');
+            $requestKey=hash('sha256','resilience-test');
+            $this->runner->assert($service->claim($account,'quest.create',$requestKey), 'First idempotency claim failed.');
+            $this->runner->assert(!$service->claim($account,'quest.create',$requestKey), 'Duplicate idempotency claim was accepted.');
+            $this->runner->assert($service->touchSession($account,'session-one','Test Browser','127.0.0.1'), 'Session registration failed.');
+            $sessions=$service->sessions($account,'session-two');
+            $this->runner->assert(count($sessions)===1 && !$sessions[0]['current'], 'Session inventory is incorrect.');
+            $this->runner->assert($service->revokeSession($account,(string)$sessions[0]['id'],'session-two'), 'Other session could not be revoked.');
+            $this->runner->assert(!$service->touchSession($account,'session-one','Test Browser','127.0.0.1'), 'Revoked session became active again.');
+            $errors=FormErrors::required(['title'=>''],['title'=>'Title']);
+            $summary=FormErrors::summary($errors);
+            $this->runner->assert(str_contains($summary,'role="alert"')&&str_contains($summary,'href="#title"'), 'Accessible error summary contract failed.');
+        } finally {
             $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
         }
     }
