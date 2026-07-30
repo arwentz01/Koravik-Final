@@ -114,4 +114,4 @@ The `archive/` directory is non-authoritative. Legacy roadmaps and handoffs must
 
 ## Current state
 
-Project Zero and Blueprint v1.0 remain authoritative. Builds 001 through 117 are committed on `main`; Hearth Daily Focus is the current complete vertical product slice.
+Project Zero and Blueprint v1.0 remain authoritative. Builds 001 through 117 are committed on `main`; Worlds Home and Reaction Review is the current implemented vertical product slice.

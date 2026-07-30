@@ -38,10 +38,11 @@ use Koravik\Platform\UI\GuideController;
 use Koravik\Platform\UI\VisualSystem;
 use Koravik\Worlds\EpicOrdinary\ChapterTwoController;
 use Koravik\Worlds\EpicOrdinary\WorldProgressController;
+use Koravik\Worlds\WorldHomeController;
 use Koravik\Worlds\WorldLifecycleController;
 
 $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');$path=app_request_path();
-if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'117','slice'=>'hearth-daily-focus'],JSON_THROW_ON_ERROR);return;}
+if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'117','slice'=>'worlds-home'],JSON_THROW_ON_ERROR);return;}
 Security::startSession();ob_start();
 $handled=(new MailOperationsController(database()))->handle($method,$path);
 if(!$handled)$handled=(new BeaconManagementController(database()))->handle($method,$path);
@@ -71,6 +72,7 @@ if(!$handled)$handled=(new PrivacyController(database()))->handle($method,$path)
 if(!$handled)$handled=(new SearchController(database()))->handle($method,$path);
 if(!$handled)$handled=(new NotificationController(database()))->handle($method,$path);
 if(!$handled)$handled=(new Koravik\Platform\ReturnExperience\ReturnController(database()))->handle();
+if(!$handled)$handled=(new WorldHomeController(database()))->handle($method,$path);
 if(!$handled)$handled=(new WorldLifecycleController())->handle($method,$path);
 if(!$handled)$handled=(new WorldProgressController())->handle($method,$path);
 if(!$handled)$handled=(new ChapterTwoController())->handle($method,$path);
@@ -82,7 +84,6 @@ if(!$account&&$method==='GET'&&$path==='/login'){if(!str_contains($html,'href="/
 if($account&&$method==='GET'&&$path==='/hearth'){$html=(new HearthLayoutService(database()))->apply($html,(string)$account['id']);$focus=(new DailyFocusView())->homePanel((new DailyFocusService(database()))->dashboard((string)$account['id']));$html=preg_replace('#<section><div class="section-heading"><h2>What matters now</h2>.*?</section>#s',$focus,$html,1)??$html;if(!str_contains($html,'hearth-focus.css'))$html=str_replace('</head>','<link rel="stylesheet" href="/assets/hearth-focus.css"></head>',$html);if(!str_contains($html,'/organizations'))$html=str_replace('</main>','<section class="surface"><h2>Organizations</h2><p>Open optional shared spaces for groups and communities without changing your personal Hearth.</p><a href="/organizations">View organizations</a></section></main>',$html);if(!str_contains($html,'/households'))$html=str_replace('</main>','<section class="surface"><h2>Households</h2><p>Coordinate private home life while keeping personal Quests and history independent.</p><a href="/households">View Households</a></section></main>',$html);}
 if($account&&$method==='GET'&&$path==='/chronicle')$html=str_replace('<section class="page-heading">','<section class="page-heading"><p class="local-actions"><a class="button" href="/chronicle/new">New entry</a> <a href="/chronicle/manage">Manage Chronicle</a></p>',$html);
 if($account&&$method==='GET'&&$path==='/settings'){$html=str_replace('Account export and deletion execution are not yet available; Koravik does not pretend otherwise.','Account export and staged account closure are available from <a href="/settings/data">Data controls</a>.',$html);if(!str_contains($html,'/settings/security'))$html=str_replace('</main>','<section class="settings-card trust-panel"><h2>Security</h2><p>Change your password and invalidate older sessions.</p><a href="/settings/security">Open security settings</a></section></main>',$html);if(in_array((string)($account['role']??''),['owner','admin'],true)&&!str_contains($html,'/system/mail'))$html=str_replace('</main>','<section class="settings-card"><h2>System operations</h2><p>Review Platform Mail and Beacon domains.</p><p><a href="/system/mail">Platform Mail</a> · <a href="/beacon/manage">Beacon management</a></p></section></main>',$html);}
-if($account&&$method==='GET'&&$path==='/worlds')$html=$replaceFirst('</section>','<p class="local-actions"><a href="/worlds/installed">Manage installed Worlds</a></p></section>',$html);
 if($account&&$method==='GET'&&$path==='/worlds/epic-ordinary'&&str_contains($html,'Status: Active')&&!str_contains($html,'/worlds/epic-ordinary/play'))$html=$replaceFirst('</section>','<p class="local-actions"><a class="button" href="/worlds/epic-ordinary/play">Continue story</a><a href="/worlds/epic-ordinary/progress">View progress</a><a href="/worlds/epic-ordinary/manage">Manage World</a></p></section>',$html);
 if($method==='GET'&&preg_match('#^/gather/events/([a-f0-9-]{36})$#',$path,$m)&&!str_contains($html,'/agenda')){$id=htmlspecialchars($m[1],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');$actions='<section class="surface"><h2>Event tools</h2><p class="local-actions"><a class="button" href="/gather/events/'.$id.'/agenda">Agenda</a>'.($account?'<a class="button secondary" href="/gather/events/'.$id.'/day-of">Day-of</a><a class="button secondary" href="/gather/events/'.$id.'/scan">Scan QR</a><a class="button secondary" href="/gather/events/'.$id.'/reflect">Reflect</a>':'').'</p></section>';$html=str_replace('</main>',$actions.'</main>',$html);}
 $html=(new AppShell())->apply($html,$account,$path);

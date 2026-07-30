@@ -15,6 +15,8 @@ use Koravik\Platform\Hearth\DailyFocusService;
 use Koravik\Platform\Hearth\DailyFocusView;
 use Koravik\Districts\Quests\QuestService;
 use Koravik\Platform\AccountData\AccountDataService;
+use Koravik\Worlds\WorldHomeService;
+use Koravik\Worlds\WorldHomeView;
 use PDO;
 
 final class ReleaseSuite
@@ -36,6 +38,7 @@ final class ReleaseSuite
         $this->runner->test('accessibility preferences persist, validate, and reset', fn() => $this->accessibility());
         $this->runner->test('workflow recovery is bounded and duplicate-safe', fn() => $this->resilience());
         $this->runner->test('Hearth daily focus composes only owned Quests', fn() => $this->dailyFocus());
+        $this->runner->test('Worlds Home reviews only owned reactions', fn() => $this->worldsHome());
     }
 
     private function migrations(): void
@@ -49,7 +52,7 @@ final class ReleaseSuite
 
     private function schema(): void
     {
-        foreach (['organization_teams','organization_quest_proposals','organization_recovery_records','households','household_memberships','household_quest_proposals','household_resources','household_recovery_records','platform_form_drafts','platform_idempotency_keys','auth_sessions'] as $table) {
+        foreach (['organization_teams','organization_quest_proposals','organization_recovery_records','households','household_memberships','household_quest_proposals','household_resources','household_recovery_records','platform_form_drafts','platform_idempotency_keys','auth_sessions','world_reaction_reviews'] as $table) {
             $statement = $this->pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=:table');
             $statement->execute(['table'=>$table]);
             $this->runner->assert((int)$statement->fetchColumn() === 1, "Missing table {$table}.");
@@ -123,7 +126,7 @@ final class ReleaseSuite
     {
         [$status,$body]=$this->http('/health');
         $payload=json_decode($body,true);
-        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='117' && ($payload['slice']??'')==='hearth-daily-focus', 'Health checkpoint does not identify the Hearth Daily Focus slice.');
+        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='117' && ($payload['slice']??'')==='worlds-home', 'Health checkpoint does not identify the Worlds Home slice.');
     }
 
     private function operations(): void
@@ -237,6 +240,43 @@ final class ReleaseSuite
             $this->runner->assert($service->dashboard($account)['focus']===null,'Daily Focus did not clear.');
         } finally {
             $this->pdo->prepare('DELETE FROM audit_log WHERE account_id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
+        }
+    }
+
+    private function worldsHome(): void
+    {
+        $account='95000000-0000-4000-8000-000000000001';$other='95000000-0000-4000-8000-000000000002';
+        $installation='95000000-0000-4000-8000-000000000003';$otherInstallation='95000000-0000-4000-8000-000000000004';
+        $reaction='95000000-0000-4000-8000-000000000005';$otherReaction='95000000-0000-4000-8000-000000000006';
+        try {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
+            $this->account($account,'world-home@test.invalid');$this->account($other,'world-home-other@test.invalid');
+            $installationInsert=$this->pdo->prepare('INSERT INTO world_installations (id,account_id,world_key,status,installed_at) VALUES (:id,:account,"epic-ordinary","active",UTC_TIMESTAMP())');
+            $installationInsert->execute(['id'=>$installation,'account'=>$account]);
+            $installationInsert->execute(['id'=>$otherInstallation,'account'=>$other]);
+            $progressInsert=$this->pdo->prepare('INSERT INTO world_narrative_progress (installation_id,current_arc,current_chapter,current_scene,updated_at) VALUES (:id,"making-refuge","the-eastern-room","doorway",UTC_TIMESTAMP())');
+            $progressInsert->execute(['id'=>$installation]);$progressInsert->execute(['id'=>$otherInstallation]);
+            $reactionInsert=$this->pdo->prepare('INSERT INTO world_reactions (id,installation_id,source_event_id,title,message,explanation,source_fact_key,source_fact_summary,rule_key,interpreted_at,created_at) VALUES (:id,:installation,:event,"The house noticed","A light returned.","An approved completion fact matched a World rule.","quest.completed","A Quest occurrence was completed.","caretaker-notices",UTC_TIMESTAMP(),UTC_TIMESTAMP())');
+            $reactionInsert->execute(['id'=>$reaction,'installation'=>$installation,'event'=>'95000000-0000-4000-8000-000000000007']);
+            $reactionInsert->execute(['id'=>$otherReaction,'installation'=>$otherInstallation,'event'=>'95000000-0000-4000-8000-000000000008']);
+            $service=new WorldHomeService(\database());$dashboard=$service->dashboard($account);
+            $this->runner->assert(($dashboard['active_world']['world_key']??'')==='epic-ordinary','Worlds Home did not compose the active World.');
+            $this->runner->assert(count($dashboard['reactions'])===1&&$dashboard['reactions'][0]['id']===$reaction,'Worlds Home exposed another account’s reaction.');
+            $html=(new WorldHomeView())->render($dashboard);
+            foreach(['Continue story','Why did this change?','Mark reviewed','fictional World State'] as $needle)$this->runner->assert(str_contains($html,$needle),"Worlds Home UI is missing {$needle}.");
+            $service->markReactionReviewed($account,$reaction);
+            $reviewed=$service->dashboard($account);
+            $this->runner->assert($reviewed['reactions'][0]['reviewed_at']!==null,'World reaction review state did not persist.');
+            try{$service->markReactionReviewed($account,$otherReaction);$denied=false;}catch(\RuntimeException){$denied=true;}
+            $this->runner->assert($denied,'World reaction review crossed account ownership.');
+            $freshAccount='95000000-0000-4000-8000-000000000009';
+            $this->account($freshAccount,'world-install@test.invalid');
+            (new \Koravik\Worlds\WorldService(\database()))->install('epic-ordinary',$freshAccount);
+            $initialized=$service->dashboard($freshAccount);
+            $this->runner->assert(($initialized['active_world']['current_scene']??'')==='caretaker-welcome','First World install did not initialize a playable scene.');
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$freshAccount]);
+        } finally {
             $this->pdo->prepare('DELETE FROM platform_accounts WHERE id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
         }
     }

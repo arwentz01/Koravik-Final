@@ -75,6 +75,22 @@ final class WorldService
                     'granted_at' => $now,
                     'updated_at' => $now,
                 ]);
+            if ($worldKey === 'epic-ordinary') {
+                $pdo->prepare(
+                    'INSERT INTO world_narrative_progress
+                        (installation_id, current_arc, current_chapter, current_scene, updated_at)
+                     VALUES
+                        (:installation_id, "coming-home", "the-first-light", "caretaker-welcome", :updated_at)
+                     ON DUPLICATE KEY UPDATE updated_at = VALUES(updated_at)'
+                )->execute(['installation_id' => $installationId, 'updated_at' => $now]);
+                $pdo->prepare(
+                    'INSERT INTO world_relationships
+                        (installation_id, npc_key, trust_score, relationship_stage, updated_at)
+                     VALUES
+                        (:installation_id, "caretaker", 0, "new", :updated_at)
+                     ON DUPLICATE KEY UPDATE updated_at = VALUES(updated_at)'
+                )->execute(['installation_id' => $installationId, 'updated_at' => $now]);
+            }
             $this->audit($pdo, $accountId, 'world.installed', $installationId, $now);
         });
     }
