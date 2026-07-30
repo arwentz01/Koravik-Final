@@ -8,11 +8,11 @@ This repository is the clean-start authority for the final Koravik implementatio
 
 ## Current status
 
-**Blueprint v1.0 complete. Build 097 release candidate in the current working tree.**
+**Blueprint v1.0 complete. Build 107 accessibility personalization candidate in the current working tree.**
 
 The platform now proves secure identity, Quests-owned real-life action, Chronicle preservation, Companion proposals and consent, explainable persistent World State, installed World lifecycle, and a bounded first-use journey that lets a new person begin without forced commitments.
 
-The current implementation includes secure personal participation, Worlds and Companion consent, Gather and Beacon operations, optional Organization operating spaces, private optional Households, and an executable release-verification suite through Build 097.
+The current implementation includes secure personal participation, Worlds and Companion consent, Gather and Beacon operations, optional Organization operating spaces, private optional Households, executable release verification, and account-wide accessibility personalization through Build 107.
 
 ## Documentation entry points
 

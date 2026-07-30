@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Builds 088–097 release verification candidate in the current working tree
-**Version:** 1.97
+**Status:** Builds 098–107 accessibility personalization candidate in the current working tree
+**Version:** 2.07
 **Baseline date:** July 30, 2026
 **Authoritative branch:** `main`
 
@@ -87,6 +87,16 @@ See `docs/builds/BUILD_078_087_HOUSEHOLD_FOUNDATION.md`.
 
 See `docs/builds/BUILD_088_097_RELEASE_VERIFICATION.md`.
 
+### Builds 098–107 — Accessibility personalization
+
+- durable reading and interaction preferences with safe defaults;
+- text scale, readable typeface, relaxed spacing, and narrow reading width;
+- emphasized links and enhanced keyboard focus;
+- dedicated settings, preview, reset, audit, and global visual-system integration;
+- automated persistence, validation, reset, CSS-contract, and Build 107 health checks.
+
+See `docs/builds/BUILD_098_107_ACCESSIBILITY_PERSONALIZATION.md`.
+
 ## Current migrations
 
 Production deployment must apply every file in `database/migrations`, including:
@@ -98,6 +108,7 @@ Production deployment must apply every file in `database/migrations`, including:
 048_052_organization_foundation.sql
 053_062_organization_operations.sql
 063_072_household_foundation.sql
+073_082_accessibility_personalization.sql
 ```
 
 Run:
@@ -178,11 +189,11 @@ php tools/worker.php 10
 
 ## Validation
 
-The single workflow at `.github/workflows/validate.yml` must lint PHP, migrate an isolated MySQL database, start the application, and run `php tools/test.php`. The release suite verifies migration inventory, critical schema, security primitives, Organization and Household capabilities, Gather authorization boundaries, subdirectory routing, accessibility, Platform Mail operations, lifecycle recovery, bounded workers, and the Build 097 health checkpoint.
+The single workflow at `.github/workflows/validate.yml` must lint PHP, migrate an isolated MySQL database, start the application, and run `php tools/test.php`. The release suite verifies migration inventory, critical schema, security primitives, Organization and Household capabilities, Gather authorization boundaries, subdirectory routing, accessibility preferences, Platform Mail operations, lifecycle recovery, bounded workers, and the Build 107 health checkpoint.
 
 ## Next build
 
-Build 098 should begin from observed product use and the Build 097 release gate. The next arc should prioritize user-visible workflow depth and accessibility findings before introducing another major domain.
+Build 108 should begin from observed product use and the Build 107 release gate. The next arc should prioritize user-visible workflow depth and measured accessibility findings before introducing another major domain.
 
 ## Build workflow
 

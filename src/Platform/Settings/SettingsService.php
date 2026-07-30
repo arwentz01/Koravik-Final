@@ -20,7 +20,7 @@ final class SettingsService
     {
         $pdo=$this->database->pdo();
         $pdo->prepare('INSERT INTO account_settings (account_id,updated_at) VALUES (:account_id,UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id)')->execute(['account_id'=>$accountId]);
-        $statement=$pdo->prepare('SELECT a.display_name,s.appearance,s.reduced_motion,s.high_contrast,s.timezone,s.date_format,s.updated_at FROM platform_accounts a JOIN account_settings s ON s.account_id=a.id WHERE a.id=:account_id LIMIT 1');
+        $statement=$pdo->prepare('SELECT a.display_name,s.appearance,s.reduced_motion,s.high_contrast,s.text_scale,s.typeface,s.content_spacing,s.emphasize_links,s.enhanced_focus,s.reading_width,s.timezone,s.date_format,s.updated_at FROM platform_accounts a JOIN account_settings s ON s.account_id=a.id WHERE a.id=:account_id LIMIT 1');
         $statement->execute(['account_id'=>$accountId]);
         $row=$statement->fetch();
         if(!$row) throw new RuntimeException('Account settings are unavailable.');

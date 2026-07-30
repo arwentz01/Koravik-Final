@@ -7,6 +7,7 @@ namespace Koravik\Tests;
 use Koravik\Platform\Households\HouseholdService;
 use Koravik\Platform\Organizations\OrganizationService;
 use Koravik\Platform\Security\Security;
+use Koravik\Platform\Settings\AccessibilityService;
 use PDO;
 
 final class ReleaseSuite
@@ -22,9 +23,10 @@ final class ReleaseSuite
         $this->runner->test('Household capabilities are contextual', fn() => $this->households());
         $this->runner->test('Gather management uses contextual authorization', fn() => $this->sourceContracts());
         $this->runner->test('login route is accessible and subdirectory-aware', fn() => $this->login());
-        $this->runner->test('health identifies Build 097', fn() => $this->health());
+        $this->runner->test('health identifies Build 107', fn() => $this->health());
         $this->runner->test('mail and recovery operations are present', fn() => $this->operations());
         $this->runner->test('workers remain explicitly bounded', fn() => $this->workers());
+        $this->runner->test('accessibility preferences persist, validate, and reset', fn() => $this->accessibility());
     }
 
     private function migrations(): void
@@ -112,7 +114,7 @@ final class ReleaseSuite
     {
         [$status,$body]=$this->http('/health');
         $payload=json_decode($body,true);
-        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='097', 'Health checkpoint is not Build 097.');
+        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='107', 'Health checkpoint is not Build 107.');
     }
 
     private function operations(): void
@@ -127,6 +129,41 @@ final class ReleaseSuite
         foreach (['mail-worker.php'=>'min(100','gather-reminder-worker.php'=>'min(500','worker.php'=>'min(100'] as $file=>$bound) {
             $source=(string)file_get_contents(KORAVIK_ROOT.'/tools/'.$file);
             $this->runner->assert(str_contains($source,$bound), "{$file} has no expected finite bound.");
+        }
+    }
+
+    private function accessibility(): void
+    {
+        $account='92000000-0000-4000-8000-000000000001';
+        try {
+            $this->pdo->prepare('DELETE FROM audit_log WHERE subject_id=:account')->execute(['account'=>$account]);
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+            $this->account($account,'accessibility@test.invalid');
+            $service=new AccessibilityService(\database());
+            $service->save($account,[
+                'text_scale'=>'larger','typeface'=>'readable','content_spacing'=>'relaxed',
+                'reading_width'=>'narrow','emphasize_links'=>'1','enhanced_focus'=>'1',
+                'high_contrast'=>'1','reduced_motion'=>'1',
+            ]);
+            $saved=$service->get($account);
+            foreach(['text_scale'=>'larger','typeface'=>'readable','content_spacing'=>'relaxed','reading_width'=>'narrow'] as $key=>$value) {
+                $this->runner->assert($saved[$key]===$value, "Accessibility preference {$key} was not saved.");
+            }
+            foreach(['emphasize_links','enhanced_focus','high_contrast','reduced_motion'] as $key) {
+                $this->runner->assert((int)$saved[$key]===1, "Accessibility switch {$key} was not saved.");
+            }
+            $service->reset($account);
+            $reset=$service->get($account);
+            $this->runner->assert($reset['text_scale']==='standard' && (int)$reset['enhanced_focus']===0, 'Accessibility reset did not restore defaults.');
+            try {$service->save($account,['text_scale'=>'extreme']);$valid=false;} catch (\RuntimeException) {$valid=true;}
+            $this->runner->assert($valid, 'Invalid accessibility values were accepted.');
+            $css=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/accessibility.css');
+            foreach(['.text-larger','.typeface-readable','.spacing-relaxed','.emphasize-links','.enhanced-focus','.width-narrow','.reduce-motion'] as $selector) {
+                $this->runner->assert(str_contains($css,$selector), "Accessibility stylesheet is missing {$selector}.");
+            }
+        } finally {
+            $this->pdo->prepare('DELETE FROM audit_log WHERE subject_id=:account')->execute(['account'=>$account]);
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
         }
     }
 

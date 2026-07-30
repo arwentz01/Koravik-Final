@@ -114,4 +114,4 @@ The `archive/` directory is non-authoritative. Legacy roadmaps and handoffs must
 
 ## Current state
 
-Project Zero and Blueprint v1.0 remain authoritative. Builds 001 through 087 are committed on `main`; Builds 088 through 097 form the current release-verification candidate.
+Project Zero and Blueprint v1.0 remain authoritative. Builds 001 through 097 are committed on `main`; Builds 098 through 107 form the current accessibility-personalization candidate.

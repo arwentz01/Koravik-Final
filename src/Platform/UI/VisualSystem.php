@@ -22,6 +22,12 @@ final class VisualSystem
                 $classes[] = 'appearance-' . preg_replace('/[^a-z-]/', '', (string) $settings['appearance']);
                 if ((int) $settings['reduced_motion'] === 1) $classes[] = 'reduce-motion';
                 if ((int) $settings['high_contrast'] === 1) $classes[] = 'high-contrast';
+                $classes[] = 'text-' . preg_replace('/[^a-z-]/', '', (string) $settings['text_scale']);
+                $classes[] = 'typeface-' . preg_replace('/[^a-z-]/', '', (string) $settings['typeface']);
+                $classes[] = 'spacing-' . preg_replace('/[^a-z-]/', '', (string) $settings['content_spacing']);
+                $classes[] = 'width-' . preg_replace('/[^a-z-]/', '', (string) $settings['reading_width']);
+                if ((int) $settings['emphasize_links'] === 1) $classes[] = 'emphasize-links';
+                if ((int) $settings['enhanced_focus'] === 1) $classes[] = 'enhanced-focus';
             } catch (Throwable) {
                 $classes[] = 'appearance-system';
             }
@@ -29,6 +35,9 @@ final class VisualSystem
 
         if (!str_contains($html, '/assets/visual-system.css')) {
             $html = str_replace('</head>', '<link rel="stylesheet" href="/assets/visual-system.css"></head>', $html);
+        }
+        if (!str_contains($html, '/assets/accessibility.css')) {
+            $html = str_replace('</head>', '<link rel="stylesheet" href="/assets/accessibility.css"></head>', $html);
         }
         $html = preg_replace('/<body([^>]*)class="([^"]*)"/', '<body$1class="$2 ' . implode(' ', $classes) . '"', $html, 1, $count) ?? $html;
         if (($count ?? 0) === 0) {

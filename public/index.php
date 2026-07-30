@@ -27,6 +27,7 @@ use Koravik\Platform\Privacy\PrivacyController;
 use Koravik\Platform\Search\SearchController;
 use Koravik\Platform\Security\AuthRecoveryController;
 use Koravik\Platform\Security\Security;
+use Koravik\Platform\Settings\AccessibilityController;
 use Koravik\Platform\Settings\SettingsController;
 use Koravik\Platform\UI\AppShell;
 use Koravik\Platform\UI\GuideController;
@@ -36,7 +37,7 @@ use Koravik\Worlds\EpicOrdinary\WorldProgressController;
 use Koravik\Worlds\WorldLifecycleController;
 
 $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');$path=app_request_path();
-if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'097'],JSON_THROW_ON_ERROR);return;}
+if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'107'],JSON_THROW_ON_ERROR);return;}
 Security::startSession();ob_start();
 $handled=(new MailOperationsController(database()))->handle($method,$path);
 if(!$handled)$handled=(new BeaconManagementController(database()))->handle($method,$path);
@@ -58,6 +59,7 @@ if(!$handled)$handled=(new HearthLayoutController(database()))->handle($method,$
 if(!$handled)$handled=(new HealingHomeController(database()))->handle($method,$path);
 if(!$handled)$handled=(new JourneyArcController(database()))->handle($method,$path);
 if(!$handled)$handled=(new LivingQuestController(database()))->handle($method,$path);
+if(!$handled)$handled=(new AccessibilityController(database()))->handle($method,$path);
 if(!$handled)$handled=(new SettingsController(database()))->handle($method,$path);
 if(!$handled)$handled=(new PrivacyController(database()))->handle($method,$path);
 if(!$handled)$handled=(new SearchController(database()))->handle($method,$path);
