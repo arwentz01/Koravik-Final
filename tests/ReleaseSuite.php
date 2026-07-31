@@ -52,6 +52,7 @@ final class ReleaseSuite
         $this->runner->test('Healing Home Journal Table starts Chronicle reflections safely', fn() => $this->healingHomeJournalTableReflectionBridge());
         $this->runner->test('Healing Home Garden opens from Caretaker conversation', fn() => $this->healingHomeGardenUnlock());
         $this->runner->test('Healing Home room expansion supports making, welcome, meaning, tending, and privacy', fn() => $this->healingHomeRoomExpansion());
+        $this->runner->test('Quests and Chronicle expose the action-memory loop safely', fn() => $this->questChroniclePolish());
     }
 
     private function migrations(): void
@@ -141,7 +142,7 @@ final class ReleaseSuite
     {
         [$status,$body]=$this->http('/health');
         $payload=json_decode($body,true);
-        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='117' && ($payload['slice']??'')==='healing-home-deepening', 'Health checkpoint does not identify the current slice.');
+        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='117' && ($payload['slice']??'')==='worlds-epic-ordinary-polish', 'Health checkpoint does not identify the current slice.');
     }
 
     private function operations(): void
@@ -243,6 +244,10 @@ final class ReleaseSuite
             $this->runner->assert(array_column($dashboard['focus']['entries'],'quest_id')===[$second,$first],'Daily priorities did not preserve their order.');
             $html=(new DailyFocusView())->homePanel($dashboard);
             foreach(['aria-labelledby="daily-focus-title"','Quest','Adjust focus','/quests/'.$second] as $needle)$this->runner->assert(str_contains($html,$needle),"Daily Focus UI is missing {$needle}.");
+            $index=(string)file_get_contents(KORAVIK_ROOT.'/public/index.php');
+            foreach(['hearth-orientation-grid','Choose the right doorway for now.','Open Healing Home','Hearth is an orientation surface','hearth-polish.css'] as $needle)$this->runner->assert(str_contains($index,$needle),"Hearth dashboard polish composition is missing {$needle}.");
+            $css=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/hearth-polish.css');
+            foreach(['.hearth-hero-actions','.hearth-orientation-grid','.hearth-trust-strip','forced-colors'] as $needle)$this->runner->assert(str_contains($css,$needle),"Hearth polish CSS is missing {$needle}.");
             $exportId=(new AccountDataService(\database()))->requestExport($account,'json');
             $export=(new AccountDataService(\database()))->export($account,$exportId);
             $exportData=json_decode((string)$export['export_json'],true);
@@ -272,6 +277,9 @@ final class ReleaseSuite
             $installationInsert->execute(['id'=>$otherInstallation,'account'=>$other]);
             $progressInsert=$this->pdo->prepare('INSERT INTO world_narrative_progress (installation_id,current_arc,current_chapter,current_scene,updated_at) VALUES (:id,"making-refuge","the-eastern-room","doorway",UTC_TIMESTAMP())');
             $progressInsert->execute(['id'=>$installation]);$progressInsert->execute(['id'=>$otherInstallation]);
+            $this->pdo->prepare('INSERT INTO world_objectives (id,installation_id,objective_key,title,description,status,created_at) VALUES ("95000000-0000-4000-8000-000000000011",:installation,"choose-refuge","Decide what kind of refuge this will become","Choose what the restored space should offer.","active",UTC_TIMESTAMP())')->execute(['installation'=>$installation]);
+            $this->pdo->prepare('INSERT INTO world_keepsakes (id,installation_id,keepsake_key,name,description,source_scene,acquired_at) VALUES ("95000000-0000-4000-8000-000000000012",:installation,"linen-thread","A Linen Thread","A pale thread from the restored room.","eastern-room-purpose",UTC_TIMESTAMP())')->execute(['installation'=>$installation]);
+            $this->pdo->prepare('INSERT INTO world_fact_permissions (installation_id,fact_key,granted,explanation,granted_at) VALUES (:installation,"quest.completed",1,"Quest completion may shape future World reactions.",UTC_TIMESTAMP())')->execute(['installation'=>$installation]);
             $reactionInsert=$this->pdo->prepare('INSERT INTO world_reactions (id,installation_id,source_event_id,title,message,explanation,source_fact_key,source_fact_summary,rule_key,interpreted_at,created_at) VALUES (:id,:installation,:event,"The house noticed","A light returned.","An approved completion fact matched a World rule.","quest.completed","A Quest occurrence was completed.","caretaker-notices",UTC_TIMESTAMP(),UTC_TIMESTAMP())');
             $reactionInsert->execute(['id'=>$reaction,'installation'=>$installation,'event'=>'95000000-0000-4000-8000-000000000007']);
             $reactionInsert->execute(['id'=>$otherReaction,'installation'=>$otherInstallation,'event'=>'95000000-0000-4000-8000-000000000008']);
@@ -279,7 +287,13 @@ final class ReleaseSuite
             $this->runner->assert(($dashboard['active_world']['world_key']??'')==='epic-ordinary','Worlds Home did not compose the active World.');
             $this->runner->assert(count($dashboard['reactions'])===1&&$dashboard['reactions'][0]['id']===$reaction,'Worlds Home exposed another account’s reaction.');
             $html=(new WorldHomeView())->render($dashboard);
-            foreach(['Continue story','Why did this change?','Mark reviewed','fictional World State'] as $needle)$this->runner->assert(str_contains($html,$needle),"Worlds Home UI is missing {$needle}.");
+            foreach(['Continue story','Why did this change?','Mark reviewed','fictional World State','Epic Ordinary is waiting at the threshold.','Current objective','Latest keepsake','Received fact','What Worlds own','Open Eastern Room'] as $needle)$this->runner->assert(str_contains($html,$needle),"Worlds Home UI is missing {$needle}.");
+            $homeCss=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/world-home.css');
+            foreach(['.world-story-gateway','.world-state-ledger','.world-continuation-cues','.world-reaction-mini','.world-trust-strip','forced-colors'] as $selector)$this->runner->assert(str_contains($homeCss,$selector),"World home polish CSS is missing {$selector}.");
+            $chapterSource=(string)file_get_contents(KORAVIK_ROOT.'/src/Worlds/EpicOrdinary/ChapterTwoController.php');
+            foreach(['eastern-room-preview','The door is unlocked by consent, not productivity.','refuge-choice-list','What this choice changes','Visit the Eastern Room'] as $needle)$this->runner->assert(str_contains($chapterSource,$needle),"Epic Ordinary continuation polish is missing {$needle}.");
+            $worldCss=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/world.css');
+            foreach(['.eastern-room-preview','.world-boundary-note','.refuge-choice-list','forced-colors'] as $selector)$this->runner->assert(str_contains($worldCss,$selector),"Epic Ordinary polish CSS is missing {$selector}.");
             $service->markReactionReviewed($account,$reaction);
             $reviewed=$service->dashboard($account);
             $this->runner->assert($reviewed['reactions'][0]['reviewed_at']!==null,'World reaction review state did not persist.');
@@ -673,7 +687,7 @@ final class ReleaseSuite
             $home=$service->homeForAccount($account);
             $renderHome=(new \ReflectionClass($controller))->getMethod('renderHome');$renderHome->setAccessible(true);
             $homeHtml=(string)$renderHome->invoke($controller,['id'=>$account,'display_name'=>'Test'],$home);
-            foreach(['Green Dusk','Return scene','Today in the house','Room directory','Source glossary','What the house knows','Arrival scene','What changed since you were gone','home-blueprint-map','room-symbol','Choose a room by meaning','House pulse','Tended and listening','Lamplight is under the door','House resonance','Choose a path by the kind of care','Open the house guide','Living house','House invitations','Thresholds','House atlas','Room lore','House constellations','Boundary ledger','Wayfinding'] as $needle)$this->runner->assert(str_contains($homeHtml,$needle),"Home expansion UI is missing {$needle}.");
+            foreach(['Green Dusk','Return scene','Today in the house','Room directory','Source glossary','What the house knows','Arrival scene','What changed since you were gone','home-blueprint-map','room-symbol','Choose a room by meaning','House pulse','Tended and listening','Lamplight is under the door','House resonance','Choose a path by the kind of care','Open the house guide','Living house','House invitations','Thresholds','House atlas','Room lore','House constellations','Boundary ledger','Wayfinding','House compass','Moods','Rooms by need','Consent map','House changelog','home-command-center','Start here','Trust and meaning','Healing Home is ready to move sections'] as $needle)$this->runner->assert(str_contains($homeHtml,$needle),"Home expansion UI is missing {$needle}.");
             $renderTimeline=(new \ReflectionClass($controller))->getMethod('renderTimeline');$renderTimeline->setAccessible(true);
             $timelineHtml=(string)$renderTimeline->invoke($controller,$service->timelineForAccount($account));
             foreach(['Room timeline','What the house has held','Something was tended','Caretaker conversation'] as $needle)$this->runner->assert(str_contains($timelineHtml,$needle),"Room timeline is missing {$needle}.");
@@ -714,14 +728,37 @@ final class ReleaseSuite
             $renderWayfinding=(new \ReflectionClass($controller))->getMethod('renderHouseWayfinding');$renderWayfinding->setAccessible(true);
             $wayfindingHtml=(string)$renderWayfinding->invoke($controller);
             foreach(['Wayfinding','I want to understand why something appeared','Start with boundaries'] as $needle)$this->runner->assert(str_contains($wayfindingHtml,$needle),"Wayfinding UI is missing {$needle}.");
+            $renderCompass=(new \ReflectionClass($controller))->getMethod('renderHouseCompass');$renderCompass->setAccessible(true);
+            $compassHtml=(string)$renderCompass->invoke($controller);
+            foreach(['House compass','North / Meaning','Threshold / Trust'] as $needle)$this->runner->assert(str_contains($compassHtml,$needle),"House compass UI is missing {$needle}.");
+            $renderMoods=(new \ReflectionClass($controller))->getMethod('renderHouseMoods');$renderMoods->setAccessible(true);
+            $moodsHtml=(string)$renderMoods->invoke($controller);
+            foreach(['Moods of the house','Quiet morning','Green dusk','Workshop lamplight'] as $needle)$this->runner->assert(str_contains($moodsHtml,$needle),"House moods UI is missing {$needle}.");
+            $renderNeeds=(new \ReflectionClass($controller))->getMethod('renderRoomsByNeed');$renderNeeds->setAccessible(true);
+            $needsHtml=(string)$renderNeeds->invoke($controller);
+            foreach(['Rooms by need','I need clarity','I need safety'] as $needle)$this->runner->assert(str_contains($needsHtml,$needle),"Rooms by need UI is missing {$needle}.");
+            $renderConsentMap=(new \ReflectionClass($controller))->getMethod('renderConsentMap');$renderConsentMap->setAccessible(true);
+            $consentMapHtml=(string)$renderConsentMap->invoke($controller);
+            foreach(['Consent map','Saving','Sharing','Excluded'] as $needle)$this->runner->assert(str_contains($consentMapHtml,$needle),"Consent map UI is missing {$needle}.");
+            $renderChangelog=(new \ReflectionClass($controller))->getMethod('renderHouseChangelog');$renderChangelog->setAccessible(true);
+            $changelogHtml=(string)$renderChangelog->invoke($controller);
+            foreach(['House changelog','Foundation','Compass'] as $needle)$this->runner->assert(str_contains($changelogHtml,$needle),"House changelog UI is missing {$needle}.");
             $renderPrivacy=(new \ReflectionClass($controller))->getMethod('renderHomePrivacy');$renderPrivacy->setAccessible(true);
             $privacyHtml=(string)$renderPrivacy->invoke($controller);
             foreach(['What the house knows','Composed sources','Deliberately not accessed','Quest notes','Data controls'] as $needle)$this->runner->assert(str_contains($privacyHtml,$needle),"Healing Home privacy panel is missing {$needle}.");
             $css=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/journey.css');
-            foreach(['.workshop-room-panel','.library-room-panel','.guest-room-panel','.room-intention-label','.home-arrival-scene','.room-walkway','.home-atmosphere-green_dusk','.home-blueprint-map','.home-pulse-panel','.garden-growth-list','.unfinished-idea-card','.source-thread-panel','.home-resonance-routes','.room-practice-panel','.home-guide-grid','.source-thread-actions','.home-today-grid','.room-directory-panel','.source-glossary-grid','.home-threshold-panel','.home-living-house','.room-invitation-panel','.house-invitations-grid','.house-threshold-columns','.house-atlas-map','.room-lore-grid','.house-constellation-grid','.boundary-ledger-grid','.house-wayfinding-grid'] as $selector)$this->runner->assert(str_contains($css,$selector),"Expansion CSS is missing {$selector}.");
+            foreach(['.workshop-room-panel','.library-room-panel','.guest-room-panel','.room-intention-label','.home-arrival-scene','.room-walkway','.home-atmosphere-green_dusk','.home-blueprint-map','.home-pulse-panel','.garden-growth-list','.unfinished-idea-card','.source-thread-panel','.home-resonance-routes','.room-practice-panel','.home-guide-grid','.source-thread-actions','.home-today-grid','.room-directory-panel','.source-glossary-grid','.home-threshold-panel','.home-living-house','.room-invitation-panel','.house-invitations-grid','.house-threshold-columns','.house-atlas-map','.room-lore-grid','.house-constellation-grid','.boundary-ledger-grid','.house-wayfinding-grid','.house-compass-grid','.house-moods-grid','.rooms-by-need-grid','.consent-map-grid','.house-changelog-list','.home-command-center','.home-command-grid'] as $selector)$this->runner->assert(str_contains($css,$selector),"Expansion CSS is missing {$selector}.");
         } finally {
             $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
         }
+    }
+
+    private function questChroniclePolish(): void
+    {
+        $index=(string)file_get_contents(KORAVIK_ROOT.'/public/index.php');
+        foreach(['quest-polish-panel','Choose the next honest action.','Preserve meaning intentionally.','What Quests owns','chronicle-polish-panel','Preserve what matters, not everything.','chronicle-editor-trust','This creates Chronicle memory only when you choose Save.','What Chronicle owns','action-memory-polish.css'] as $needle)$this->runner->assert(str_contains($index,$needle),"Quest and Chronicle polish composition is missing {$needle}.");
+        $css=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/action-memory-polish.css');
+        foreach(['.action-memory-loop','.quest-polish-panel','.chronicle-polish-panel','.ownership-bridge-strip','.reflection-bridge-panel','.chronicle-editor-trust','forced-colors'] as $selector)$this->runner->assert(str_contains($css,$selector),"Quest and Chronicle polish CSS is missing {$selector}.");
     }
 
     private function account(string $id,string $email):void{$this->pdo->prepare('INSERT INTO platform_accounts (id,email,display_name,role,status,created_at,updated_at) VALUES (:id,:email,"Test","user","active",UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute(['id'=>$id,'email'=>$email]);}

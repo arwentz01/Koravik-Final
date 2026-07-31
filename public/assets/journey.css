@@ -1034,6 +1034,37 @@
     box-shadow: var(--shadow);
 }
 
+.home-command-center {
+    border-left-color: var(--plum);
+}
+
+.home-command-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: .85rem;
+    margin-top: 1rem;
+}
+
+.home-command-grid article {
+    display: grid;
+    align-content: start;
+    gap: .45rem;
+    padding: 1rem;
+    border: 1px solid rgb(83 61 42 / 14%);
+    border-radius: 16px;
+    background: rgb(255 255 255 / 62%);
+}
+
+.home-command-grid h3 {
+    margin: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.15rem;
+}
+
+.home-command-grid .local-actions {
+    margin-top: .35rem;
+}
+
 .house-invitations-grid,
 .house-atlas-map,
 .house-threshold-columns {
@@ -1113,6 +1144,47 @@
 .house-constellation-grid h2,
 .boundary-ledger-grid h2,
 .house-wayfinding-grid h2 {
+    margin: .15rem 0 .45rem;
+    font-family: Georgia, "Times New Roman", serif;
+}
+
+.house-compass-grid,
+.house-moods-grid,
+.rooms-by-need-grid,
+.consent-map-grid,
+.house-changelog-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: .85rem;
+    margin: 1rem 0;
+}
+
+.house-compass-grid article,
+.house-moods-grid article,
+.rooms-by-need-grid article,
+.consent-map-grid article,
+.house-changelog-list article {
+    display: grid;
+    gap: .45rem;
+    padding: 1rem;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background:
+        radial-gradient(circle at 88% 12%, rgb(198 155 84 / 15%), transparent 24%),
+        rgb(255 250 240 / 78%);
+    box-shadow: var(--shadow);
+}
+
+.house-compass-hero h1,
+.house-moods-hero h1,
+.rooms-by-need-hero h1,
+.consent-map-hero h1,
+.house-changelog-hero h1,
+.house-compass-grid h2,
+.house-moods-grid h2,
+.rooms-by-need-grid h2,
+.consent-map-grid h2,
+.house-changelog-list h2 {
     margin: .15rem 0 .45rem;
     font-family: Georgia, "Times New Roman", serif;
 }

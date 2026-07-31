@@ -229,6 +229,36 @@ final class HealingHomeController
             return true;
         }
 
+        if ($method === 'GET' && $path === '/home/compass') {
+            Security::requireAccount();
+            echo $this->renderHouseCompass();
+            return true;
+        }
+
+        if ($method === 'GET' && $path === '/home/moods') {
+            Security::requireAccount();
+            echo $this->renderHouseMoods();
+            return true;
+        }
+
+        if ($method === 'GET' && $path === '/home/by-need') {
+            Security::requireAccount();
+            echo $this->renderRoomsByNeed();
+            return true;
+        }
+
+        if ($method === 'GET' && $path === '/home/consent-map') {
+            Security::requireAccount();
+            echo $this->renderConsentMap();
+            return true;
+        }
+
+        if ($method === 'GET' && $path === '/home/changelog') {
+            Security::requireAccount();
+            echo $this->renderHouseChangelog();
+            return true;
+        }
+
         if ($method === 'GET' && preg_match('#^/home/source/(change|keepsake|conversation)/([a-f0-9-]{36})$#', $path, $matches)) {
             $account = Security::requireAccount();
             $thread = (new JourneyService($this->database))->sourceThreadForAccount((string) $account['id'], $matches[1], $matches[2]);
@@ -333,7 +363,7 @@ final class HealingHomeController
         $arrival = '<section class="home-arrival-scene" aria-labelledby="home-arrival-title"><div><p class="eyebrow">Arrival scene</p><h2 id="home-arrival-title">What changed since you were gone</h2><p>' . self::e($this->atmosphereDescription((string) ($journey['state']['atmosphere'] ?? 'quiet_morning'))) . '</p></div><ul class="arrival-list">' . $sinceGone . '<li><strong>Open rooms</strong><span>' . $openRooms . ' rooms are available; waiting doors stay visible without pressure.</span></li><li><strong>Next threshold</strong><span>Choose a room by meaning, not by obligation.</span></li></ul></section>';
         $pulse = '<section class="home-pulse-panel" aria-labelledby="home-pulse-title"><p class="eyebrow">House pulse</p><h2 id="home-pulse-title">' . self::e($this->housePulseLabel((string) ($journey['state']['atmosphere'] ?? 'quiet_morning'))) . '</h2><p>' . self::e($this->housePulseCopy((string) ($journey['state']['atmosphere'] ?? 'quiet_morning'))) . '</p><p class="meta">This is atmospheric presentation, not diagnosis, productivity scoring, or hidden emotional assessment.</p></section>';
         $routes = '<section class="home-resonance-routes" aria-labelledby="home-resonance-title"><div><p class="eyebrow">House resonance</p><h2 id="home-resonance-title">Choose a path by the kind of care you want.</h2><p>These are invitations, not assigned work. Each path keeps the source owner visible.</p></div><ol><li><strong>Understand what changed</strong><span>Fireplace → Library → Source thread</span><a href="/home/rooms/fireplace">Follow the echoes</a></li><li><strong>Make without proving</strong><span>Eastern Room → Workshop → Chronicle only if chosen</span><a href="/home/rooms/workshop">Enter the Workshop</a></li><li><strong>Recover gently</strong><span>Caretaker → Garden → Room note</span><a href="/home/rooms/garden">Visit the Garden</a></li></ol><p><a class="button secondary" href="/home/guide">Open the house guide</a></p></section>';
-        $living = '<section class="home-living-house" aria-labelledby="home-living-title"><div><p class="eyebrow">Living house</p><h2 id="home-living-title">The house offers invitations, not assignments.</h2><p>Use these surfaces when you want a different doorway into the same source-aware home.</p></div><p class="local-actions"><a class="button secondary" href="/home/invitations">House invitations</a><a class="button secondary" href="/home/thresholds">Thresholds</a><a class="button secondary" href="/home/atlas">House atlas</a><a class="button secondary" href="/home/lore">Room lore</a><a class="button secondary" href="/home/constellations">House constellations</a><a class="button secondary" href="/home/boundaries">Boundary ledger</a><a class="button secondary" href="/home/wayfinding">Wayfinding</a></p></section>';
+        $living = '<section class="home-living-house home-command-center" aria-labelledby="home-living-title"><div><p class="eyebrow">Living house</p><h2 id="home-living-title">The house offers invitations, not assignments.</h2><p>Use these grouped shelves when you want a different doorway into the same source-aware home. Healing Home is ready to move sections after this polish pass.</p></div><div class="home-command-grid"><article><h3>Start here</h3><p>Daily orientation and direct room access.</p><p class="local-actions"><a class="button secondary" href="/home/today">Today in the house</a><a class="button secondary" href="/home/rooms">Room directory</a><a class="button secondary" href="/home/guide">Open the house guide</a></p></article><article><h3>Living house</h3><p>Invitations, thresholds, and the authored map of the house.</p><p class="local-actions"><a class="button secondary" href="/home/invitations">House invitations</a><a class="button secondary" href="/home/thresholds">Thresholds</a><a class="button secondary" href="/home/atlas">House atlas</a><a class="button secondary" href="/home/lore">Room lore</a><a class="button secondary" href="/home/constellations">House constellations</a></p></article><article><h3>Trust and meaning</h3><p>Boundaries, provenance, and consent stay visible.</p><p class="local-actions"><a class="button secondary" href="/home/sources">Source glossary</a><a class="button secondary" href="/home/boundaries">Boundary ledger</a><a class="button secondary" href="/home/consent-map">Consent map</a><a class="button secondary" href="/home/privacy">What the house knows</a></p></article><article><h3>Compass</h3><p>Choose by need, mood, or orientation.</p><p class="local-actions"><a class="button secondary" href="/home/wayfinding">Wayfinding</a><a class="button secondary" href="/home/compass">House compass</a><a class="button secondary" href="/home/moods">Moods</a><a class="button secondary" href="/home/by-need">Rooms by need</a><a class="button secondary" href="/home/changelog">House changelog</a></p></article></div></section>';
 
         $body = '<section class="healing-home-hero home-atmosphere-' . self::e((string) ($journey['state']['atmosphere'] ?? 'quiet_morning')) . '" aria-labelledby="healing-home-title"><div class="home-sky" aria-hidden="true"><span></span><span></span><span></span></div><div class="healing-home-copy"><p class="eyebrow">Healing Home - ' . self::e(ucwords($atmosphere)) . '</p><h1 id="healing-home-title">Welcome home, ' . self::e((string) $account['display_name']) . '.</h1><p>You do not have to carry everything at once. One honest next step is enough.</p>' . $returned . '<div class="hero-actions"><a class="button" href="#home-room-scene">Step inside</a><a class="button secondary" href="/home/today">Today in the house</a><a class="button secondary" href="/home/rooms">Room directory</a><a class="button secondary" href="/home/sources">Source glossary</a><a class="button secondary" href="/home/privacy">What the house knows</a></div></div><figure class="home-illustration" aria-label="A warm cutaway room with a lit fireplace, quest board, journal table, companion chair, and unopened doors."><div class="roof" aria-hidden="true"></div><div class="room-window" aria-hidden="true"></div><div class="room-fire" aria-hidden="true"></div><div class="room-board" aria-hidden="true"></div><div class="room-table" aria-hidden="true"></div><div class="room-chair" aria-hidden="true"></div><div class="room-door" aria-hidden="true"></div></figure></section>' . $arrival . $pulse . $routes . $living . '<section id="home-room-scene" class="healing-home-grid" aria-label="Healing Home rooms">' . $focusHtml . $changeHtml . $memoryHtml . $keepsakeHtml . $relationshipHtml . '<article class="home-place room-card room-companion-chair"><p class="eyebrow">Companion Chair</p><h2>A place for thoughtful help.</h2><p>The Companion may help you clarify, reflect, or draft, but never choose for you.</p><p class="local-actions"><a href="/companion">Visit Companion</a><a href="/home/rooms/companion_chair">Open room</a></p></article></section><section class="home-rooms home-room-map home-blueprint-map" aria-labelledby="home-room-map-title"><div class="section-heading"><div><p class="eyebrow">Room map</p><h2 id="home-room-map-title">Familiar places and unopened doors</h2><p>Every room names what it holds, whether it is open, and where you are resting now. Each room also has a symbolic marker and a doorway you can choose without pressure.</p></div></div><ul>' . $rooms . '</ul></section>';
 
@@ -875,6 +905,41 @@ final class HealingHomeController
         $body = '<section class="relationship-hero house-wayfinding-hero"><p class="eyebrow">Healing Home deepening</p><h1>Wayfinding</h1><p>Choose a doorway based on what you are trying to understand, not on what the system wants from you.</p><a class="button secondary" href="/home">Return home</a></section><section class="house-wayfinding-grid"><article><h2>I want to understand why something appeared.</h2><p>Go to Fireplace, then Library, then Source Thread.</p><a href="/home/rooms/fireplace">Start with Fireplace</a></article><article><h2>I want to make something but keep it soft.</h2><p>Go to Workshop. Use a room note before choosing Chronicle.</p><a href="/home/rooms/workshop">Start with Workshop</a></article><article><h2>I want to rest or repair.</h2><p>Go to Garden or speak with the Caretaker.</p><a href="/home/rooms/garden">Start with Garden</a></article><article><h2>I want to know what is safe.</h2><p>Go to Boundary Ledger, Source Glossary, or Privacy.</p><a href="/home/boundaries">Start with boundaries</a></article></section>';
 
         return $this->document('Wayfinding', $body);
+    }
+
+    private function renderHouseCompass(): string
+    {
+        $body = '<section class="relationship-hero house-compass-hero"><p class="eyebrow">Healing Home compass</p><h1>Choose by direction, not pressure</h1><p>The compass gives you another way to enter the same house: meaning, story, care, making, welcome, or trust.</p><a class="button secondary" href="/home">Return home</a></section><section class="house-compass-grid"><article><h2>North / Meaning</h2><p>Fireplace, Library, Source Threads, Source Glossary.</p><a href="/home/rooms/library">Open meaning</a></article><article><h2>East / Story</h2><p>Eastern Room, Epic Ordinary, Keepsake Shelf.</p><a href="/home/rooms/eastern_room">Open story</a></article><article><h2>South / Care</h2><p>Garden, Caretaker, Today in the House.</p><a href="/home/rooms/garden">Open care</a></article><article><h2>West / Making</h2><p>Workshop, Journal Table, private room notes.</p><a href="/home/rooms/workshop">Open making</a></article><article><h2>Threshold / Trust</h2><p>Boundary Ledger, Consent Map, Privacy.</p><a href="/home/consent-map">Open trust</a></article></section>';
+
+        return $this->document('House compass', $body);
+    }
+
+    private function renderHouseMoods(): string
+    {
+        $body = '<section class="relationship-hero house-moods-hero"><p class="eyebrow">Healing Home compass</p><h1>Moods of the house</h1><p>Moods are presentation language. They are not diagnosis, scoring, or emotional surveillance.</p><a class="button secondary" href="/home">Return home</a></section><section class="house-moods-grid"><article><h2>Quiet morning</h2><p>The default mood: the house is steady and asks nothing.</p></article><article><h2>Green dusk</h2><p>The Garden has recently been tended. Care is visible, not scored.</p></article><article><h2>Workshop lamplight</h2><p>The Workshop is awake for making, repair, and unfinished ideas.</p></article><article><h2>Future moods</h2><p>New moods must remain explainable and tied to visible account-owned state.</p></article></section>';
+
+        return $this->document('Moods of the house', $body);
+    }
+
+    private function renderRoomsByNeed(): string
+    {
+        $body = '<section class="relationship-hero rooms-by-need-hero"><p class="eyebrow">Healing Home compass</p><h1>Rooms by need</h1><p>Start with what you need, then choose the room. No path is required.</p><a class="button secondary" href="/home">Return home</a></section><section class="rooms-by-need-grid"><article><h2>I need clarity</h2><p>Library, Source Glossary, Boundary Ledger.</p><a href="/home/rooms/library">Open Library</a></article><article><h2>I need continuity</h2><p>Today in the House, Timeline, Entry Hall.</p><a href="/home/today">Open Today</a></article><article><h2>I need repair</h2><p>Garden, Caretaker, Eastern Room.</p><a href="/home/rooms/garden">Open Garden</a></article><article><h2>I need expression</h2><p>Workshop, Journal Table, Chronicle only if chosen.</p><a href="/home/rooms/workshop">Open Workshop</a></article><article><h2>I need safety</h2><p>Consent Map, Guest Room, Privacy.</p><a href="/home/consent-map">Open Consent Map</a></article></section>';
+
+        return $this->document('Rooms by need', $body);
+    }
+
+    private function renderConsentMap(): string
+    {
+        $body = '<section class="relationship-hero consent-map-hero"><p class="eyebrow">Healing Home compass</p><h1>Consent map</h1><p>A map of what can happen only after explicit approval.</p><a class="button secondary" href="/home">Return home</a></section><section class="consent-map-grid"><article><h2>Saving</h2><p>Chronicle entries are saved only when you submit them in Chronicle.</p></article><article><h2>Acting</h2><p>Quest actions remain in Quests and require their own forms and validation.</p></article><article><h2>Sharing</h2><p>Guest Room shares nothing now. Future sharing requires a clear review and approval flow.</p></article><article><h2>Companion</h2><p>Companion may propose. Consequential action still requires approval and owner execution.</p></article><article><h2>Excluded</h2><p>Health, Gather, Beacon, account secrets, and other accounts are not silently pulled into Healing Home.</p></article></section>';
+
+        return $this->document('Consent map', $body);
+    }
+
+    private function renderHouseChangelog(): string
+    {
+        $body = '<section class="relationship-hero house-changelog-hero"><p class="eyebrow">Healing Home compass</p><h1>House changelog</h1><p>A human-readable guide to the house surfaces that now exist. This is documentation inside the product, not a developer log.</p><a class="button secondary" href="/home">Return home</a></section><section class="house-changelog-list"><article><h2>Foundation</h2><p>Home overview, room pages, rest state, room notes, and source ownership.</p></article><article><h2>Intrigue</h2><p>Atmosphere, room symbols, door states, room practices, invitations, and source threads.</p></article><article><h2>Presence</h2><p>Today in the House, Room Directory, Source Glossary, and guide thresholds.</p></article><article><h2>Living House</h2><p>Invitations, Thresholds, House Atlas, Room Lore, Constellations, Boundary Ledger, and Wayfinding.</p></article><article><h2>Compass</h2><p>Compass, moods, rooms by need, consent map, and this changelog.</p></article></section>';
+
+        return $this->document('House changelog', $body);
     }
 
     private function roomLore(string $roomKey): string

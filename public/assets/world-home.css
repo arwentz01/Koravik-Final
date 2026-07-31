@@ -2,6 +2,56 @@
     align-items: end;
 }
 
+.world-story-gateway {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(240px, .55fr);
+    gap: clamp(1rem, 4vw, 2rem);
+    align-items: start;
+    margin-block: 1.2rem 1.6rem;
+    padding: clamp(1.2rem, 4vw, 2rem);
+    border: 1px solid rgba(75, 45, 91, .18);
+    border-radius: calc(var(--radius) + 8px);
+    background:
+        radial-gradient(circle at 12% 0%, rgba(255, 217, 156, .42), transparent 34%),
+        linear-gradient(135deg, #fffaf0, #eee4f1);
+    box-shadow: var(--shadow);
+}
+
+.world-story-gateway h2 {
+    max-width: 18ch;
+    margin: .15rem 0;
+    font: 700 clamp(2rem, 4vw, 3.4rem)/1.04 Georgia, "Times New Roman", serif;
+}
+
+.world-state-ledger,
+.world-reaction-mini {
+    display: grid;
+    gap: .65rem;
+    margin: 0;
+}
+
+.world-state-ledger div,
+.world-reaction-mini div,
+.world-continuation-cues p {
+    margin: 0;
+    padding: .8rem;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: rgb(255 255 255 / 72%);
+}
+
+.world-state-ledger dt,
+.world-reaction-mini dt,
+.world-continuation-cues strong {
+    color: var(--plum);
+    font-weight: 800;
+}
+
+.world-state-ledger dd,
+.world-reaction-mini dd {
+    margin: .15rem 0 0;
+}
+
 .active-world-card {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(220px, .34fr);
@@ -31,6 +81,17 @@
     max-width: 36rem;
     padding-left: .85rem;
     border-left: 3px solid var(--ember);
+}
+
+.world-continuation-cues {
+    display: grid;
+    gap: .7rem;
+    margin-block: 1rem;
+}
+
+.world-continuation-cues span {
+    display: block;
+    margin-top: .2rem;
 }
 
 .active-world-context {
@@ -87,6 +148,11 @@
     margin: 0;
 }
 
+.world-reaction-mini {
+    margin-block: .75rem;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+}
+
 .new-reaction-label {
     display: inline-flex;
     padding: .12rem .45rem;
@@ -115,7 +181,16 @@
     background: var(--surface);
 }
 
+.world-trust-strip {
+    margin-block: clamp(2rem, 5vw, 4rem);
+    padding: clamp(1rem, 3vw, 1.4rem);
+    border: 1px solid rgba(75, 45, 91, .16);
+    border-radius: 22px;
+    background: rgb(255 253 248 / 78%);
+}
+
 @media (max-width: 760px) {
+    .world-story-gateway,
     .active-world-card,
     .world-reaction-card {
         grid-template-columns: 1fr;
@@ -123,5 +198,17 @@
 
     .active-world-card .button {
         width: 100%;
+    }
+}
+
+@media (forced-colors: active) {
+    .world-story-gateway,
+    .world-state-ledger div,
+    .world-reaction-mini div,
+    .world-continuation-cues p,
+    .world-trust-strip {
+        border: 1px solid CanvasText;
+        background: Canvas;
+        box-shadow: none;
     }
 }

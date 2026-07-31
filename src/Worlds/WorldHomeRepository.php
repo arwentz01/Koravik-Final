@@ -19,6 +19,12 @@ final class WorldHomeRepository
             'SELECT c.world_key, c.name, c.tagline, i.id AS installation_id, i.status,
                     n.current_arc, n.current_chapter, n.current_scene,
                     r.relationship_stage, r.trust_score,
+                    (SELECT o.title FROM world_objectives o WHERE o.installation_id = i.id ORDER BY o.created_at DESC LIMIT 1) AS objective_title,
+                    (SELECT o.status FROM world_objectives o WHERE o.installation_id = i.id ORDER BY o.created_at DESC LIMIT 1) AS objective_status,
+                    (SELECT k.name FROM world_keepsakes k WHERE k.installation_id = i.id ORDER BY k.acquired_at DESC LIMIT 1) AS keepsake_name,
+                    (SELECT p.granted FROM world_fact_permissions p WHERE p.installation_id = i.id AND p.fact_key = "quest.completed" LIMIT 1) AS quest_fact_granted,
+                    (SELECT reaction.title FROM world_reactions reaction WHERE reaction.installation_id = i.id ORDER BY reaction.created_at DESC LIMIT 1) AS latest_reaction_title,
+                    (SELECT reaction.source_fact_summary FROM world_reactions reaction WHERE reaction.installation_id = i.id ORDER BY reaction.created_at DESC LIMIT 1) AS latest_reaction_fact,
                     (SELECT COUNT(*)
                        FROM world_reactions reaction
                        LEFT JOIN world_reaction_reviews review ON review.reaction_id = reaction.id
@@ -41,7 +47,7 @@ final class WorldHomeRepository
     {
         $statement = $this->database->pdo()->prepare(
             'SELECT reaction.id, reaction.title, reaction.message, reaction.explanation,
-                    reaction.source_fact_summary,
+                    reaction.source_fact_summary, reaction.source_fact_key, reaction.rule_key,
                     COALESCE(reaction.interpreted_at, reaction.created_at) AS interpreted_at,
                     review.reviewed_at, catalog.name AS world_name, installation.world_key
                FROM world_reactions reaction

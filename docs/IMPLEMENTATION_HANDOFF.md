@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Healing Home Deepening vertical product slice in the current working tree
-**Version:** 2.37
+**Status:** Worlds and Epic Ordinary Polish vertical product slice in the current working tree
+**Version:** 2.42
 **Baseline date:** July 30, 2026
 **Authoritative branch:** `main`
 
@@ -365,6 +365,77 @@ See `docs/features/HEALING_HOME_LIVING_HOUSE.md`.
 - `/home` exposes these deepening surfaces from the living-house panel.
 
 See `docs/features/HEALING_HOME_DEEPENING.md`.
+
+### Healing Home Compass — implemented vertical slice
+
+- `/home/compass` orients the house by direction and purpose;
+- `/home/moods` explains mood language as presentation, not diagnosis;
+- `/home/by-need` maps common user needs to safe room paths;
+- `/home/consent-map` shows explicit-approval boundaries for saving, acting,
+  sharing, Companion proposals, and excluded sources;
+- `/home/changelog` gives a human-readable in-product guide to current Healing
+  Home surfaces.
+
+See `docs/features/HEALING_HOME_COMPASS.md`.
+
+### Healing Home Final Polish — implemented vertical slice
+
+- `/home` now consolidates the many Healing Home surfaces into grouped shelves:
+  Start Here, Living House, Trust and Meaning, and Compass;
+- the final polish keeps every route available while reducing the entry-point
+  link pile;
+- the page explicitly records that Healing Home is ready to move sections after
+  this polish pass;
+- no new state, migrations, scoring, diagnosis, hidden automation, or District
+  writes were introduced.
+
+See `docs/features/HEALING_HOME_FINAL_POLISH.md`.
+
+### Hearth Dashboard Polish — implemented vertical slice
+
+- `/hearth` now includes a dashboard orientation grid for Act, Reflect,
+  Healing Home, and Worlds;
+- the Hearth hero exposes Healing Home, Daily Focus, and Guide actions;
+- a Hearth trust strip explains that Hearth composes and links but does not
+  create Quests, Chronicle entries, Companion memory, World facts, or Healing
+  Home state by itself;
+- the polish uses a dedicated `hearth-polish.css` stylesheet with responsive
+  and forced-color support.
+
+See `docs/features/HEARTH_DASHBOARD_POLISH.md`.
+
+### Quest and Chronicle Polish — implemented vertical slice
+
+- `/quests` now frames real-life action as an intentionally light commitment
+  surface with direct paths to create a Quest, reflect in Chronicle, or open
+  the Healing Home Quest Board;
+- Quest detail pages include a non-mutating reflection bridge into Chronicle;
+- `/chronicle` now frames saved reflection as intentional memory with paths
+  back to Quests and the Healing Home Journal Table;
+- `/chronicle/new` explains before saving that drafting does not complete a
+  Quest, notify anyone, create Companion memory, or change World State;
+- the shared polish uses `action-memory-polish.css` with responsive and
+  forced-color support.
+
+See `docs/features/QUEST_CHRONICLE_POLISH.md`.
+
+### Worlds and Epic Ordinary Polish — implemented vertical slice
+
+- `/worlds` now includes a story doorway for the active World with current
+  chapter, scene, objective, keepsake, fact boundary, latest signal, and
+  received-fact summary;
+- Worlds Home reaction cards now show approved fact and World rule summaries
+  before linking to the full explanation;
+- a Worlds ownership strip explains that Worlds own fictional progress,
+  choices, objectives, keepsakes, relationship state, and reactions without
+  owning Quests, Chronicle, Companion memory, account secrets, or unrelated
+  records;
+- Epic Ordinary Chapter Two now has stronger Eastern Room preview, refuge
+  choice, consequence, and post-choice navigation surfaces;
+- the polish uses `world-home.css` and `world.css` additions with responsive
+  and forced-color support.
+
+See `docs/features/WORLDS_EPIC_ORDINARY_POLISH.md`.
 
 ## Current migrations
 

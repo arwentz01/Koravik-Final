@@ -1,0 +1,90 @@
+.action-memory-loop,
+.ownership-bridge-strip,
+.reflection-bridge-panel,
+.chronicle-editor-trust {
+    border: 1px solid rgba(81, 52, 35, 0.14);
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at 10% 0%, rgba(255, 222, 169, 0.42), transparent 32%),
+        linear-gradient(135deg, rgba(255, 252, 244, 0.96), rgba(245, 235, 218, 0.92));
+    box-shadow: 0 18px 45px rgba(60, 39, 24, 0.08);
+    margin-block: 1.4rem;
+    padding: clamp(1rem, 3vw, 1.6rem);
+}
+
+.action-memory-loop {
+    display: grid;
+    gap: 1.25rem;
+}
+
+.quest-polish-panel {
+    border-color: rgba(123, 84, 44, 0.2);
+}
+
+.chronicle-polish-panel {
+    border-color: rgba(95, 72, 120, 0.22);
+    background:
+        radial-gradient(circle at 90% 0%, rgba(217, 204, 255, 0.35), transparent 32%),
+        linear-gradient(135deg, rgba(255, 252, 247, 0.96), rgba(239, 232, 248, 0.9));
+}
+
+.action-memory-cards {
+    display: grid;
+    gap: 0.85rem;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+}
+
+.action-memory-cards article {
+    border: 1px solid rgba(81, 52, 35, 0.12);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.68);
+    padding: 1rem;
+}
+
+.action-memory-cards h3,
+.ownership-bridge-strip h2,
+.reflection-bridge-panel h2,
+.chronicle-editor-trust h2 {
+    margin-top: 0;
+}
+
+.action-memory-cards a,
+.reflection-bridge-panel a,
+.chronicle-editor-trust a {
+    font-weight: 700;
+}
+
+.ownership-bridge-strip {
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.reflection-bridge-panel {
+    display: grid;
+    gap: 1rem;
+    border-style: dashed;
+}
+
+.chronicle-editor-trust {
+    background:
+        radial-gradient(circle at 0% 0%, rgba(181, 222, 204, 0.32), transparent 34%),
+        rgba(255, 255, 255, 0.78);
+}
+
+@media (min-width: 760px) {
+    .reflection-bridge-panel {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+    }
+}
+
+@media (forced-colors: active) {
+    .action-memory-loop,
+    .ownership-bridge-strip,
+    .reflection-bridge-panel,
+    .chronicle-editor-trust,
+    .action-memory-cards article {
+        border: 1px solid CanvasText;
+        background: Canvas;
+        box-shadow: none;
+    }
+}
