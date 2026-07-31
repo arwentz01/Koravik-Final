@@ -8,11 +8,11 @@ This repository is the clean-start authority for the final Koravik implementatio
 
 ## Current status
 
-**Blueprint v1.0 complete. Healing Home Visual Foundation in the current working tree.**
+**Blueprint v1.0 complete. Healing Home Room Notes in the current working tree.**
 
 The platform now proves secure identity, Quests-owned real-life action, Chronicle preservation, Companion proposals and consent, explainable persistent World State, installed World lifecycle, and a bounded first-use journey that lets a new person begin without forced commitments.
 
-The current implementation includes secure personal participation, Worlds and Companion consent, Gather and Beacon operations, optional Organization operating spaces, private optional Households, accessibility personalization, workflow recovery, Hearth Daily Focus, a story-first Worlds Home with durable reaction review, and a visually grounded Healing Home foundation.
+The current implementation includes secure personal participation, Worlds and Companion consent, Gather and Beacon operations, optional Organization operating spaces, private optional Households, accessibility personalization, workflow recovery, Hearth Daily Focus, a story-first Worlds Home with durable reaction review, navigable Healing Home rooms, explicit room presence, and private room notes.
 
 ## Documentation entry points
 

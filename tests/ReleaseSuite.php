@@ -41,6 +41,9 @@ final class ReleaseSuite
         $this->runner->test('Hearth daily focus composes only owned Quests', fn() => $this->dailyFocus());
         $this->runner->test('Worlds Home reviews only owned reactions', fn() => $this->worldsHome());
         $this->runner->test('Healing Home renders owned room continuity', fn() => $this->healingHome());
+        $this->runner->test('Healing Home room detail preserves source ownership', fn() => $this->healingHomeRooms());
+        $this->runner->test('Healing Home rest state is explicit and bounded', fn() => $this->healingHomeRestState());
+        $this->runner->test('Healing Home room notes are private and bounded', fn() => $this->healingHomeRoomNotes());
     }
 
     private function migrations(): void
@@ -61,6 +64,8 @@ final class ReleaseSuite
         }
         $type = (string)$this->pdo->query("SELECT COLUMN_TYPE FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='gather_events' AND column_name='owner_type'")->fetchColumn();
         $this->runner->assert(str_contains($type, "'organization'") && str_contains($type, "'household'"), 'Gather ownership contexts are incomplete.');
+        $roomColumns=$this->pdo->query("SELECT column_name FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='healing_home_rooms'")->fetchAll(PDO::FETCH_COLUMN);
+        foreach(['note_text','note_updated_at'] as $column)$this->runner->assert(in_array($column,$roomColumns,true), "Healing Home rooms missing {$column}.");
     }
 
     private function security(): void
@@ -128,7 +133,7 @@ final class ReleaseSuite
     {
         [$status,$body]=$this->http('/health');
         $payload=json_decode($body,true);
-        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='117' && ($payload['slice']??'')==='healing-home-visual-foundation', 'Health checkpoint does not identify the current slice.');
+        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='117' && ($payload['slice']??'')==='healing-home-room-notes', 'Health checkpoint does not identify the current slice.');
     }
 
     private function operations(): void
@@ -313,6 +318,102 @@ final class ReleaseSuite
             $this->runner->assert($home['state']['last_returned_at']!==null,'Healing Home did not preserve return continuity.');
         } finally {
             $this->pdo->prepare('DELETE FROM platform_accounts WHERE id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
+        }
+    }
+
+    private function healingHomeRooms(): void
+    {
+        $account='97000000-0000-4000-8000-000000000001';
+        try {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+            $this->account($account,'healing-room@test.invalid');
+            $questId=(new QuestService(\database()))->create($account,'Set out tomorrow clothes','',['purpose'=>'Make morning kinder.','next_step'=>'Put the clothes on the chair.','starts_on'=>gmdate('Y-m-d')]);
+            $service=new JourneyService(\database());
+            $home=$service->homeForAccount($account);
+            $controller=new \Koravik\Platform\Journey\HealingHomeController(\database());
+            $renderHome=(new \ReflectionClass($controller))->getMethod('renderHome');
+            $renderHome->setAccessible(true);
+            $homeHtml=(string)$renderHome->invoke($controller,['id'=>$account,'display_name'=>'Test'],$home);
+            foreach(['/home/rooms/quest_board','/home/rooms/journal_table','/home/rooms/companion_chair'] as $needle)$this->runner->assert(str_contains($homeHtml,$needle),"Healing Home overview is missing room link {$needle}.");
+            $room=$service->roomForAccount($account,'quest_board');
+            $this->runner->assert(($room['focus_quest']['id']??'')===$questId,'Quest Board room did not compose owned Quest.');
+            $renderRoom=(new \ReflectionClass($controller))->getMethod('renderRoom');
+            $renderRoom->setAccessible(true);
+            $roomHtml=(string)$renderRoom->invoke($controller,$room);
+            foreach(['Healing Home Room','Open in Quests','Quests owns titles','Return home'] as $needle)$this->runner->assert(str_contains($roomHtml,$needle),"Quest Board room UI is missing {$needle}.");
+            $locked=$service->roomForAccount($account,'garden');
+            $lockedHtml=(string)$renderRoom->invoke($controller,$locked);
+            $this->runner->assert(str_contains($lockedHtml,'has not opened yet')&&str_contains($lockedHtml,'Return home'),'Locked room state is not useful.');
+            $this->runner->assert($service->roomForAccount($account,'../../secrets')===null,'Room lookup accepted an invalid room key.');
+        } finally {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+        }
+    }
+
+    private function healingHomeRestState(): void
+    {
+        $account='98000000-0000-4000-8000-000000000001';
+        try {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+            $this->account($account,'healing-rest@test.invalid');
+            $service=new JourneyService(\database());
+            $room=$service->roomForAccount($account,'journal_table');
+            $this->runner->assert(($room['current_room']??'')==='entry_hall','Opening a room changed rest state without consent.');
+            $service->restInRoom($account,'journal_table');
+            $rested=$service->roomForAccount($account,'journal_table');
+            $this->runner->assert(($rested['current_room']??'')==='journal_table','Rest state did not persist.');
+            $audit=$this->pdo->prepare('SELECT COUNT(*) FROM audit_log WHERE account_id=:account AND action="healing_home.room.rested" AND subject_id="journal_table"');
+            $audit->execute(['account'=>$account]);
+            $this->runner->assert((int)$audit->fetchColumn()===1,'Rest state audit evidence was not recorded.');
+            $controller=new \Koravik\Platform\Journey\HealingHomeController(\database());
+            $renderRoom=(new \ReflectionClass($controller))->getMethod('renderRoom');
+            $renderRoom->setAccessible(true);
+            $roomHtml=(string)$renderRoom->invoke($controller,$rested);
+            $this->runner->assert(str_contains($roomHtml,'You are resting here.'),'Room detail did not show current rest state.');
+            $home=$service->homeForAccount($account);
+            $renderHome=(new \ReflectionClass($controller))->getMethod('renderHome');
+            $renderHome->setAccessible(true);
+            $homeHtml=(string)$renderHome->invoke($controller,['id'=>$account,'display_name'=>'Test'],$home);
+            $this->runner->assert(str_contains($homeHtml,'current-room')&&str_contains($homeHtml,'Resting here'),'Healing Home overview did not mark the current room.');
+            try{$service->restInRoom($account,'garden');$denied=false;}catch(\RuntimeException){$denied=true;}
+            $this->runner->assert($denied,'Rest state accepted a locked room.');
+        } finally {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+        }
+    }
+
+    private function healingHomeRoomNotes(): void
+    {
+        $account='99000000-0000-4000-8000-000000000001';
+        try {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+            $this->account($account,'healing-note@test.invalid');
+            $service=new JourneyService(\database());
+            $service->saveRoomNote($account,'journal_table','Remember why this room is calm.');
+            $room=$service->roomForAccount($account,'journal_table');
+            $this->runner->assert(($room['room']['note_text']??'')==='Remember why this room is calm.','Room note did not persist.');
+            $controller=new \Koravik\Platform\Journey\HealingHomeController(\database());
+            $renderRoom=(new \ReflectionClass($controller))->getMethod('renderRoom');
+            $renderRoom->setAccessible(true);
+            $html=(string)$renderRoom->invoke($controller,$room);
+            foreach(['Room Note','Not saved to Chronicle','Remember why this room is calm.','Clear note'] as $needle)$this->runner->assert(str_contains($html,$needle),"Room note UI is missing {$needle}.");
+            $audit=$this->pdo->prepare('SELECT COUNT(*) FROM audit_log WHERE account_id=:account AND action="healing_home.room_note.saved" AND subject_id="journal_table"');
+            $audit->execute(['account'=>$account]);
+            $this->runner->assert((int)$audit->fetchColumn()===1,'Room note save audit evidence was not recorded.');
+            $exportId=(new AccountDataService(\database()))->requestExport($account,'json');
+            $export=(new AccountDataService(\database()))->export($account,$exportId);
+            $exportData=json_decode((string)$export['export_json'],true);
+            $roomExports=array_values(array_filter($exportData['healing_home_rooms']??[],fn(array $row):bool=>($row['room_key']??'')==='journal_table'));
+            $this->runner->assert(count($roomExports)===1&&($roomExports[0]['note_text']??'')==='Remember why this room is calm.','Account export omitted Healing Home room note.');
+            try{$service->saveRoomNote($account,'journal_table',str_repeat('x',601));$bounded=false;}catch(\RuntimeException){$bounded=true;}
+            $this->runner->assert($bounded,'Room note accepted more than 600 characters.');
+            try{$service->saveRoomNote($account,'garden','Sneak into locked room.');$denied=false;}catch(\RuntimeException){$denied=true;}
+            $this->runner->assert($denied,'Room note accepted a locked room.');
+            $service->clearRoomNote($account,'journal_table');
+            $cleared=$service->roomForAccount($account,'journal_table');
+            $this->runner->assert(($cleared['room']['note_text']??null)===null,'Room note did not clear.');
+        } finally {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
         }
     }
 

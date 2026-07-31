@@ -50,6 +50,116 @@ final class JourneyService
         return $relationship;
     }
 
+    public function roomForAccount(string $accountId, string $roomKey): ?array
+    {
+        if (!preg_match('/^[a-z0-9_]+$/', $roomKey)) {
+            return null;
+        }
+
+        $this->ensureHome($accountId);
+        $this->materializeJourney($accountId);
+        $pdo = $this->database->pdo();
+        $room = $pdo->prepare('SELECT room_key, name, state, note_text, note_updated_at, sort_order FROM healing_home_rooms WHERE account_id = :account_id AND room_key = :room_key LIMIT 1');
+        $room->execute(['account_id' => $accountId, 'room_key' => $roomKey]);
+        $result = $room->fetch();
+        if (!$result) {
+            return null;
+        }
+
+        $state = $pdo->prepare('SELECT current_room FROM healing_home_state WHERE account_id = :account_id LIMIT 1');
+        $state->execute(['account_id' => $accountId]);
+        $quest = $pdo->prepare('SELECT id, title, purpose, next_step, quest_type, origin_type FROM quests WHERE account_id = :account_id AND lifecycle_status = "active" ORDER BY updated_at DESC, created_at DESC LIMIT 1');
+        $quest->execute(['account_id' => $accountId]);
+        $chronicle = $pdo->prepare('SELECT title, body, created_at FROM chronicle_entries WHERE account_id = :account_id AND archived_at IS NULL ORDER BY created_at DESC LIMIT 3');
+        $chronicle->execute(['account_id' => $accountId]);
+        $changes = $pdo->prepare('SELECT title, description, room_key, created_at FROM healing_home_changes WHERE account_id = :account_id AND room_key = :room_key ORDER BY created_at DESC LIMIT 6');
+        $changes->execute(['account_id' => $accountId, 'room_key' => $roomKey]);
+        $keepsakes = $pdo->prepare('SELECT name, meaning, room_key, created_at FROM healing_home_keepsakes WHERE account_id = :account_id AND room_key = :room_key AND displayed = 1 ORDER BY created_at DESC LIMIT 6');
+        $keepsakes->execute(['account_id' => $accountId, 'room_key' => $roomKey]);
+        $relationships = $pdo->prepare('SELECT character_key, character_name, relationship_state, familiarity, last_met_at FROM journey_relationships WHERE account_id = :account_id ORDER BY updated_at DESC LIMIT 5');
+        $relationships->execute(['account_id' => $accountId]);
+
+        return [
+            'room' => $result,
+            'current_room' => (string) ($state->fetchColumn() ?: 'entry_hall'),
+            'focus_quest' => $quest->fetch() ?: null,
+            'chronicle' => $chronicle->fetchAll(),
+            'changes' => $changes->fetchAll(),
+            'keepsakes' => $keepsakes->fetchAll(),
+            'relationships' => $relationships->fetchAll(),
+        ];
+    }
+
+    public function restInRoom(string $accountId, string $roomKey): void
+    {
+        if (!preg_match('/^[a-z0-9_]+$/', $roomKey)) {
+            throw new \RuntimeException('That room is unavailable.');
+        }
+
+        $this->ensureHome($accountId);
+        $this->database->transaction(function (PDO $pdo) use ($accountId, $roomKey): void {
+            $room = $pdo->prepare('SELECT state FROM healing_home_rooms WHERE account_id = :account_id AND room_key = :room_key LIMIT 1');
+            $room->execute(['account_id' => $accountId, 'room_key' => $roomKey]);
+            $state = $room->fetchColumn();
+            if ($state === false || (string) $state !== 'open') {
+                throw new \RuntimeException('That room is not open yet.');
+            }
+
+            $pdo->prepare('UPDATE healing_home_state SET current_room = :room_key, updated_at = UTC_TIMESTAMP() WHERE account_id = :account_id')->execute(['account_id' => $accountId, 'room_key' => $roomKey]);
+            $this->auditRoom($pdo, $accountId, 'healing_home.room.rested', $roomKey);
+        });
+    }
+
+    public function saveRoomNote(string $accountId, string $roomKey, string $note): void
+    {
+        if (!preg_match('/^[a-z0-9_]+$/', $roomKey)) {
+            throw new \RuntimeException('That room is unavailable.');
+        }
+
+        $note = trim($note);
+        if ($note === '') {
+            $this->clearRoomNote($accountId, $roomKey);
+            return;
+        }
+
+        if (mb_strlen($note) > 600) {
+            throw new \RuntimeException('Room notes must be 600 characters or fewer.');
+        }
+
+        $this->ensureHome($accountId);
+        $this->database->transaction(function (PDO $pdo) use ($accountId, $roomKey, $note): void {
+            $room = $pdo->prepare('SELECT state FROM healing_home_rooms WHERE account_id = :account_id AND room_key = :room_key LIMIT 1');
+            $room->execute(['account_id' => $accountId, 'room_key' => $roomKey]);
+            $state = $room->fetchColumn();
+            if ($state === false || (string) $state !== 'open') {
+                throw new \RuntimeException('That room is not open yet.');
+            }
+
+            $pdo->prepare('UPDATE healing_home_rooms SET note_text = :note, note_updated_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() WHERE account_id = :account_id AND room_key = :room_key')->execute(['account_id' => $accountId, 'room_key' => $roomKey, 'note' => $note]);
+            $this->auditRoom($pdo, $accountId, 'healing_home.room_note.saved', $roomKey);
+        });
+    }
+
+    public function clearRoomNote(string $accountId, string $roomKey): void
+    {
+        if (!preg_match('/^[a-z0-9_]+$/', $roomKey)) {
+            throw new \RuntimeException('That room is unavailable.');
+        }
+
+        $this->ensureHome($accountId);
+        $this->database->transaction(function (PDO $pdo) use ($accountId, $roomKey): void {
+            $room = $pdo->prepare('SELECT state FROM healing_home_rooms WHERE account_id = :account_id AND room_key = :room_key LIMIT 1');
+            $room->execute(['account_id' => $accountId, 'room_key' => $roomKey]);
+            $state = $room->fetchColumn();
+            if ($state === false || (string) $state !== 'open') {
+                throw new \RuntimeException('That room is not open yet.');
+            }
+
+            $pdo->prepare('UPDATE healing_home_rooms SET note_text = NULL, note_updated_at = NULL, updated_at = UTC_TIMESTAMP() WHERE account_id = :account_id AND room_key = :room_key')->execute(['account_id' => $accountId, 'room_key' => $roomKey]);
+            $this->auditRoom($pdo, $accountId, 'healing_home.room_note.cleared', $roomKey);
+        });
+    }
+
     private function materializeJourney(string $accountId): void
     {
         $this->database->transaction(function (PDO $pdo) use ($accountId): void {
@@ -96,6 +206,14 @@ final class JourneyService
             $statement=$pdo->prepare('INSERT IGNORE INTO healing_home_rooms (id, account_id, room_key, name, state, sort_order, created_at, updated_at) VALUES (:id,:account_id,:room_key,:name,:state,:sort_order,:created_at,:updated_at)');
             foreach($rooms as [$key,$name,$state,$order]) $statement->execute(['id'=>self::uuid(),'account_id'=>$accountId,'room_key'=>$key,'name'=>$name,'state'=>$state,'sort_order'=>$order,'created_at'=>$now,'updated_at'=>$now]);
         });
+    }
+
+    private function auditRoom(PDO $pdo, string $accountId, string $action, string $roomKey): void
+    {
+        $pdo->prepare(
+            'INSERT INTO audit_log (id, account_id, action, subject_type, subject_id, occurred_at)
+             VALUES (:id, :account_id, :action, "healing_home_room", :subject_id, UTC_TIMESTAMP())'
+        )->execute(['id' => self::uuid(), 'account_id' => $accountId, 'action' => $action, 'subject_id' => $roomKey]);
     }
 
     private static function uuid(): string

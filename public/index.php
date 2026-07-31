@@ -42,7 +42,7 @@ use Koravik\Worlds\WorldHomeController;
 use Koravik\Worlds\WorldLifecycleController;
 
 $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');$path=app_request_path();
-if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'117','slice'=>'healing-home-visual-foundation'],JSON_THROW_ON_ERROR);return;}
+if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'117','slice'=>'healing-home-room-notes'],JSON_THROW_ON_ERROR);return;}
 Security::startSession();ob_start();
 $handled=(new MailOperationsController(database()))->handle($method,$path);
 if(!$handled)$handled=(new BeaconManagementController(database()))->handle($method,$path);

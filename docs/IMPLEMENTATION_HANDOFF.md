@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Healing Home Visual Foundation vertical product slice in the current working tree
-**Version:** 2.20
+**Status:** Healing Home Room Notes vertical product slice in the current working tree
+**Version:** 2.23
 **Baseline date:** July 30, 2026
 **Authoritative branch:** `main`
 
@@ -145,6 +145,43 @@ See `docs/features/WORLDS_HOME_AND_REACTION_REVIEW.md`.
 
 See `docs/features/HEALING_HOME_VISUAL_FOUNDATION.md`.
 
+### Healing Home Room Detail — implemented vertical slice
+
+- `GET /home/rooms/{roomKey}` opens focused room detail pages from the
+  Healing Home overview;
+- open rooms render source-aware next actions for Quest Board, Journal Table,
+  Fireplace, Entry Hall, and Companion Chair;
+- visible locked rooms render a clear unavailable state without guilt,
+  invented rituals, or hidden requirements;
+- room reads remain account-scoped and update `current_room` only for open
+  rooms.
+
+See `docs/features/HEALING_HOME_ROOM_DETAIL.md`.
+
+### Healing Home Room Presence — implemented vertical slice
+
+- `POST /home/rooms/{roomKey}/rest` lets the person explicitly choose the
+  open room they are resting in;
+- visiting room pages is read-only and no longer changes `current_room`;
+- current room state is rendered on room detail and the Healing Home overview
+  with text plus `aria-current`;
+- locked or invalid rooms cannot be selected, and successful room-rest actions
+  append minimized audit evidence.
+
+See `docs/features/HEALING_HOME_ROOM_PRESENCE.md`.
+
+### Healing Home Room Notes — implemented vertical slice
+
+- open Healing Home rooms can save or clear one private account-scoped note;
+- room notes remain Healing Home state and do not create Quests, Chronicle
+  entries, World facts, Companion memory, or notifications;
+- locked rooms reject room notes, notes are bounded to 600 characters, and
+  save/clear actions append minimized audit evidence;
+- Account export includes room notes and Account closure deletes Healing Home
+  state explicitly.
+
+See `docs/features/HEALING_HOME_ROOM_NOTES.md`.
+
 ## Current migrations
 
 Production deployment must apply every file in `database/migrations`, including:
@@ -161,6 +198,7 @@ Production deployment must apply every file in `database/migrations`, including:
 093_hearth_daily_focus.sql
 094_hearth_daily_focus_lifecycle.sql
 095_world_reaction_reviews.sql
+096_healing_home_room_notes.sql
 ```
 
 Run:
@@ -212,6 +250,16 @@ php tools/worker.php 10
 - `POST /hearth/focus`
 - `POST /hearth/focus/clear`
 
+## Healing Home routes
+
+- `GET /home`
+- `GET /healing-home`
+- `GET /home/rooms/{roomKey}`
+- `POST /home/rooms/{roomKey}/rest`
+- `POST /home/rooms/{roomKey}/note`
+- `POST /home/rooms/{roomKey}/note/clear`
+- `GET /home/relationships/{characterKey}`
+
 ## Worlds Home routes
 
 - `GET /worlds`
@@ -252,7 +300,7 @@ php tools/worker.php 10
 
 ## Validation
 
-The single workflow at `.github/workflows/validate.yml` must lint PHP, migrate an isolated MySQL database, start the application, and run `php tools/test.php`. The release suite verifies migration inventory, critical schema, security primitives, Organization and Household capabilities, Gather authorization boundaries, subdirectory routing, accessibility preferences, Platform Mail operations, workflow recovery, duplicate protection, session revocation, bounded workers, the Build 117 checkpoint, Hearth Daily Focus, Worlds Home ownership, reaction review, rendering, first-install initialization, and Healing Home owned-room continuity.
+The single workflow at `.github/workflows/validate.yml` must lint PHP, migrate an isolated MySQL database, start the application, and run `php tools/test.php`. The release suite verifies migration inventory, critical schema, security primitives, Organization and Household capabilities, Gather authorization boundaries, subdirectory routing, accessibility preferences, Platform Mail operations, workflow recovery, duplicate protection, session revocation, bounded workers, the Build 117 checkpoint, Hearth Daily Focus, Worlds Home ownership, reaction review, rendering, first-install initialization, Healing Home owned-room continuity, Healing Home room detail ownership, explicit Healing Home room presence, and private Healing Home room notes.
 
 ## Next build
 
