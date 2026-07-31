@@ -140,13 +140,13 @@ final class JourneyService
         $this->materializeJourney($accountId);
         $pdo = $this->database->pdo();
         $items = [];
-        $changes = $pdo->prepare('SELECT "change" AS item_type, title, description, room_key, created_at FROM healing_home_changes WHERE account_id = :account_id');
+        $changes = $pdo->prepare('SELECT "change" AS item_type, id, source_type, source_id, title, description, room_key, created_at FROM healing_home_changes WHERE account_id = :account_id');
         $changes->execute(['account_id'=>$accountId]);
         foreach ($changes->fetchAll() as $row) $items[] = $row;
-        $keepsakes = $pdo->prepare('SELECT "keepsake" AS item_type, name AS title, meaning AS description, room_key, created_at FROM healing_home_keepsakes WHERE account_id = :account_id AND displayed = 1');
+        $keepsakes = $pdo->prepare('SELECT "keepsake" AS item_type, id, source_type, source_id, name AS title, meaning AS description, room_key, created_at FROM healing_home_keepsakes WHERE account_id = :account_id AND displayed = 1');
         $keepsakes->execute(['account_id'=>$accountId]);
         foreach ($keepsakes->fetchAll() as $row) $items[] = $row;
-        $conversations = $pdo->prepare('SELECT "conversation" AS item_type, "Caretaker conversation" AS title, character_response AS description, "entry_hall" AS room_key, created_at FROM relationship_conversations WHERE account_id = :account_id');
+        $conversations = $pdo->prepare('SELECT "conversation" AS item_type, id, "relationship_conversation" AS source_type, id AS source_id, "Caretaker conversation" AS title, character_response AS description, "entry_hall" AS room_key, created_at FROM relationship_conversations WHERE account_id = :account_id');
         $conversations->execute(['account_id'=>$accountId]);
         foreach ($conversations->fetchAll() as $row) $items[] = $row;
         usort($items, static fn(array $a, array $b): int => strcmp((string)$b['created_at'], (string)$a['created_at']));
@@ -179,9 +179,9 @@ final class JourneyService
         $quest->execute(['account_id' => $accountId]);
         $chronicle = $pdo->prepare('SELECT title, body, created_at FROM chronicle_entries WHERE account_id = :account_id AND archived_at IS NULL ORDER BY created_at DESC LIMIT 3');
         $chronicle->execute(['account_id' => $accountId]);
-        $changes = $pdo->prepare('SELECT title, description, room_key, created_at FROM healing_home_changes WHERE account_id = :account_id AND room_key = :room_key ORDER BY created_at DESC LIMIT 6');
+        $changes = $pdo->prepare('SELECT id, source_type, source_id, change_key, title, description, room_key, created_at FROM healing_home_changes WHERE account_id = :account_id AND room_key = :room_key ORDER BY created_at DESC LIMIT 6');
         $changes->execute(['account_id' => $accountId, 'room_key' => $roomKey]);
-        $keepsakes = $pdo->prepare('SELECT name, meaning, room_key, created_at FROM healing_home_keepsakes WHERE account_id = :account_id AND room_key = :room_key AND displayed = 1 ORDER BY created_at DESC LIMIT 6');
+        $keepsakes = $pdo->prepare('SELECT id, source_type, source_id, name, meaning, room_key, created_at FROM healing_home_keepsakes WHERE account_id = :account_id AND room_key = :room_key AND displayed = 1 ORDER BY created_at DESC LIMIT 6');
         $keepsakes->execute(['account_id' => $accountId, 'room_key' => $roomKey]);
         $relationships = $pdo->prepare('SELECT character_key, character_name, relationship_state, familiarity, last_met_at FROM journey_relationships WHERE account_id = :account_id ORDER BY updated_at DESC LIMIT 5');
         $relationships->execute(['account_id' => $accountId]);
@@ -204,6 +204,28 @@ final class JourneyService
             'relationships' => $relationships->fetchAll(),
             'world_reactions' => $reactions->fetchAll(),
         ];
+    }
+
+    public function sourceThreadForAccount(string $accountId, string $kind, string $id): ?array
+    {
+        if (!in_array($kind, ['change', 'keepsake', 'conversation'], true) || !preg_match('/^[a-f0-9-]{36}$/', $id)) {
+            return null;
+        }
+
+        $this->ensureHome($accountId);
+        $this->materializeJourney($accountId);
+        $pdo = $this->database->pdo();
+        if ($kind === 'change') {
+            $statement = $pdo->prepare('SELECT id, "change" AS kind, source_type, source_id, change_key AS source_key, title, description, room_key, created_at FROM healing_home_changes WHERE account_id = :account_id AND id = :id LIMIT 1');
+        } elseif ($kind === 'keepsake') {
+            $statement = $pdo->prepare('SELECT id, "keepsake" AS kind, source_type, source_id, keepsake_key AS source_key, name AS title, meaning AS description, room_key, created_at FROM healing_home_keepsakes WHERE account_id = :account_id AND id = :id LIMIT 1');
+        } else {
+            $statement = $pdo->prepare('SELECT id, "conversation" AS kind, "relationship_conversation" AS source_type, id AS source_id, prompt_key AS source_key, "Caretaker conversation" AS title, character_response AS description, "entry_hall" AS room_key, created_at FROM relationship_conversations WHERE account_id = :account_id AND id = :id LIMIT 1');
+        }
+        $statement->execute(['account_id'=>$accountId,'id'=>$id]);
+        $thread = $statement->fetch();
+
+        return $thread ?: null;
     }
 
     public function restInRoom(string $accountId, string $roomKey): void

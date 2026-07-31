@@ -8,11 +8,11 @@ This repository is the clean-start authority for the final Koravik implementatio
 
 ## Current status
 
-**Blueprint v1.0 complete. Healing Home Room Expansion in the current working tree.**
+**Blueprint v1.0 complete. Healing Home Deepening in the current working tree.**
 
 The platform now proves secure identity, Quests-owned real-life action, Chronicle preservation, Companion proposals and consent, explainable persistent World State, installed World lifecycle, and a bounded first-use journey that lets a new person begin without forced commitments.
 
-The current implementation includes secure personal participation, Worlds and Companion consent, Gather and Beacon operations, optional Organization operating spaces, private optional Households, accessibility personalization, workflow recovery, Hearth Daily Focus, a story-first Worlds Home with durable reaction review, navigable Healing Home rooms, explicit room presence, private room notes, an Eastern Room that opens from Epic Ordinary Chapter Two, a bounded Caretaker conversation inside Healing Home relationship memory, a stateful Healing Home room map, Fireplace reaction explainability, a provenance-aware Keepsake Shelf, a Journal Table bridge into Chronicle, and an expanded Healing Home with Workshop, Library, Guest Room, Garden tending, atmosphere, timeline, intention-label, return-scene, and privacy/explainability flows.
+The current implementation includes secure personal participation, Worlds and Companion consent, Gather and Beacon operations, optional Organization operating spaces, private optional Households, accessibility personalization, workflow recovery, Hearth Daily Focus, a story-first Worlds Home with durable reaction review, navigable Healing Home rooms, explicit room presence, private room notes, an Eastern Room that opens from Epic Ordinary Chapter Two, a bounded Caretaker conversation inside Healing Home relationship memory, a stateful Healing Home room map, Fireplace reaction explainability, a provenance-aware Keepsake Shelf, a Journal Table bridge into Chronicle, and an expanded Healing Home with Workshop, Library, Guest Room, Garden tending, atmosphere, timeline, intention-label, return-scene, privacy/explainability flows, symbolic room identities, arrival-scene intrigue, natural room-to-room movement, richer door states, a house pulse, room-specific depth, ambient empty states, source-thread explainability, house resonance paths, room practices, a non-prescriptive house guide, Today in the House, a room directory, a source glossary, house invitations, thresholds, a house atlas, room lore, house constellations, a boundary ledger, and wayfinding.
 
 ## Documentation entry points
 

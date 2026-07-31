@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Healing Home Room Expansion vertical product slice in the current working tree
-**Version:** 2.31
+**Status:** Healing Home Deepening vertical product slice in the current working tree
+**Version:** 2.37
 **Baseline date:** July 30, 2026
 **Authoritative branch:** `main`
 
@@ -285,6 +285,87 @@ See `docs/features/HEALING_HOME_GARDEN_UNLOCK.md`.
 
 See `docs/features/HEALING_HOME_ROOM_EXPANSION.md`.
 
+### Healing Home Visual Depth — implemented vertical slice
+
+- `/home` now presents an arrival scene that names atmosphere, recent change,
+  open-room count, and the next threshold without pressure;
+- the room map has symbolic room markers and clearer blueprint-style state
+  language for open, waiting, and current rooms;
+- room detail pages include room symbols and a keyboard-accessible room
+  walkway for previous room, house map, and next room navigation;
+- Garden, Workshop, and Library have stronger front-facing visual motifs while
+  preserving text states and source ownership;
+- the slice remains presentation and navigation focused: no hidden scoring,
+  no new District ownership, and no invented backend obligations.
+
+See `docs/features/HEALING_HOME_VISUAL_DEPTH.md`.
+
+### Healing Home Intrigue — implemented vertical slice
+
+- room doors now communicate richer waiting/open states while preserving exact
+  text status and unlock boundaries;
+- `/home` includes a non-diagnostic House Pulse panel tied to atmosphere;
+- Fireplace, Library, Garden, Workshop, Guest Room, and Eastern Room have
+  deeper front-facing panels for echoes, explanations, care, unfinished ideas,
+  consent preview, and chosen purpose;
+- ambient empty states explain what belongs in a room without pressure;
+- source-thread routes show where a room memory came from, what room it
+  affected, and what stayed private.
+
+See `docs/features/HEALING_HOME_INTRIGUE.md`.
+
+### Healing Home Resonance — implemented vertical slice
+
+- `/home` now includes House Resonance routes for understanding, making, and
+  gentle recovery;
+- room detail pages include non-mutating Room Practice panels that suggest a
+  way to use the room without creating hidden obligations;
+- `/home/guide` explains how to move through the house by meaning, making,
+  recovery, or boundaries;
+- source-thread pages now include follow-through actions back to the affected
+  room, privacy boundary, and house guide;
+- the slice remains front-facing and consent-preserving: no new scoring,
+  diagnosis, District writes, or hidden automation.
+
+See `docs/features/HEALING_HOME_RESONANCE.md`.
+
+### Healing Home Presence — implemented vertical slice
+
+- `/home/today` gives a one-page read of current room, atmosphere, latest
+  threshold, and a gentle route;
+- `/home/rooms` provides a full room directory with state, symbols, door copy,
+  and source-aware purpose;
+- `/home/sources` explains source owners and deliberately excluded data;
+- `/home/guide` now links to Today, the room directory, source glossary, and
+  threshold reminders;
+- `/home` exposes Today, Room Directory, and Source Glossary as primary house
+  orientation paths.
+
+See `docs/features/HEALING_HOME_PRESENCE.md`.
+
+### Healing Home Living House — implemented vertical slice
+
+- `/home/invitations` presents gentle room invitations without assigning work;
+- `/home/thresholds` groups open and waiting doorways with source-aware door
+  copy;
+- `/home/atlas` maps the house into meaning, story, care, making, and return;
+- room detail pages now include room invitation panels alongside practices;
+- `/home` exposes the living-house surfaces from the main orientation flow.
+
+See `docs/features/HEALING_HOME_LIVING_HOUSE.md`.
+
+### Healing Home Deepening — implemented vertical slice
+
+- `/home/lore` gives every known room authored lore while preserving source
+  ownership;
+- `/home/constellations` groups rooms by meaning, making, care, and welcome;
+- `/home/boundaries` provides a boundary ledger for may-show, may-suggest,
+  must-ask-first, and must-not-touch rules;
+- `/home/wayfinding` answers intent-based navigation questions;
+- `/home` exposes these deepening surfaces from the living-house panel.
+
+See `docs/features/HEALING_HOME_DEEPENING.md`.
+
 ## Current migrations
 
 Production deployment must apply every file in `database/migrations`, including:
@@ -357,11 +438,15 @@ php tools/worker.php 10
 
 - `GET /home`
 - `GET /healing-home`
+- `GET /home/timeline`
+- `GET /home/privacy`
 - `GET /home/rooms/{roomKey}`
 - `POST /home/rooms/{roomKey}/rest`
 - `POST /home/rooms/{roomKey}/note`
 - `POST /home/rooms/{roomKey}/note/clear`
+- `POST /home/rooms/garden/tend`
 - `GET /home/relationships/{characterKey}`
+- `POST /home/relationships/{characterKey}/converse`
 
 ## Worlds Home routes
 

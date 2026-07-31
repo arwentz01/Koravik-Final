@@ -141,7 +141,7 @@ final class ReleaseSuite
     {
         [$status,$body]=$this->http('/health');
         $payload=json_decode($body,true);
-        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='117' && ($payload['slice']??'')==='healing-home-room-expansion', 'Health checkpoint does not identify the current slice.');
+        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='117' && ($payload['slice']??'')==='healing-home-deepening', 'Health checkpoint does not identify the current slice.');
     }
 
     private function operations(): void
@@ -662,22 +662,63 @@ final class ReleaseSuite
             $workshopHtml=(string)$renderRoom->invoke($controller,$workshop);
             $libraryHtml=(string)$renderRoom->invoke($controller,$library);
             $gardenHtml=(string)$renderRoom->invoke($controller,$garden);
-            foreach(['A place for making and repair.','Intention label','Make without proving'] as $needle)$this->runner->assert(str_contains($workshopHtml,$needle),"Workshop expansion UI is missing {$needle}.");
-            foreach(['A place for explanations.','What the house knows'] as $needle)$this->runner->assert(str_contains($libraryHtml,$needle),"Library expansion UI is missing {$needle}.");
-            foreach(['Water gently','Something was tended'] as $needle)$this->runner->assert(str_contains($gardenHtml,$needle),"Garden tending UI/history is missing {$needle}.");
+            foreach(['A place for making and repair.','Intention label','Make without proving','Move through the Healing Home','Next room','Unfinished ideas shelf','Local shelf','Room practice','Leave a seed unfinished'] as $needle)$this->runner->assert(str_contains($workshopHtml,$needle),"Workshop expansion UI is missing {$needle}.");
+            foreach(['A place for explanations.','What the house knows','Explanation browser','World reaction shelf','Privacy shelf'] as $needle)$this->runner->assert(str_contains($libraryHtml,$needle),"Library expansion UI is missing {$needle}.");
+            foreach(['Water gently','Something was tended','Garden growth state','Watered: yes','not streaks or points'] as $needle)$this->runner->assert(str_contains($gardenHtml,$needle),"Garden tending UI/history is missing {$needle}.");
+            $fireplaceHtml=(string)$renderRoom->invoke($controller,$service->roomForAccount($account,'fireplace'));
+            foreach(['Narrative center','The Fireplace reads the echoes','Recent echoes gather here'] as $needle)$this->runner->assert(str_contains($fireplaceHtml,$needle),"Fireplace intrigue UI is missing {$needle}.");
+            $easternHtml=(string)$renderRoom->invoke($controller,$service->roomForAccount($account,'eastern_room'));
+            foreach(['Purpose deepening','A room for making','Trace the source thread'] as $needle)$this->runner->assert(str_contains($easternHtml,$needle),"Eastern Room intrigue UI is missing {$needle}.");
             $service->homeForAccount($account);
             $home=$service->homeForAccount($account);
             $renderHome=(new \ReflectionClass($controller))->getMethod('renderHome');$renderHome->setAccessible(true);
             $homeHtml=(string)$renderHome->invoke($controller,['id'=>$account,'display_name'=>'Test'],$home);
-            foreach(['Green Dusk','Return scene','Room timeline','What the house knows'] as $needle)$this->runner->assert(str_contains($homeHtml,$needle),"Home expansion UI is missing {$needle}.");
+            foreach(['Green Dusk','Return scene','Today in the house','Room directory','Source glossary','What the house knows','Arrival scene','What changed since you were gone','home-blueprint-map','room-symbol','Choose a room by meaning','House pulse','Tended and listening','Lamplight is under the door','House resonance','Choose a path by the kind of care','Open the house guide','Living house','House invitations','Thresholds','House atlas','Room lore','House constellations','Boundary ledger','Wayfinding'] as $needle)$this->runner->assert(str_contains($homeHtml,$needle),"Home expansion UI is missing {$needle}.");
             $renderTimeline=(new \ReflectionClass($controller))->getMethod('renderTimeline');$renderTimeline->setAccessible(true);
             $timelineHtml=(string)$renderTimeline->invoke($controller,$service->timelineForAccount($account));
             foreach(['Room timeline','What the house has held','Something was tended','Caretaker conversation'] as $needle)$this->runner->assert(str_contains($timelineHtml,$needle),"Room timeline is missing {$needle}.");
+            $source=$service->sourceThreadForAccount($account,'change',$garden['changes'][0]['id']);
+            $renderSource=(new \ReflectionClass($controller))->getMethod('renderSourceThread');$renderSource->setAccessible(true);
+            $sourceHtml=(string)$renderSource->invoke($controller,$source);
+            foreach(['Healing Home source thread','Where this came from','What stayed private','Open room','Follow the thread','Open house guide'] as $needle)$this->runner->assert(str_contains($sourceHtml,$needle),"Source thread UI is missing {$needle}.");
+            $renderGuide=(new \ReflectionClass($controller))->getMethod('renderHomeGuide');$renderGuide->setAccessible(true);
+            $guideHtml=(string)$renderGuide->invoke($controller);
+            foreach(['Healing Home guide','How to move through the house','When you want meaning','When you want boundaries','Threshold reminders','Today in the house'] as $needle)$this->runner->assert(str_contains($guideHtml,$needle),"Home guide UI is missing {$needle}.");
+            $renderToday=(new \ReflectionClass($controller))->getMethod('renderHomeToday');$renderToday->setAccessible(true);
+            $todayHtml=(string)$renderToday->invoke($controller,$home);
+            foreach(['Today in the house','Current room','Latest threshold','Suggested gentle route'] as $needle)$this->runner->assert(str_contains($todayHtml,$needle),"Home today UI is missing {$needle}.");
+            $renderDirectory=(new \ReflectionClass($controller))->getMethod('renderRoomDirectory');$renderDirectory->setAccessible(true);
+            $directoryHtml=(string)$renderDirectory->invoke($controller,$home);
+            foreach(['Room directory','All known rooms','Quest Board','Source-aware purpose'] as $needle)$this->runner->assert(str_contains($directoryHtml,$needle),"Room directory UI is missing {$needle}.");
+            $renderGlossary=(new \ReflectionClass($controller))->getMethod('renderSourceGlossary');$renderGlossary->setAccessible(true);
+            $glossaryHtml=(string)$renderGlossary->invoke($controller);
+            foreach(['Source glossary','Quests','Chronicle','Worlds','Deliberately excluded'] as $needle)$this->runner->assert(str_contains($glossaryHtml,$needle),"Source glossary UI is missing {$needle}.");
+            $renderInvitations=(new \ReflectionClass($controller))->getMethod('renderHouseInvitations');$renderInvitations->setAccessible(true);
+            $invitationsHtml=(string)$renderInvitations->invoke($controller,$home);
+            foreach(['House invitations','Invitations are gentle doorways','Open invitation','Workshop'] as $needle)$this->runner->assert(str_contains($invitationsHtml,$needle),"House invitations UI is missing {$needle}.");
+            $renderThresholds=(new \ReflectionClass($controller))->getMethod('renderHouseThresholds');$renderThresholds->setAccessible(true);
+            $thresholdsHtml=(string)$renderThresholds->invoke($controller,$home);
+            foreach(['Thresholds','Open thresholds','Waiting thresholds','Open doorway'] as $needle)$this->runner->assert(str_contains($thresholdsHtml,$needle),"House thresholds UI is missing {$needle}.");
+            $renderAtlas=(new \ReflectionClass($controller))->getMethod('renderHouseAtlas');$renderAtlas->setAccessible(true);
+            $atlasHtml=(string)$renderAtlas->invoke($controller);
+            foreach(['House atlas','North: Meaning','East: Story','Center: Return'] as $needle)$this->runner->assert(str_contains($atlasHtml,$needle),"House atlas UI is missing {$needle}.");
+            $renderLore=(new \ReflectionClass($controller))->getMethod('renderRoomLore');$renderLore->setAccessible(true);
+            $loreHtml=(string)$renderLore->invoke($controller);
+            foreach(['Room lore','The interpretive hearth','The bench for unfinished things','Visit room'] as $needle)$this->runner->assert(str_contains($loreHtml,$needle),"Room lore UI is missing {$needle}.");
+            $renderConstellations=(new \ReflectionClass($controller))->getMethod('renderHouseConstellations');$renderConstellations->setAccessible(true);
+            $constellationHtml=(string)$renderConstellations->invoke($controller);
+            foreach(['House constellations','Meaning constellation','Making constellation','Welcome constellation'] as $needle)$this->runner->assert(str_contains($constellationHtml,$needle),"House constellations UI is missing {$needle}.");
+            $renderLedger=(new \ReflectionClass($controller))->getMethod('renderBoundaryLedger');$renderLedger->setAccessible(true);
+            $ledgerHtml=(string)$renderLedger->invoke($controller);
+            foreach(['Boundary ledger','May show','Must ask first','Must not touch'] as $needle)$this->runner->assert(str_contains($ledgerHtml,$needle),"Boundary ledger UI is missing {$needle}.");
+            $renderWayfinding=(new \ReflectionClass($controller))->getMethod('renderHouseWayfinding');$renderWayfinding->setAccessible(true);
+            $wayfindingHtml=(string)$renderWayfinding->invoke($controller);
+            foreach(['Wayfinding','I want to understand why something appeared','Start with boundaries'] as $needle)$this->runner->assert(str_contains($wayfindingHtml,$needle),"Wayfinding UI is missing {$needle}.");
             $renderPrivacy=(new \ReflectionClass($controller))->getMethod('renderHomePrivacy');$renderPrivacy->setAccessible(true);
             $privacyHtml=(string)$renderPrivacy->invoke($controller);
             foreach(['What the house knows','Composed sources','Deliberately not accessed','Quest notes','Data controls'] as $needle)$this->runner->assert(str_contains($privacyHtml,$needle),"Healing Home privacy panel is missing {$needle}.");
             $css=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/journey.css');
-            foreach(['.workshop-room-panel','.library-room-panel','.guest-room-panel','.room-intention-label'] as $selector)$this->runner->assert(str_contains($css,$selector),"Expansion CSS is missing {$selector}.");
+            foreach(['.workshop-room-panel','.library-room-panel','.guest-room-panel','.room-intention-label','.home-arrival-scene','.room-walkway','.home-atmosphere-green_dusk','.home-blueprint-map','.home-pulse-panel','.garden-growth-list','.unfinished-idea-card','.source-thread-panel','.home-resonance-routes','.room-practice-panel','.home-guide-grid','.source-thread-actions','.home-today-grid','.room-directory-panel','.source-glossary-grid','.home-threshold-panel','.home-living-house','.room-invitation-panel','.house-invitations-grid','.house-threshold-columns','.house-atlas-map','.room-lore-grid','.house-constellation-grid','.boundary-ledger-grid','.house-wayfinding-grid'] as $selector)$this->runner->assert(str_contains($css,$selector),"Expansion CSS is missing {$selector}.");
         } finally {
             $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
         }
