@@ -8,11 +8,11 @@ This repository is the clean-start authority for the final Koravik implementatio
 
 ## Current status
 
-**Blueprint v1.0 complete. Healing Home Room Notes in the current working tree.**
+**Blueprint v1.0 complete. Healing Home Room Expansion in the current working tree.**
 
 The platform now proves secure identity, Quests-owned real-life action, Chronicle preservation, Companion proposals and consent, explainable persistent World State, installed World lifecycle, and a bounded first-use journey that lets a new person begin without forced commitments.
 
-The current implementation includes secure personal participation, Worlds and Companion consent, Gather and Beacon operations, optional Organization operating spaces, private optional Households, accessibility personalization, workflow recovery, Hearth Daily Focus, a story-first Worlds Home with durable reaction review, navigable Healing Home rooms, explicit room presence, and private room notes.
+The current implementation includes secure personal participation, Worlds and Companion consent, Gather and Beacon operations, optional Organization operating spaces, private optional Households, accessibility personalization, workflow recovery, Hearth Daily Focus, a story-first Worlds Home with durable reaction review, navigable Healing Home rooms, explicit room presence, private room notes, an Eastern Room that opens from Epic Ordinary Chapter Two, a bounded Caretaker conversation inside Healing Home relationship memory, a stateful Healing Home room map, Fireplace reaction explainability, a provenance-aware Keepsake Shelf, a Journal Table bridge into Chronicle, and an expanded Healing Home with Workshop, Library, Guest Room, Garden tending, atmosphere, timeline, intention-label, return-scene, and privacy/explainability flows.
 
 ## Documentation entry points
 

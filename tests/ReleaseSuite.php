@@ -44,6 +44,14 @@ final class ReleaseSuite
         $this->runner->test('Healing Home room detail preserves source ownership', fn() => $this->healingHomeRooms());
         $this->runner->test('Healing Home rest state is explicit and bounded', fn() => $this->healingHomeRestState());
         $this->runner->test('Healing Home room notes are private and bounded', fn() => $this->healingHomeRoomNotes());
+        $this->runner->test('Healing Home Eastern Room opens from Epic Ordinary choice', fn() => $this->healingHomeEasternRoom());
+        $this->runner->test('Healing Home relationship conversations are bounded and private', fn() => $this->healingHomeRelationshipConversations());
+        $this->runner->test('Healing Home room map is visual, stateful, and accessible', fn() => $this->healingHomeRoomMap());
+        $this->runner->test('Healing Home Fireplace explains and reviews World reactions', fn() => $this->healingHomeFireplaceReactionDetail());
+        $this->runner->test('Healing Home Keepsake Shelf shows provenance and boundaries', fn() => $this->healingHomeKeepsakeShelf());
+        $this->runner->test('Healing Home Journal Table starts Chronicle reflections safely', fn() => $this->healingHomeJournalTableReflectionBridge());
+        $this->runner->test('Healing Home Garden opens from Caretaker conversation', fn() => $this->healingHomeGardenUnlock());
+        $this->runner->test('Healing Home room expansion supports making, welcome, meaning, tending, and privacy', fn() => $this->healingHomeRoomExpansion());
     }
 
     private function migrations(): void
@@ -133,7 +141,7 @@ final class ReleaseSuite
     {
         [$status,$body]=$this->http('/health');
         $payload=json_decode($body,true);
-        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='117' && ($payload['slice']??'')==='healing-home-room-notes', 'Health checkpoint does not identify the current slice.');
+        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='117' && ($payload['slice']??'')==='healing-home-room-expansion', 'Health checkpoint does not identify the current slice.');
     }
 
     private function operations(): void
@@ -412,6 +420,264 @@ final class ReleaseSuite
             $service->clearRoomNote($account,'journal_table');
             $cleared=$service->roomForAccount($account,'journal_table');
             $this->runner->assert(($cleared['room']['note_text']??null)===null,'Room note did not clear.');
+        } finally {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+        }
+    }
+
+    private function healingHomeEasternRoom(): void
+    {
+        $account='9a000000-0000-4000-8000-000000000001';$other='9a000000-0000-4000-8000-000000000002';
+        $installation='9a000000-0000-4000-8000-000000000003';$otherInstallation='9a000000-0000-4000-8000-000000000004';
+        $choice='9a000000-0000-4000-8000-000000000005';$otherChoice='9a000000-0000-4000-8000-000000000006';
+        try {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
+            $this->account($account,'eastern-room@test.invalid');$this->account($other,'eastern-room-other@test.invalid');
+            $installationInsert=$this->pdo->prepare('INSERT INTO world_installations (id,account_id,world_key,status,installed_at) VALUES (:id,:account,"epic-ordinary","active",UTC_TIMESTAMP())');
+            $installationInsert->execute(['id'=>$installation,'account'=>$account]);
+            $installationInsert->execute(['id'=>$otherInstallation,'account'=>$other]);
+            $progress=$this->pdo->prepare('INSERT INTO world_narrative_progress (installation_id,current_arc,current_chapter,current_scene,updated_at) VALUES (:installation,"making-refuge","the-eastern-room","room-restored",UTC_TIMESTAMP())');
+            $progress->execute(['installation'=>$installation]);$progress->execute(['installation'=>$otherInstallation]);
+            $choiceInsert=$this->pdo->prepare('INSERT INTO world_choice_history (id,installation_id,scene_key,choice_key,choice_label,created_at) VALUES (:id,:installation,"eastern-room-purpose",:key,:label,UTC_TIMESTAMP())');
+            $choiceInsert->execute(['id'=>$choice,'installation'=>$installation,'key'=>'rest','label'=>'A room for rest']);
+            $choiceInsert->execute(['id'=>$otherChoice,'installation'=>$otherInstallation,'key'=>'welcome','label'=>'A room for welcome']);
+            $this->pdo->prepare('INSERT INTO world_keepsakes (id,installation_id,keepsake_key,name,description,source_scene,acquired_at) VALUES ("9a000000-0000-4000-8000-000000000007",:installation,"linen-thread","A Linen Thread","A pale thread from the first curtain hung in the restored room.","eastern-room-purpose",UTC_TIMESTAMP())')->execute(['installation'=>$installation]);
+            $this->pdo->prepare('INSERT INTO world_keepsakes (id,installation_id,keepsake_key,name,description,source_scene,acquired_at) VALUES ("9a000000-0000-4000-8000-000000000008",:installation,"small-key","A Small Brass Key","This should stay in another account.","eastern-room-purpose",UTC_TIMESTAMP())')->execute(['installation'=>$otherInstallation]);
+
+            $service=new JourneyService(\database());
+            $room=$service->roomForAccount($account,'eastern_room');
+            $this->runner->assert(($room['room']['state']??'')==='open','Eastern Room did not open after the Chapter Two choice.');
+            $this->runner->assert(count($room['changes'])===1&&$room['changes'][0]['title']==='The Eastern Room opened','Eastern Room change was not materialized.');
+            $this->runner->assert(count($room['keepsakes'])===1&&$room['keepsakes'][0]['name']==='A Linen Thread','Eastern Room keepsake was missing or crossed account scope.');
+            $controller=new \Koravik\Platform\Journey\HealingHomeController(\database());
+            $renderRoom=(new \ReflectionClass($controller))->getMethod('renderRoom');
+            $renderRoom->setAccessible(true);
+            $html=(string)$renderRoom->invoke($controller,$room);
+            foreach(['A room with a chosen purpose.','Epic Ordinary owns the chapter choice','A Linen Thread','Continue Epic Ordinary'] as $needle)$this->runner->assert(str_contains($html,$needle),"Eastern Room UI is missing {$needle}.");
+        } finally {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
+        }
+    }
+
+    private function healingHomeRelationshipConversations(): void
+    {
+        $account='9b000000-0000-4000-8000-000000000001';$other='9b000000-0000-4000-8000-000000000002';
+        $installation='9b000000-0000-4000-8000-000000000003';$reaction='9b000000-0000-4000-8000-000000000004';
+        try {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
+            $this->account($account,'caretaker-talk@test.invalid');$this->account($other,'caretaker-talk-other@test.invalid');
+            $this->pdo->prepare('INSERT INTO world_installations (id,account_id,world_key,status,installed_at) VALUES (:id,:account,"epic-ordinary","active",UTC_TIMESTAMP())')->execute(['id'=>$installation,'account'=>$account]);
+            $this->pdo->prepare('INSERT INTO world_reactions (id,installation_id,source_event_id,title,message,explanation,source_fact_key,source_fact_summary,rule_key,interpreted_at,created_at) VALUES (:id,:installation,"9b000000-0000-4000-8000-000000000005","A threshold warmed","The room made space for return.","Only a minimized approved fact was interpreted.","quest.completed","A Quest occurrence was completed.","caretaker-notices",UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute(['id'=>$reaction,'installation'=>$installation]);
+            $service=new JourneyService(\database());
+            $service->homeForAccount($account);
+            $service->converseWithCaretaker($account,'quiet');
+            $relationship=$service->relationshipForAccount($account,'caretaker');
+            $this->runner->assert(count($relationship['conversations']??[])===1,'Caretaker conversation did not persist.');
+            $this->runner->assert(($relationship['conversations'][0]['player_choice']??'')==='quiet','Caretaker conversation saved the wrong choice.');
+            $this->runner->assert(str_contains((string)($relationship['conversations'][0]['remembered_context']??''),'room made space'),'Caretaker conversation did not include bounded remembered context.');
+            $otherRelationship=$service->relationshipForAccount($other,'caretaker');
+            $this->runner->assert(count($otherRelationship['conversations']??[])===0,'Caretaker conversations crossed account scope.');
+            $controller=new \Koravik\Platform\Journey\HealingHomeController(\database());
+            $render=(new \ReflectionClass($controller))->getMethod('renderRelationship');
+            $render->setAccessible(true);
+            $html=(string)$render->invoke($controller,$relationship);
+            foreach(['Speak with the Caretaker','Sit quietly','No answer is demanded of you.','does not create a Quest, Chronicle entry, Companion memory, or World fact'] as $needle)$this->runner->assert(str_contains($html,$needle),"Caretaker conversation UI is missing {$needle}.");
+            $audit=$this->pdo->prepare('SELECT COUNT(*) FROM audit_log WHERE account_id=:account AND action="healing_home.relationship.conversed" AND subject_id="caretaker"');
+            $audit->execute(['account'=>$account]);
+            $this->runner->assert((int)$audit->fetchColumn()===1,'Caretaker conversation audit evidence was not recorded.');
+            $exportId=(new AccountDataService(\database()))->requestExport($account,'json');
+            $export=(new AccountDataService(\database()))->export($account,$exportId);
+            $exportData=json_decode((string)$export['export_json'],true);
+            $this->runner->assert(count($exportData['relationship_conversations']??[])===1,'Account export omitted relationship conversation.');
+            try{$service->converseWithCaretaker($account,'flatter');$denied=false;}catch(\RuntimeException){$denied=true;}
+            $this->runner->assert($denied,'Caretaker conversation accepted an invalid choice.');
+        } finally {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
+        }
+    }
+
+    private function healingHomeRoomMap(): void
+    {
+        $account='9c000000-0000-4000-8000-000000000001';$installation='9c000000-0000-4000-8000-000000000002';$choice='9c000000-0000-4000-8000-000000000003';
+        try {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+            $this->account($account,'room-map@test.invalid');
+            $this->pdo->prepare('INSERT INTO world_installations (id,account_id,world_key,status,installed_at) VALUES (:id,:account,"epic-ordinary","active",UTC_TIMESTAMP())')->execute(['id'=>$installation,'account'=>$account]);
+            $this->pdo->prepare('INSERT INTO world_narrative_progress (installation_id,current_arc,current_chapter,current_scene,updated_at) VALUES (:installation,"making-refuge","the-eastern-room","room-restored",UTC_TIMESTAMP())')->execute(['installation'=>$installation]);
+            $this->pdo->prepare('INSERT INTO world_choice_history (id,installation_id,scene_key,choice_key,choice_label,created_at) VALUES (:id,:installation,"eastern-room-purpose","making","A room for making",UTC_TIMESTAMP())')->execute(['id'=>$choice,'installation'=>$installation]);
+            $service=new JourneyService(\database());
+            $service->restInRoom($account,'fireplace');
+            $home=$service->homeForAccount($account);
+            $controller=new \Koravik\Platform\Journey\HealingHomeController(\database());
+            $renderHome=(new \ReflectionClass($controller))->getMethod('renderHome');
+            $renderHome->setAccessible(true);
+            $html=(string)$renderHome->invoke($controller,['id'=>$account,'display_name'=>'Test'],$home);
+            foreach(['Room map','Every room names what it holds','Open room','Door waiting','Restored room open','aria-current="location"','home-room-eastern_room restored-room','Epic Ordinary refuge, opened by Chapter Two.'] as $needle)$this->runner->assert(str_contains($html,$needle),"Healing Home room map is missing {$needle}.");
+            $css=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/journey.css');
+            foreach(['.home-room-map','.room-map-status','.home-room.restored-room','.home-room.locked a::before'] as $selector)$this->runner->assert(str_contains($css,$selector),"Healing Home room map CSS is missing {$selector}.");
+        } finally {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+        }
+    }
+
+    private function healingHomeFireplaceReactionDetail(): void
+    {
+        $account='9d000000-0000-4000-8000-000000000001';$other='9d000000-0000-4000-8000-000000000002';
+        $installation='9d000000-0000-4000-8000-000000000003';$otherInstallation='9d000000-0000-4000-8000-000000000004';
+        $reaction='9d000000-0000-4000-8000-000000000005';$otherReaction='9d000000-0000-4000-8000-000000000006';
+        try {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
+            $this->account($account,'fireplace-reaction@test.invalid');$this->account($other,'fireplace-reaction-other@test.invalid');
+            $installationInsert=$this->pdo->prepare('INSERT INTO world_installations (id,account_id,world_key,status,installed_at) VALUES (:id,:account,"epic-ordinary","active",UTC_TIMESTAMP())');
+            $installationInsert->execute(['id'=>$installation,'account'=>$account]);
+            $installationInsert->execute(['id'=>$otherInstallation,'account'=>$other]);
+            $reactionInsert=$this->pdo->prepare('INSERT INTO world_reactions (id,installation_id,source_event_id,title,message,explanation,source_fact_key,source_fact_summary,rule_key,interpreted_at,created_at) VALUES (:id,:installation,:event,:title,:message,:explanation,"quest.completed",:summary,:rule,UTC_TIMESTAMP(),UTC_TIMESTAMP())');
+            $reactionInsert->execute(['id'=>$reaction,'installation'=>$installation,'event'=>'9d000000-0000-4000-8000-000000000007','title'=>'The fire changed color','message'=>'The Caretaker noticed a promise kept.','explanation'=>'Epic Ordinary interpreted a completed Quest occurrence.','summary'=>'A Quest occurrence was completed.','rule'=>'caretaker-notices-completion']);
+            $reactionInsert->execute(['id'=>$otherReaction,'installation'=>$otherInstallation,'event'=>'9d000000-0000-4000-8000-000000000008','title'=>'Other private fire','message'=>'This should not render.','explanation'=>'Other account only.','summary'=>'Other account fact.','rule'=>'other-rule']);
+            $service=new JourneyService(\database());
+            $room=$service->roomForAccount($account,'fireplace');
+            $this->runner->assert(count($room['world_reactions']??[])===1&&$room['world_reactions'][0]['id']===$reaction,'Fireplace exposed the wrong World reactions.');
+            $controller=new \Koravik\Platform\Journey\HealingHomeController(\database());
+            $renderRoom=(new \ReflectionClass($controller))->getMethod('renderRoom');
+            $renderRoom->setAccessible(true);
+            $html=(string)$renderRoom->invoke($controller,$room);
+            foreach(['Why the house noticed','Approved fact','World rule','Deliberately excluded','Quest notes, Chronicle prose','Mark reviewed','caretaker-notices-completion'] as $needle)$this->runner->assert(str_contains($html,$needle),"Fireplace reaction UI is missing {$needle}.");
+            (new WorldHomeService(\database()))->markReactionReviewed($account,$reaction);
+            $reviewed=$service->roomForAccount($account,'fireplace');
+            $reviewedHtml=(string)$renderRoom->invoke($controller,$reviewed);
+            $this->runner->assert(str_contains($reviewedHtml,'Reviewed ')&&!str_contains($reviewedHtml,'Other private fire'),'Fireplace reviewed state failed or leaked another reaction.');
+        } finally {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
+        }
+    }
+
+    private function healingHomeKeepsakeShelf(): void
+    {
+        $account='9e000000-0000-4000-8000-000000000001';$other='9e000000-0000-4000-8000-000000000002';
+        $keepsake='9e000000-0000-4000-8000-000000000003';$otherKeepsake='9e000000-0000-4000-8000-000000000004';
+        try {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
+            $this->account($account,'keepsake-shelf@test.invalid');$this->account($other,'keepsake-shelf-other@test.invalid');
+            $service=new JourneyService(\database());
+            $service->homeForAccount($account);$service->homeForAccount($other);
+            $this->pdo->prepare('INSERT INTO healing_home_keepsakes (id,account_id,source_type,source_id,keepsake_key,name,meaning,room_key,displayed,created_at) VALUES (:id,:account,"world_choice","9e000000-0000-4000-8000-000000000005","linen-thread","A Linen Thread","A pale thread from the first curtain.","eastern_room",1,UTC_TIMESTAMP())')->execute(['id'=>$keepsake,'account'=>$account]);
+            $this->pdo->prepare('INSERT INTO healing_home_keepsakes (id,account_id,source_type,source_id,keepsake_key,name,meaning,room_key,displayed,created_at) VALUES (:id,:account,"quest_resolution","9e000000-0000-4000-8000-000000000006","small-token","Other Token","This should stay elsewhere.","fireplace",1,UTC_TIMESTAMP())')->execute(['id'=>$otherKeepsake,'account'=>$other]);
+            $keepsakes=$service->keepsakesForAccount($account);
+            $this->runner->assert(count($keepsakes)===1&&$keepsakes[0]['id']===$keepsake,'Keepsake shelf did not stay account-scoped.');
+            $controller=new \Koravik\Platform\Journey\HealingHomeController(\database());
+            $renderShelf=(new \ReflectionClass($controller))->getMethod('renderKeepsakes');
+            $renderShelf->setAccessible(true);
+            $shelfHtml=(string)$renderShelf->invoke($controller,$keepsakes);
+            foreach(['Keepsake Shelf','Epic Ordinary World choice','Eastern Room','They are not currency, trophies','/home/keepsakes/'.$keepsake] as $needle)$this->runner->assert(str_contains($shelfHtml,$needle),"Keepsake shelf UI is missing {$needle}.");
+            $renderKeepsake=(new \ReflectionClass($controller))->getMethod('renderKeepsake');
+            $renderKeepsake->setAccessible(true);
+            $detail=$service->keepsakeForAccount($account,$keepsake);
+            $detailHtml=(string)$renderKeepsake->invoke($controller,$detail);
+            foreach(['Provenance','Source owner','Open room','does not create a Quest, Chronicle entry, Companion memory'] as $needle)$this->runner->assert(str_contains($detailHtml,$needle),"Keepsake detail UI is missing {$needle}.");
+            $this->runner->assert($service->keepsakeForAccount($account,$otherKeepsake)===null,'Keepsake detail crossed account scope.');
+            $emptyHtml=(string)$renderShelf->invoke($controller,[]);
+            $this->runner->assert(str_contains($emptyHtml,'No keepsakes are displayed yet'),'Keepsake shelf empty state is missing.');
+        } finally {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id IN (:account,:other)')->execute(['account'=>$account,'other'=>$other]);
+        }
+    }
+
+    private function healingHomeJournalTableReflectionBridge(): void
+    {
+        $account='9f000000-0000-4000-8000-000000000001';
+        try {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+            $this->account($account,'journal-bridge@test.invalid');
+            $service=new JourneyService(\database());
+            $room=$service->roomForAccount($account,'journal_table');
+            $controller=new \Koravik\Platform\Journey\HealingHomeController(\database());
+            $renderRoom=(new \ReflectionClass($controller))->getMethod('renderRoom');
+            $renderRoom->setAccessible(true);
+            $roomHtml=(string)$renderRoom->invoke($controller,$room);
+            foreach(['Start a reflection','context=healing_home_journal_table','Chronicle owns the saved entry'] as $needle)$this->runner->assert(str_contains($roomHtml,$needle),"Journal Table bridge is missing {$needle}.");
+            $_GET=['context'=>'healing_home_journal_table','title'=>'Journal Table reflection','tags'=>'healing-home,journal-table'];
+            $chronicle=new \Koravik\Platform\Experience\ChronicleManagementController(\database());
+            $form=(new \ReflectionClass($chronicle))->getMethod('form');
+            $form->setAccessible(true);
+            ob_start();$form->invoke($chronicle);$formHtml=(string)ob_get_clean();
+            $_GET=[];
+            foreach(['Started from Healing Home','Journal Table context','value="Journal Table reflection"','value="healing-home,journal-table"','Chronicle owns the saved entry, validation, privacy, archive, and deletion behavior'] as $needle)$this->runner->assert(str_contains($formHtml,$needle),"Chronicle bridge form is missing {$needle}.");
+        } finally {
+            $_GET=[];
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+        }
+    }
+
+    private function healingHomeGardenUnlock(): void
+    {
+        $account='9f100000-0000-4000-8000-000000000001';
+        try {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+            $this->account($account,'garden-unlock@test.invalid');
+            $service=new JourneyService(\database());
+            $locked=$service->roomForAccount($account,'garden');
+            $this->runner->assert(($locked['room']['state']??'')==='visible_locked','Garden opened before relationship conversation.');
+            $service->converseWithCaretaker($account,'gratitude');
+            $garden=$service->roomForAccount($account,'garden');
+            $this->runner->assert(($garden['room']['state']??'')==='open','Garden did not open after Caretaker conversation.');
+            $this->runner->assert(count($garden['changes'])===1&&$garden['changes'][0]['title']==='The Garden gate opened','Garden change was not materialized.');
+            $controller=new \Koravik\Platform\Journey\HealingHomeController(\database());
+            $renderRoom=(new \ReflectionClass($controller))->getMethod('renderRoom');
+            $renderRoom->setAccessible(true);
+            $html=(string)$renderRoom->invoke($controller,$garden);
+            foreach(['A place for tending.','never streaks, punishment, or proof','Reflect from the Garden','Chronicle owns any reflection'] as $needle)$this->runner->assert(str_contains($html,$needle),"Garden room UI is missing {$needle}.");
+            $home=$service->homeForAccount($account);
+            $renderHome=(new \ReflectionClass($controller))->getMethod('renderHome');
+            $renderHome->setAccessible(true);
+            $homeHtml=(string)$renderHome->invoke($controller,['id'=>$account,'display_name'=>'Test'],$home);
+            $this->runner->assert(str_contains($homeHtml,'home-room open home-room-garden')&&str_contains($homeHtml,'Tending, recovery, and small chosen care.'),'Garden map state did not render as open.');
+            $css=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/journey.css');
+            $this->runner->assert(str_contains($css,'.garden-room-panel')&&str_contains($css,'.home-room-garden.open'),'Garden CSS contract is missing.');
+        } finally {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+        }
+    }
+
+    private function healingHomeRoomExpansion(): void
+    {
+        $account='9f200000-0000-4000-8000-000000000001';$installation='9f200000-0000-4000-8000-000000000002';$reaction='9f200000-0000-4000-8000-000000000003';
+        try {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+            $this->account($account,'room-expansion@test.invalid');
+            $this->pdo->prepare('INSERT INTO world_installations (id,account_id,world_key,status,installed_at) VALUES (:id,:account,"epic-ordinary","active",UTC_TIMESTAMP())')->execute(['id'=>$installation,'account'=>$account]);
+            $this->pdo->prepare('INSERT INTO world_narrative_progress (installation_id,current_arc,current_chapter,current_scene,updated_at) VALUES (:installation,"making-refuge","the-eastern-room","room-restored",UTC_TIMESTAMP())')->execute(['installation'=>$installation]);
+            $this->pdo->prepare('INSERT INTO world_choice_history (id,installation_id,scene_key,choice_key,choice_label,created_at) VALUES ("9f200000-0000-4000-8000-000000000004",:installation,"eastern-room-purpose","making","A room for making",UTC_TIMESTAMP())')->execute(['installation'=>$installation]);
+            $this->pdo->prepare('INSERT INTO world_reactions (id,installation_id,source_event_id,title,message,explanation,source_fact_key,source_fact_summary,rule_key,interpreted_at,created_at) VALUES (:id,:installation,"9f200000-0000-4000-8000-000000000005","A margin note appeared","The Library had something to explain.","Only minimized fact.","quest.completed","A Quest occurrence was completed.","library-opens",UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute(['id'=>$reaction,'installation'=>$installation]);
+            (new WorldHomeService(\database()))->markReactionReviewed($account,$reaction);
+            $service=new JourneyService(\database());
+            $service->converseWithCaretaker($account,'repair');
+            $service->tendGarden($account,'water');
+            $service->saveRoomNote($account,'workshop',"Make without proving\nA tiny sketch is enough.");
+            $workshop=$service->roomForAccount($account,'workshop');
+            $library=$service->roomForAccount($account,'library');
+            $garden=$service->roomForAccount($account,'garden');
+            $this->runner->assert(($workshop['room']['state']??'')==='open'&&($library['room']['state']??'')==='open'&&($garden['room']['state']??'')==='open','Expanded rooms did not unlock from their source moments.');
+            $controller=new \Koravik\Platform\Journey\HealingHomeController(\database());
+            $renderRoom=(new \ReflectionClass($controller))->getMethod('renderRoom');$renderRoom->setAccessible(true);
+            $workshopHtml=(string)$renderRoom->invoke($controller,$workshop);
+            $libraryHtml=(string)$renderRoom->invoke($controller,$library);
+            $gardenHtml=(string)$renderRoom->invoke($controller,$garden);
+            foreach(['A place for making and repair.','Intention label','Make without proving'] as $needle)$this->runner->assert(str_contains($workshopHtml,$needle),"Workshop expansion UI is missing {$needle}.");
+            foreach(['A place for explanations.','What the house knows'] as $needle)$this->runner->assert(str_contains($libraryHtml,$needle),"Library expansion UI is missing {$needle}.");
+            foreach(['Water gently','Something was tended'] as $needle)$this->runner->assert(str_contains($gardenHtml,$needle),"Garden tending UI/history is missing {$needle}.");
+            $service->homeForAccount($account);
+            $home=$service->homeForAccount($account);
+            $renderHome=(new \ReflectionClass($controller))->getMethod('renderHome');$renderHome->setAccessible(true);
+            $homeHtml=(string)$renderHome->invoke($controller,['id'=>$account,'display_name'=>'Test'],$home);
+            foreach(['Green Dusk','Return scene','Room timeline','What the house knows'] as $needle)$this->runner->assert(str_contains($homeHtml,$needle),"Home expansion UI is missing {$needle}.");
+            $renderTimeline=(new \ReflectionClass($controller))->getMethod('renderTimeline');$renderTimeline->setAccessible(true);
+            $timelineHtml=(string)$renderTimeline->invoke($controller,$service->timelineForAccount($account));
+            foreach(['Room timeline','What the house has held','Something was tended','Caretaker conversation'] as $needle)$this->runner->assert(str_contains($timelineHtml,$needle),"Room timeline is missing {$needle}.");
+            $renderPrivacy=(new \ReflectionClass($controller))->getMethod('renderHomePrivacy');$renderPrivacy->setAccessible(true);
+            $privacyHtml=(string)$renderPrivacy->invoke($controller);
+            foreach(['What the house knows','Composed sources','Deliberately not accessed','Quest notes','Data controls'] as $needle)$this->runner->assert(str_contains($privacyHtml,$needle),"Healing Home privacy panel is missing {$needle}.");
+            $css=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/journey.css');
+            foreach(['.workshop-room-panel','.library-room-panel','.guest-room-panel','.room-intention-label'] as $selector)$this->runner->assert(str_contains($css,$selector),"Expansion CSS is missing {$selector}.");
         } finally {
             $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
         }

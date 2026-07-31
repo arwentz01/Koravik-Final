@@ -31,9 +31,10 @@ final class JourneyService
         $keepsakes->execute(['account_id' => $accountId]);
         $relationships = $pdo->prepare('SELECT id, character_key, character_name, relationship_state, familiarity, last_met_at FROM journey_relationships WHERE account_id = :account_id ORDER BY updated_at DESC');
         $relationships->execute(['account_id' => $accountId]);
+        $previousReturn = $home->fetch() ?: [];
         $pdo->prepare('UPDATE healing_home_state SET last_returned_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() WHERE account_id = :account_id')->execute(['account_id' => $accountId]);
 
-        return ['state'=>$home->fetch() ?: [],'rooms'=>$rooms->fetchAll(),'focus_quest'=>$quest->fetch() ?: null,'chronicle'=>$chronicle->fetch() ?: null,'changes'=>$changes->fetchAll(),'keepsakes'=>$keepsakes->fetchAll(),'relationships'=>$relationships->fetchAll()];
+        return ['state'=>$previousReturn,'rooms'=>$rooms->fetchAll(),'focus_quest'=>$quest->fetch() ?: null,'chronicle'=>$chronicle->fetch() ?: null,'changes'=>$changes->fetchAll(),'keepsakes'=>$keepsakes->fetchAll(),'relationships'=>$relationships->fetchAll()];
     }
 
     public function relationshipForAccount(string $accountId, string $characterKey): ?array
@@ -47,7 +48,110 @@ final class JourneyService
         $memories = $this->database->pdo()->prepare('SELECT memory_kind, summary, created_at FROM journey_relationship_memories WHERE relationship_id = :relationship_id AND account_id = :account_id ORDER BY created_at DESC');
         $memories->execute(['relationship_id'=>$relationship['id'],'account_id'=>$accountId]);
         $relationship['memories'] = $memories->fetchAll();
+        $conversations = $this->database->pdo()->prepare('SELECT conversation_type, prompt_key, player_choice, character_response, remembered_context, created_at FROM relationship_conversations WHERE account_id = :account_id AND character_key = :character_key ORDER BY created_at DESC LIMIT 8');
+        $conversations->execute(['account_id'=>$accountId,'character_key'=>$characterKey]);
+        $relationship['conversations'] = $conversations->fetchAll();
         return $relationship;
+    }
+
+    public function keepsakesForAccount(string $accountId): array
+    {
+        $this->ensureHome($accountId);
+        $this->materializeJourney($accountId);
+        $statement = $this->database->pdo()->prepare('SELECT id, source_type, source_id, keepsake_key, name, meaning, room_key, displayed, created_at FROM healing_home_keepsakes WHERE account_id = :account_id ORDER BY created_at DESC, name');
+        $statement->execute(['account_id'=>$accountId]);
+
+        return $statement->fetchAll();
+    }
+
+    public function keepsakeForAccount(string $accountId, string $id): ?array
+    {
+        if (!preg_match('/^[a-f0-9-]{36}$/', $id)) {
+            return null;
+        }
+
+        $this->ensureHome($accountId);
+        $this->materializeJourney($accountId);
+        $statement = $this->database->pdo()->prepare('SELECT id, source_type, source_id, keepsake_key, name, meaning, room_key, displayed, created_at FROM healing_home_keepsakes WHERE account_id = :account_id AND id = :id LIMIT 1');
+        $statement->execute(['account_id'=>$accountId,'id'=>$id]);
+        $keepsake = $statement->fetch();
+
+        return $keepsake ?: null;
+    }
+
+    public function converseWithCaretaker(string $accountId, string $choice): void
+    {
+        $responses = [
+            'gratitude' => 'The Caretaker rests a hand on the chair. "Then let us remember that something good was allowed to matter."',
+            'repair' => 'The Caretaker nods. "We do not have to pretend every moment landed well. We can begin again without erasing it."',
+            'disagree' => 'The Caretaker leans back. "You may disagree with me. Your judgment remains your own."',
+            'quiet' => 'The fire settles into a softer glow. No answer is demanded of you.',
+        ];
+        if (!isset($responses[$choice])) {
+            throw new \RuntimeException('Choose a valid conversation response.');
+        }
+
+        $this->ensureHome($accountId);
+        $this->materializeJourney($accountId);
+        $this->database->transaction(function (PDO $pdo) use ($accountId, $choice, $responses): void {
+            $relationship = $pdo->prepare('SELECT id FROM journey_relationships WHERE account_id = :account_id AND world_key = "epic-ordinary" AND character_key = "caretaker" LIMIT 1');
+            $relationship->execute(['account_id' => $accountId]);
+            if (!$relationship->fetchColumn()) {
+                throw new \RuntimeException('The Caretaker is not available yet.');
+            }
+
+            $memory = $pdo->prepare('SELECT summary FROM journey_relationship_memories WHERE account_id = :account_id AND source_type <> "relationship_conversation" ORDER BY created_at DESC LIMIT 1');
+            $memory->execute(['account_id' => $accountId]);
+            $pdo->prepare('INSERT INTO relationship_conversations (id, account_id, character_key, conversation_type, prompt_key, player_choice, character_response, remembered_context, created_at) VALUES (:id, :account_id, "caretaker", "check_in", "healing_home_relationship", :choice, :response, :memory, UTC_TIMESTAMP())')->execute(['id' => self::uuid(), 'account_id' => $accountId, 'choice' => $choice, 'response' => $responses[$choice], 'memory' => $memory->fetchColumn() ?: null]);
+            $this->auditRoom($pdo, $accountId, 'healing_home.relationship.conversed', 'caretaker');
+        });
+    }
+
+    public function tendGarden(string $accountId, string $choice): void
+    {
+        $choices = [
+            'water' => 'You watered what is still becoming. Nothing had to bloom today.',
+            'clear_space' => 'You cleared a little space without declaring the whole garden fixed.',
+            'rest' => 'You rested near the green things. Rest counted as care.',
+            'repair' => 'You tended one small repair and let it be enough.',
+        ];
+        if (!isset($choices[$choice])) {
+            throw new \RuntimeException('Choose a valid Garden tending action.');
+        }
+
+        $this->ensureHome($accountId);
+        $this->materializeJourney($accountId);
+        $this->database->transaction(function (PDO $pdo) use ($accountId, $choice, $choices): void {
+            $room = $pdo->prepare('SELECT state FROM healing_home_rooms WHERE account_id = :account_id AND room_key = "garden" LIMIT 1');
+            $room->execute(['account_id'=>$accountId]);
+            if ((string) $room->fetchColumn() !== 'open') {
+                throw new \RuntimeException('The Garden is not open yet.');
+            }
+            $id = self::uuid();
+            $pdo->prepare('INSERT INTO healing_home_changes (id, account_id, source_type, source_id, change_key, title, description, room_key, created_at) VALUES (:id,:account_id,"garden_tending",:source_id,:change_key,"Something was tended",:description,"garden",UTC_TIMESTAMP())')->execute(['id'=>$id,'account_id'=>$accountId,'source_id'=>$id,'change_key'=>'garden_'.$choice,'description'=>$choices[$choice]]);
+            $pdo->prepare('UPDATE healing_home_state SET atmosphere = "green_dusk", updated_at = UTC_TIMESTAMP() WHERE account_id = :account_id')->execute(['account_id'=>$accountId]);
+            $this->auditRoom($pdo, $accountId, 'healing_home.garden.tended', $choice);
+        });
+    }
+
+    public function timelineForAccount(string $accountId): array
+    {
+        $this->ensureHome($accountId);
+        $this->materializeJourney($accountId);
+        $pdo = $this->database->pdo();
+        $items = [];
+        $changes = $pdo->prepare('SELECT "change" AS item_type, title, description, room_key, created_at FROM healing_home_changes WHERE account_id = :account_id');
+        $changes->execute(['account_id'=>$accountId]);
+        foreach ($changes->fetchAll() as $row) $items[] = $row;
+        $keepsakes = $pdo->prepare('SELECT "keepsake" AS item_type, name AS title, meaning AS description, room_key, created_at FROM healing_home_keepsakes WHERE account_id = :account_id AND displayed = 1');
+        $keepsakes->execute(['account_id'=>$accountId]);
+        foreach ($keepsakes->fetchAll() as $row) $items[] = $row;
+        $conversations = $pdo->prepare('SELECT "conversation" AS item_type, "Caretaker conversation" AS title, character_response AS description, "entry_hall" AS room_key, created_at FROM relationship_conversations WHERE account_id = :account_id');
+        $conversations->execute(['account_id'=>$accountId]);
+        foreach ($conversations->fetchAll() as $row) $items[] = $row;
+        usort($items, static fn(array $a, array $b): int => strcmp((string)$b['created_at'], (string)$a['created_at']));
+
+        return array_slice($items, 0, 30);
     }
 
     public function roomForAccount(string $accountId, string $roomKey): ?array
@@ -59,7 +163,10 @@ final class JourneyService
         $this->ensureHome($accountId);
         $this->materializeJourney($accountId);
         $pdo = $this->database->pdo();
-        $room = $pdo->prepare('SELECT room_key, name, state, note_text, note_updated_at, sort_order FROM healing_home_rooms WHERE account_id = :account_id AND room_key = :room_key LIMIT 1');
+        $noteColumns = $this->roomNotesAvailable($pdo)
+            ? 'note_text, note_updated_at'
+            : 'NULL AS note_text, NULL AS note_updated_at';
+        $room = $pdo->prepare('SELECT room_key, name, state, ' . $noteColumns . ', sort_order FROM healing_home_rooms WHERE account_id = :account_id AND room_key = :room_key LIMIT 1');
         $room->execute(['account_id' => $accountId, 'room_key' => $roomKey]);
         $result = $room->fetch();
         if (!$result) {
@@ -78,6 +185,14 @@ final class JourneyService
         $keepsakes->execute(['account_id' => $accountId, 'room_key' => $roomKey]);
         $relationships = $pdo->prepare('SELECT character_key, character_name, relationship_state, familiarity, last_met_at FROM journey_relationships WHERE account_id = :account_id ORDER BY updated_at DESC LIMIT 5');
         $relationships->execute(['account_id' => $accountId]);
+        $reactions = $pdo->prepare('SELECT wr.id, wr.title, wr.message, wr.explanation, wr.source_fact_key, wr.source_fact_summary, wr.rule_key, COALESCE(wr.interpreted_at, wr.created_at) AS interpreted_at, wrr.reviewed_at
+            FROM world_reactions wr
+            JOIN world_installations wi ON wi.id = wr.installation_id
+            LEFT JOIN world_reaction_reviews wrr ON wrr.reaction_id = wr.id AND wrr.account_id = wi.account_id
+            WHERE wi.account_id = :account_id
+            ORDER BY (wrr.reviewed_at IS NULL) DESC, wr.created_at DESC
+            LIMIT 6');
+        $reactions->execute(['account_id' => $accountId]);
 
         return [
             'room' => $result,
@@ -87,6 +202,7 @@ final class JourneyService
             'changes' => $changes->fetchAll(),
             'keepsakes' => $keepsakes->fetchAll(),
             'relationships' => $relationships->fetchAll(),
+            'world_reactions' => $reactions->fetchAll(),
         ];
     }
 
@@ -128,6 +244,10 @@ final class JourneyService
 
         $this->ensureHome($accountId);
         $this->database->transaction(function (PDO $pdo) use ($accountId, $roomKey, $note): void {
+            if (!$this->roomNotesAvailable($pdo)) {
+                throw new \RuntimeException('Room notes need the latest database migration before they can be saved.');
+            }
+
             $room = $pdo->prepare('SELECT state FROM healing_home_rooms WHERE account_id = :account_id AND room_key = :room_key LIMIT 1');
             $room->execute(['account_id' => $accountId, 'room_key' => $roomKey]);
             $state = $room->fetchColumn();
@@ -148,6 +268,10 @@ final class JourneyService
 
         $this->ensureHome($accountId);
         $this->database->transaction(function (PDO $pdo) use ($accountId, $roomKey): void {
+            if (!$this->roomNotesAvailable($pdo)) {
+                throw new \RuntimeException('Room notes need the latest database migration before they can be cleared.');
+            }
+
             $room = $pdo->prepare('SELECT state FROM healing_home_rooms WHERE account_id = :account_id AND room_key = :room_key LIMIT 1');
             $room->execute(['account_id' => $accountId, 'room_key' => $roomKey]);
             $state = $room->fetchColumn();
@@ -169,6 +293,44 @@ final class JourneyService
             foreach ($reactions->fetchAll() as $reaction) {
                 $pdo->prepare('INSERT IGNORE INTO healing_home_changes (id, account_id, source_type, source_id, change_key, title, description, room_key, created_at) VALUES (:id,:account_id,"world_reaction",:source_id,"fireplace_notice",:title,:description,"fireplace",:created_at)')->execute(['id'=>self::uuid(),'account_id'=>$accountId,'source_id'=>$reaction['id'],'title'=>$reaction['title'],'description'=>$reaction['message'],'created_at'=>$reaction['created_at']]);
                 $pdo->prepare('INSERT IGNORE INTO journey_relationship_memories (id, relationship_id, account_id, source_type, source_id, memory_kind, summary, created_at) VALUES (:id,:relationship_id,:account_id,"world_reaction",:source_id,"noticed_change",:summary,:created_at)')->execute(['id'=>self::uuid(),'relationship_id'=>$relationshipId,'account_id'=>$accountId,'source_id'=>$reaction['id'],'summary'=>$reaction['message'],'created_at'=>$reaction['created_at']]);
+            }
+            $easternRoom = $pdo->prepare('SELECT wch.id, wch.choice_label, wch.created_at, wk.name, wk.description
+                FROM world_installations wi
+                JOIN world_choice_history wch ON wch.installation_id = wi.id AND wch.scene_key = "eastern-room-purpose"
+                LEFT JOIN world_keepsakes wk ON wk.installation_id = wi.id AND wk.source_scene = "eastern-room-purpose"
+                WHERE wi.account_id = :account_id AND wi.world_key = "epic-ordinary"
+                ORDER BY wch.created_at DESC
+                LIMIT 1');
+            $easternRoom->execute(['account_id' => $accountId]);
+            $restoredRoom = $easternRoom->fetch();
+            if ($restoredRoom) {
+                $pdo->prepare('UPDATE healing_home_rooms SET state = "open", unlocked_at = COALESCE(unlocked_at, :unlocked_at), updated_at = UTC_TIMESTAMP() WHERE account_id = :account_id AND room_key = "eastern_room"')->execute(['unlocked_at' => $restoredRoom['created_at'], 'account_id' => $accountId]);
+                if (str_contains(mb_strtolower((string)$restoredRoom['choice_label']), 'making')) {
+                    $pdo->prepare('UPDATE healing_home_rooms SET state = "open", unlocked_at = COALESCE(unlocked_at, :unlocked_at), updated_at = UTC_TIMESTAMP() WHERE account_id = :account_id AND room_key = "workshop"')->execute(['unlocked_at' => $restoredRoom['created_at'], 'account_id' => $accountId]);
+                    $pdo->prepare('UPDATE healing_home_state SET atmosphere = "workshop_lamplight", updated_at = UTC_TIMESTAMP() WHERE account_id = :account_id AND atmosphere <> "green_dusk"')->execute(['account_id'=>$accountId]);
+                }
+                if (str_contains(mb_strtolower((string)$restoredRoom['choice_label']), 'welcome')) {
+                    $pdo->prepare('UPDATE healing_home_rooms SET state = "open", unlocked_at = COALESCE(unlocked_at, :unlocked_at), updated_at = UTC_TIMESTAMP() WHERE account_id = :account_id AND room_key = "guest_room"')->execute(['unlocked_at' => $restoredRoom['created_at'], 'account_id' => $accountId]);
+                }
+                $description = 'You chose ' . $restoredRoom['choice_label'] . '. The Eastern Room now has a purpose inside Epic Ordinary.';
+                $pdo->prepare('INSERT IGNORE INTO healing_home_changes (id, account_id, source_type, source_id, change_key, title, description, room_key, created_at) VALUES (:id,:account_id,"world_choice",:source_id,"eastern_room_restored","The Eastern Room opened",:description,"eastern_room",:created_at)')->execute(['id' => self::uuid(), 'account_id' => $accountId, 'source_id' => $restoredRoom['id'], 'description' => $description, 'created_at' => $restoredRoom['created_at']]);
+                if (!empty($restoredRoom['name'])) {
+                    $pdo->prepare('INSERT IGNORE INTO healing_home_keepsakes (id, account_id, source_type, source_id, keepsake_key, name, meaning, room_key, displayed, created_at) VALUES (:id,:account_id,"world_choice",:source_id,"eastern_room_keepsake",:name,:meaning,"eastern_room",1,:created_at)')->execute(['id' => self::uuid(), 'account_id' => $accountId, 'source_id' => $restoredRoom['id'], 'name' => $restoredRoom['name'], 'meaning' => $restoredRoom['description'], 'created_at' => $restoredRoom['created_at']]);
+                }
+            }
+            $gardenMoment = $pdo->prepare('SELECT id, player_choice, created_at FROM relationship_conversations WHERE account_id = :account_id AND character_key = "caretaker" ORDER BY created_at ASC LIMIT 1');
+            $gardenMoment->execute(['account_id' => $accountId]);
+            $garden = $gardenMoment->fetch();
+            if ($garden) {
+                $pdo->prepare('UPDATE healing_home_rooms SET state = "open", unlocked_at = COALESCE(unlocked_at, :unlocked_at), updated_at = UTC_TIMESTAMP() WHERE account_id = :account_id AND room_key = "garden"')->execute(['unlocked_at' => $garden['created_at'], 'account_id' => $accountId]);
+                $description = 'The Garden opened after you chose to meet the Caretaker honestly. It is a place for tending, not proving.';
+                $pdo->prepare('INSERT IGNORE INTO healing_home_changes (id, account_id, source_type, source_id, change_key, title, description, room_key, created_at) VALUES (:id,:account_id,"relationship_conversation",:source_id,"garden_opened","The Garden gate opened",:description,"garden",:created_at)')->execute(['id'=>self::uuid(),'account_id'=>$accountId,'source_id'=>$garden['id'],'description'=>$description,'created_at'=>$garden['created_at']]);
+            }
+            $reviewed = $pdo->prepare('SELECT reviewed_at FROM world_reaction_reviews WHERE account_id = :account_id ORDER BY reviewed_at ASC LIMIT 1');
+            $reviewed->execute(['account_id'=>$accountId]);
+            $reviewedAt = $reviewed->fetchColumn();
+            if ($reviewedAt) {
+                $pdo->prepare('UPDATE healing_home_rooms SET state = "open", unlocked_at = COALESCE(unlocked_at, :unlocked_at), updated_at = UTC_TIMESTAMP() WHERE account_id = :account_id AND room_key = "library"')->execute(['unlocked_at'=>$reviewedAt,'account_id'=>$accountId]);
             }
             $resolutions = $pdo->prepare('SELECT qr.id, qr.outcome, qr.reflection, qr.resolved_at, q.title FROM quest_resolutions qr JOIN quests q ON q.id = qr.quest_id WHERE qr.account_id = :account_id ORDER BY qr.resolved_at');
             $resolutions->execute(['account_id'=>$accountId]);
@@ -214,6 +376,20 @@ final class JourneyService
             'INSERT INTO audit_log (id, account_id, action, subject_type, subject_id, occurred_at)
              VALUES (:id, :account_id, :action, "healing_home_room", :subject_id, UTC_TIMESTAMP())'
         )->execute(['id' => self::uuid(), 'account_id' => $accountId, 'action' => $action, 'subject_id' => $roomKey]);
+    }
+
+    private function roomNotesAvailable(PDO $pdo): bool
+    {
+        $statement = $pdo->prepare(
+            'SELECT COUNT(*)
+             FROM information_schema.columns
+             WHERE table_schema = DATABASE()
+               AND table_name = "healing_home_rooms"
+               AND column_name IN ("note_text", "note_updated_at")'
+        );
+        $statement->execute();
+
+        return (int) $statement->fetchColumn() === 2;
     }
 
     private static function uuid(): string

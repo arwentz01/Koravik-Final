@@ -1,7 +1,7 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Healing Home Room Notes vertical product slice in the current working tree
-**Version:** 2.23
+**Status:** Healing Home Room Expansion vertical product slice in the current working tree
+**Version:** 2.31
 **Baseline date:** July 30, 2026
 **Authoritative branch:** `main`
 
@@ -181,6 +181,109 @@ See `docs/features/HEALING_HOME_ROOM_PRESENCE.md`.
   state explicitly.
 
 See `docs/features/HEALING_HOME_ROOM_NOTES.md`.
+
+### Healing Home Eastern Room — implemented vertical slice
+
+- the visible locked Eastern Room opens when the account's Epic Ordinary
+  Chapter Two refuge choice exists;
+- the room detail composes the source World choice, room change, fictional
+  keepsake, room rest state, and private room notes;
+- materialization is account-scoped and does not create real-life Quests,
+  Chronicle entries, Companion memory, notifications, or District facts;
+- the room renders specific source-ownership copy and remains locked with a
+  useful unavailable state before the choice.
+
+See `docs/features/HEALING_HOME_EASTERN_ROOM.md`.
+
+### Healing Home Caretaker Conversation — implemented vertical slice
+
+- `/home/relationships/caretaker` now includes a CSRF-protected bounded
+  conversation form with four authored choices;
+- submitted conversations persist as account-scoped relationship continuity,
+  render in recent history, and include optional minimized remembered context;
+- conversation records do not create Quests, Chronicle entries, Companion
+  memory, notifications, World facts, or District records;
+- Account export includes relationship conversations and Account closure
+  deletes them with Healing Home composition.
+
+See `docs/features/HEALING_HOME_CARETAKER_CONVERSATION.md`.
+
+### Healing Home Room Map — implemented vertical slice
+
+- `/home` now renders a labeled room map with descriptions for every room;
+- open, waiting, current, and restored Eastern Room states are visible as text
+  and not only as color or decoration;
+- the current room retains `aria-current="location"` and visible status copy;
+- the room map is presentation-only and does not mutate source District or
+  World-owned records.
+
+See `docs/features/HEALING_HOME_ROOM_MAP.md`.
+
+### Healing Home Fireplace Reactions — implemented vertical slice
+
+- `/home/rooms/fireplace` now lists owned World reactions with explanation
+  details, approved minimized fact, World rule, interpreted time, and privacy
+  exclusions;
+- Fireplace reaction review reuses the existing Worlds-owned review service
+  through a CSRF-protected room-local action;
+- reviewed and unreviewed states render visibly inside the room;
+- reactions remain account-scoped and World-owned while Healing Home composes
+  them for context.
+
+See `docs/features/HEALING_HOME_FIREPLACE_REACTIONS.md`.
+
+### Healing Home Keepsake Shelf — implemented vertical slice
+
+- `/home/keepsakes` lists account-owned displayed keepsakes with source and
+  room labels;
+- `/home/keepsakes/{keepsakeId}` renders provenance, room placement, creation
+  time, and boundary copy;
+- keepsake detail reads are account-scoped and return a useful unavailable
+  state when missing;
+- the shelf remains presentational and does not create Quests, Chronicle
+  entries, Companion memory, World facts, notifications, or District records.
+
+See `docs/features/HEALING_HOME_KEEPSAKE_SHELF.md`.
+
+### Healing Home Journal Table Reflection Bridge — implemented vertical slice
+
+- `/home/rooms/journal_table` now includes a visible **Start a reflection**
+  action into Chronicle;
+- `/chronicle/new` recognizes the Healing Home Journal Table context and
+  renders editable prefilled title and tags plus ownership copy;
+- Chronicle remains the source owner for saved entries, validation, privacy,
+  archive, and deletion behavior;
+- opening the bridge does not create entries, Quests, Companion memory, World
+  facts, notifications, or Healing Home state.
+
+See `docs/features/HEALING_HOME_JOURNAL_BRIDGE.md`.
+
+### Healing Home Garden Unlock — implemented vertical slice
+
+- the Garden remains a visible locked room until the account has a bounded
+  Caretaker conversation;
+- after that relationship moment, the Garden opens with room-specific tending
+  and recovery copy, map state, and a minimized room change;
+- the unlock is not a streak, score, achievement, punishment, or productivity
+  reward;
+- Chronicle remains the owner of any reflection started from the Garden.
+
+See `docs/features/HEALING_HOME_GARDEN_UNLOCK.md`.
+
+### Healing Home Room Expansion — implemented vertical slice
+
+- Workshop, Library, and Guest Room now open from documented Journey source
+  moments rather than manual scaffolding;
+- Garden tending is an explicit CSRF-protected room action with minimized
+  Healing Home change history and a calmer atmosphere state;
+- `/home/timeline` composes room changes, keepsakes, and Caretaker continuity
+  into a private room-memory timeline;
+- room notes now surface a private first-line intention label without creating
+  Quests, Chronicle entries, Companion memory, notifications, or World facts;
+- `/home/privacy` explains what Healing Home composes and what it deliberately
+  does not access.
+
+See `docs/features/HEALING_HOME_ROOM_EXPANSION.md`.
 
 ## Current migrations
 

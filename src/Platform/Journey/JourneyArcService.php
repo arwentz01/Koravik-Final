@@ -49,7 +49,7 @@ final class JourneyArcService
     {
         $responses=['gratitude'=>'The Caretaker rests a hand on the chair. “Then let us remember that something good was allowed to matter.”','repair'=>'The Caretaker nods. “We do not have to pretend every moment landed well. We can begin again without erasing it.”','disagree'=>'The Caretaker leans back. “You may disagree with me. Your judgment remains your own.”','quiet'=>'The fire settles into a softer glow. No answer is demanded of you.'];
         if(!isset($responses[$choice])) throw new RuntimeException('Choose a valid conversation response.');
-        $last=$this->database->pdo()->prepare('SELECT memory_text FROM journey_relationship_memories WHERE account_id=:account_id AND character_key="caretaker" ORDER BY remembered_at DESC LIMIT 1');$last->execute(['account_id'=>$accountId]);$memory=$last->fetchColumn();
+        $last=$this->database->pdo()->prepare('SELECT summary FROM journey_relationship_memories m JOIN journey_relationships r ON r.id=m.relationship_id WHERE m.account_id=:account_id AND r.character_key="caretaker" ORDER BY m.created_at DESC LIMIT 1');$last->execute(['account_id'=>$accountId]);$memory=$last->fetchColumn();
         $this->database->pdo()->prepare('INSERT INTO relationship_conversations (id,account_id,character_key,conversation_type,prompt_key,player_choice,character_response,remembered_context,created_at) VALUES (:id,:account_id,"caretaker","check_in","home_fireplace",:choice,:response,:memory,UTC_TIMESTAMP())')->execute(['id'=>self::uuid(),'account_id'=>$accountId,'choice'=>$choice,'response'=>$responses[$choice],'memory'=>$memory?:null]);
     }
 
