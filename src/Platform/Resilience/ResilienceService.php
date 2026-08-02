@@ -30,6 +30,15 @@ final class ResilienceService
         return $rows;
     }
 
+    public function draft(string $accountId,string $id): ?array
+    {
+        $s=$this->database->pdo()->prepare('SELECT id,form_key,payload_json,updated_at,expires_at FROM platform_form_drafts WHERE id=:id AND account_id=:account_id AND expires_at>UTC_TIMESTAMP() LIMIT 1');
+        $s->execute(['id'=>$id,'account_id'=>$accountId]);$row=$s->fetch();
+        if(!$row)return null;
+        $row['payload']=json_decode((string)$row['payload_json'],true)?:[];
+        return $row;
+    }
+
     public function deleteDraft(string $accountId,string $id): void
     {
         $this->database->pdo()->prepare('DELETE FROM platform_form_drafts WHERE id=:id AND account_id=:account_id')->execute(['id'=>$id,'account_id'=>$accountId]);

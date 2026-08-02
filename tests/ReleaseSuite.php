@@ -15,6 +15,7 @@ use Koravik\Platform\Hearth\DailyFocusService;
 use Koravik\Platform\Hearth\DailyFocusView;
 use Koravik\Platform\Journey\JourneyService;
 use Koravik\Districts\Quests\QuestService;
+use Koravik\Districts\Health\HealthService;
 use Koravik\Platform\AccountData\AccountDataService;
 use Koravik\Worlds\WorldHomeService;
 use Koravik\Worlds\WorldHomeView;
@@ -27,7 +28,7 @@ final class ReleaseSuite
     public function register(): void
     {
         $this->runner->test('migration inventory is fully applied', fn() => $this->migrations());
-        $this->runner->test('critical schema matches Builds 068-087', fn() => $this->schema());
+        $this->runner->test('critical schema matches the current product checkpoint', fn() => $this->schema());
         $this->runner->test('password and CSRF primitives fail closed', fn() => $this->security());
         $this->runner->test('Organization capabilities are contextual', fn() => $this->organizations());
         $this->runner->test('Household capabilities are contextual', fn() => $this->households());
@@ -53,6 +54,19 @@ final class ReleaseSuite
         $this->runner->test('Healing Home Garden opens from Caretaker conversation', fn() => $this->healingHomeGardenUnlock());
         $this->runner->test('Healing Home room expansion supports making, welcome, meaning, tending, and privacy', fn() => $this->healingHomeRoomExpansion());
         $this->runner->test('Quests and Chronicle expose the action-memory loop safely', fn() => $this->questChroniclePolish());
+        $this->runner->test('Health check-ins remain private and publish only consented derived facts', fn() => $this->healthFoundation());
+        $this->runner->test('Discovery, trust, campaign, follow-up, and Health trend slices are wired', fn() => $this->discoveryTrustCampaignFollowup());
+        $this->runner->test('Layout, recurrence, media, and administration slices are wired', fn() => $this->layoutRecurrenceMediaAdmin());
+        $this->runner->test('Builds 138 through 147 harden runtime coherence', fn() => $this->builds138147());
+        $this->runner->test('Builds 148 through 157 deepen the core loop', fn() => $this->builds148157());
+        $this->runner->test('Builds 158 through 167 polish public trust and admin readiness', fn() => $this->builds158167());
+        $this->runner->test('Builds 168 through 177 improve onboarding, navigation, and everyday coherence', fn() => $this->builds168177());
+        $this->runner->test('Builds 178 through 187 deepen Healing Home composition', fn() => $this->builds178187());
+        $this->runner->test('Builds 188 through 197 make cross-module decisions actionable', fn() => $this->builds188197());
+        $this->runner->test('Builds 198 through 207 mature the Source Inbox', fn() => $this->builds198207());
+        $this->runner->test('Builds 208 through 217 make cross-module drafts durable', fn() => $this->builds208217());
+        $this->runner->test('Epic Ordinary reclamation restores wonder without breaking boundaries', fn() => $this->epicOrdinaryReclamation());
+        $this->runner->test('Moment Engine Foundation queues arrival scenes and Chronicle review safely', fn() => $this->momentEngineFoundation());
     }
 
     private function migrations(): void
@@ -66,11 +80,12 @@ final class ReleaseSuite
 
     private function schema(): void
     {
-        foreach (['organization_teams','organization_quest_proposals','organization_recovery_records','households','household_memberships','household_quest_proposals','household_resources','household_recovery_records','platform_form_drafts','platform_idempotency_keys','auth_sessions','world_reaction_reviews'] as $table) {
+        foreach (['organization_teams','organization_quest_proposals','organization_recovery_records','households','household_memberships','household_quest_proposals','household_resources','household_recovery_records','platform_form_drafts','platform_idempotency_keys','auth_sessions','world_reaction_reviews','beacon_page_revisions','health_wellbeing_checkins','health_checkin_revisions','beacon_campaigns','gather_event_followups','platform_media_assets','beacon_page_blocks','chronicle_reflection_reviews','platform_media_links','quest_timeline_events','platform_moments'] as $table) {
             $statement = $this->pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=:table');
             $statement->execute(['table'=>$table]);
             $this->runner->assert((int)$statement->fetchColumn() === 1, "Missing table {$table}.");
         }
+        foreach(['event_accent_color','event_header_style'] as $column){$statement=$this->pdo->prepare('SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name="gather_events" AND column_name=:column');$statement->execute(['column'=>$column]);$this->runner->assert((int)$statement->fetchColumn()===1,"Gather event branding missing {$column}.");}
         $type = (string)$this->pdo->query("SELECT COLUMN_TYPE FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='gather_events' AND column_name='owner_type'")->fetchColumn();
         $this->runner->assert(str_contains($type, "'organization'") && str_contains($type, "'household'"), 'Gather ownership contexts are incomplete.');
         $roomColumns=$this->pdo->query("SELECT column_name FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='healing_home_rooms'")->fetchAll(PDO::FETCH_COLUMN);
@@ -142,7 +157,7 @@ final class ReleaseSuite
     {
         [$status,$body]=$this->http('/health');
         $payload=json_decode($body,true);
-        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='117' && ($payload['slice']??'')==='worlds-epic-ordinary-polish', 'Health checkpoint does not identify the current slice.');
+        $this->runner->assert($status===200 && ($payload['status']??'')==='ok' && ($payload['build']??'')==='217' && ($payload['slice']??'')==='durable-cross-module-drafts', 'Health checkpoint does not identify the current slice.');
     }
 
     private function operations(): void
@@ -279,7 +294,7 @@ final class ReleaseSuite
             $progressInsert->execute(['id'=>$installation]);$progressInsert->execute(['id'=>$otherInstallation]);
             $this->pdo->prepare('INSERT INTO world_objectives (id,installation_id,objective_key,title,description,status,created_at) VALUES ("95000000-0000-4000-8000-000000000011",:installation,"choose-refuge","Decide what kind of refuge this will become","Choose what the restored space should offer.","active",UTC_TIMESTAMP())')->execute(['installation'=>$installation]);
             $this->pdo->prepare('INSERT INTO world_keepsakes (id,installation_id,keepsake_key,name,description,source_scene,acquired_at) VALUES ("95000000-0000-4000-8000-000000000012",:installation,"linen-thread","A Linen Thread","A pale thread from the restored room.","eastern-room-purpose",UTC_TIMESTAMP())')->execute(['installation'=>$installation]);
-            $this->pdo->prepare('INSERT INTO world_fact_permissions (installation_id,fact_key,granted,explanation,granted_at) VALUES (:installation,"quest.completed",1,"Quest completion may shape future World reactions.",UTC_TIMESTAMP())')->execute(['installation'=>$installation]);
+            $this->pdo->prepare('INSERT INTO world_fact_permissions (installation_id,fact_key,granted,explanation,granted_at,updated_at) VALUES (:installation,"quest.completed",1,"Quest completion may shape future World reactions.",UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute(['installation'=>$installation]);
             $reactionInsert=$this->pdo->prepare('INSERT INTO world_reactions (id,installation_id,source_event_id,title,message,explanation,source_fact_key,source_fact_summary,rule_key,interpreted_at,created_at) VALUES (:id,:installation,:event,"The house noticed","A light returned.","An approved completion fact matched a World rule.","quest.completed","A Quest occurrence was completed.","caretaker-notices",UTC_TIMESTAMP(),UTC_TIMESTAMP())');
             $reactionInsert->execute(['id'=>$reaction,'installation'=>$installation,'event'=>'95000000-0000-4000-8000-000000000007']);
             $reactionInsert->execute(['id'=>$otherReaction,'installation'=>$otherInstallation,'event'=>'95000000-0000-4000-8000-000000000008']);
@@ -292,6 +307,73 @@ final class ReleaseSuite
             foreach(['.world-story-gateway','.world-state-ledger','.world-continuation-cues','.world-reaction-mini','.world-trust-strip','forced-colors'] as $selector)$this->runner->assert(str_contains($homeCss,$selector),"World home polish CSS is missing {$selector}.");
             $chapterSource=(string)file_get_contents(KORAVIK_ROOT.'/src/Worlds/EpicOrdinary/ChapterTwoController.php');
             foreach(['eastern-room-preview','The door is unlocked by consent, not productivity.','refuge-choice-list','What this choice changes','Visit the Eastern Room'] as $needle)$this->runner->assert(str_contains($chapterSource,$needle),"Epic Ordinary continuation polish is missing {$needle}.");
+            foreach(['Chapter Three · The Listening Wall','chapter-three/begin','listening-choice-list','The wall answers in your own words','Hear the Library echo'] as $needle)$this->runner->assert(str_contains($chapterSource,$needle),"Epic Ordinary Chapter Three UI is missing {$needle}.");
+            $chapterService=(string)file_get_contents(KORAVIK_ROOT.'/src/Worlds/EpicOrdinary/ChapterTwoService.php');
+            foreach(['beginChapterThree','chooseListeningTruth','listening-wall-truth','choose-what-the-house-keeps','chapter.three.choice'] as $needle)$this->runner->assert(str_contains($chapterService,$needle),"Epic Ordinary Chapter Three service is missing {$needle}.");
+            $chapterCss=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/chapter-three.css');
+            foreach(['.chapter-three-threshold','.listening-choice-list','Fictional truth','forced-colors'] as $selector)$this->runner->assert(str_contains($chapterCss,$selector),"Epic Ordinary Chapter Three CSS is missing {$selector}.");
+            $journeySource=(string)file_get_contents(KORAVIK_ROOT.'/src/Platform/Journey/JourneyService.php');
+            foreach(['listening_wall_echo','An echo entered the Library','listening_wall_keepsake'] as $needle)$this->runner->assert(str_contains($journeySource,$needle),"Chapter Three Healing Home consequence is missing {$needle}.");
+            $companionSource=(string)file_get_contents(KORAVIK_ROOT.'/src/Platform/Companion/CompanionController.php');
+            foreach(['Companion help center','companion-state-strip','Need your decision','Approved, not executed','How control works','companion-center.css'] as $needle)$this->runner->assert(str_contains($companionSource,$needle),"Companion proposal center is missing {$needle}.");
+            $companionCss=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/companion-center.css');
+            foreach(['.companion-state-strip','.companion-workspace','.proposal-center-grid','forced-colors'] as $selector)$this->runner->assert(str_contains($companionCss,$selector),"Companion proposal center CSS is missing {$selector}.");
+            $returnController=(string)file_get_contents(KORAVIK_ROOT.'/src/Platform/ReturnExperience/ReturnController.php');
+            foreach(['You do not have to catch up.','Choose one thread','Unfinished drafts','Unread notices','return-experience.css'] as $needle)$this->runner->assert(str_contains($returnController,$needle),"Welcome-Back Experience is missing {$needle}.");
+            $returnService=(string)file_get_contents(KORAVIK_ROOT.'/src/Platform/ReturnExperience/ReturnService.php');
+            foreach(['platform_form_drafts','target_url','current_chapter'] as $needle)$this->runner->assert(str_contains($returnService,$needle),"Welcome-Back composition is missing {$needle}.");
+            $returnCss=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/return-experience.css');
+            foreach(['.welcome-back','.return-continuity-grid','.return-continuity-card','forced-colors'] as $selector)$this->runner->assert(str_contains($returnCss,$selector),"Welcome-Back CSS is missing {$selector}.");
+            $questManagement=(string)file_get_contents(KORAVIK_ROOT.'/src/Districts/Quests/LivingQuestController.php');
+            foreach(['/quests/manage','updateDetails','rescheduleNext','Quest history','quest-management.css'] as $needle)$this->runner->assert(str_contains($questManagement,$needle),"Complete Quest Management is missing {$needle}.");
+            $questService=(string)file_get_contents(KORAVIK_ROOT.'/src/Districts/Quests/QuestService.php');
+            foreach(['function management','function history','function updateDetails','function rescheduleNext'] as $needle)$this->runner->assert(str_contains($questService,$needle),"Quest management service is missing {$needle}.");
+            $questCss=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/quest-management.css');
+            foreach(['.quest-management-grid','.quest-manage-card','.quest-history','forced-colors'] as $selector)$this->runner->assert(str_contains($questCss,$selector),"Quest management CSS is missing {$selector}.");
+            $chronicleManagement=(string)file_get_contents(KORAVIK_ROOT.'/src/Platform/Experience/ChronicleManagementController.php');
+            foreach(['chronicle-detail-layout','Private Chronicle record','Entry lifecycle','Delete permanently','chronicle-management.css'] as $needle)$this->runner->assert(str_contains($chronicleManagement,$needle),"Complete Chronicle Lifecycle is missing {$needle}.");
+            $chronicleCss=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/chronicle-management.css');
+            foreach(['.chronicle-detail-layout','.chronicle-provenance','.chronicle-lifecycle','forced-colors'] as $selector)$this->runner->assert(str_contains($chronicleCss,$selector),"Chronicle management CSS is missing {$selector}.");
+            $organizationDashboard=(string)file_get_contents(KORAVIK_ROOT.'/src/Platform/Organizations/OrganizationController.php');
+            foreach(['organization-command-bar','Your operating role','Gather owns event truth','Beacon owns public links','organization-dashboard.css'] as $needle)$this->runner->assert(str_contains($organizationDashboard,$needle),"Organization Operating Dashboard is missing {$needle}.");
+            $organizationCss=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/organization-dashboard.css');
+            foreach(['.organization-command-bar','.organization-role-panel','.organization-source-grid','forced-colors'] as $selector)$this->runner->assert(str_contains($organizationCss,$selector),"Organization dashboard CSS is missing {$selector}.");
+            $householdDashboard=(string)file_get_contents(KORAVIK_ROOT.'/src/Platform/Households/HouseholdController.php');
+            foreach(['household-summary','Your Household role','Gather owns event truth','Recent Household activity','household-dashboard.css'] as $needle)$this->runner->assert(str_contains($householdDashboard,$needle),"Household Home Dashboard is missing {$needle}.");
+            $householdCss=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/household-dashboard.css');
+            foreach(['.household-summary','.household-role-note','.household-source-grid','forced-colors'] as $selector)$this->runner->assert(str_contains($householdCss,$selector),"Household dashboard CSS is missing {$selector}.");
+            $gatherParticipant=(string)file_get_contents(KORAVIK_ROOT.'/src/Districts/Gather/GatherController.php');
+            foreach(['Your Gather participation','participant-journey','Signup commitments','Release this commitment','Cancel RSVP','gather-participant.css','gather.css','gather-host-operating-system','Gather Event Lifecycle Map','agenda','Day-of operations','Closeout and aftercare','gather-signup-builder','gather-public-view-page','gather-organization-branding','gather-better-than-signupgenius','Food and potluck','Equipment and gear','Attendance is required: if someone is not going, they cannot claim this need.','max_quantity_per_commitment'] as $needle)$this->runner->assert(str_contains($gatherParticipant,$needle),"Gather Participant Journey is missing {$needle}.");
+            $gatherCommand=(string)file_get_contents(KORAVIK_ROOT.'/src/Districts/Gather/GatherOperationsController.php');
+            foreach(['gather-event-editor','gather-mod-signups','gather-mod-slot-card','Assign RSVP','Delete signup','/details','/assign','/delete','gather.css','gather-command-roadmap','Step 1 · Event basics','Step 3 · Food, shifts, equipment, supplies','Add this signup need','Use Step 3 above','event_accent_color','event_header_style','Save event details and branding'] as $needle)$this->runner->assert(str_contains($gatherCommand,$needle),"Gather moderator command center is missing {$needle}.");
+            $gatherServiceSource=(string)file_get_contents(KORAVIK_ROOT.'/src/Districts/Gather/GatherService.php');
+            foreach(['categoryKey','categoryLabel','organization_brand_color','RSVP yes before claiming this signup.','max_quantity_per_commitment',"'require_rsvp'=>1"] as $needle)$this->runner->assert(str_contains($gatherServiceSource,$needle),"Gather signup service is missing {$needle}.");
+            $gatherCommandService=(string)file_get_contents(KORAVIK_ROOT.'/src/Districts/Gather/GatherCommandService.php');
+            foreach(['function updateDetails','function updateSlot','function deleteSlot','function assignSlot','categoryKey','Quantity needed cannot be below active assigned quantity'] as $needle)$this->runner->assert(str_contains($gatherCommandService,$needle),"Gather moderator service is missing {$needle}.");
+            $gatherWorkflow=(string)file_get_contents(KORAVIK_ROOT.'/src/Districts/Gather/GatherWorkflowService.php');
+            foreach(['commitment_id','checkin','cancelCommitment','category_label','Equipment and gear','max_quantity_per_commitment'] as $needle)$this->runner->assert(str_contains($gatherWorkflow,$needle),"Gather participant service is missing {$needle}.");
+            $gatherCss=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/gather.css');
+            foreach(['.gather-mod-signups','.gather-mod-slot-card','.gather-inline-assign','.gather-signup-category','.gather-public-view-page','.gather-event-editor .form-grid','.gather-command-roadmap','.gather-command-step','.gather-template-strip','.form-note','.gather-event-header','.header-style-forest','.header-style-custom','forced-colors'] as $selector)$this->runner->assert(str_contains($gatherCss,$selector),"Gather visual system CSS is missing {$selector}.");
+            $appCss=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/app.css');
+            foreach(['Koravik Design System v1','--koravik-navy','--koravik-forest','--koravik-gold','--koravik-parchment'] as $selector)$this->runner->assert(str_contains($appCss,$selector),"Koravik brand system CSS is missing {$selector}.");
+            $visualSystemCss=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/visual-system.css');
+            foreach(['Global visual reset','Site-wide UI/UX cleanup','input[type="checkbox"]','input[type="radio"]','minmax(min(100%,260px),1fr)','label:has(input[type="checkbox"])','.koravik-ui .page','.koravik-ui .page-header','.koravik-ui .page-header h1','.koravik-ui table','.koravik-ui .section-heading','.koravik-ui .surface>*:first-child','.koravik-ui .surface form'] as $selector)$this->runner->assert(str_contains($visualSystemCss,$selector),"Global visual system CSS is missing {$selector}.");
+            $appShellCss=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/app-shell.css');
+            foreach(['.shell-navigation','grid-template-columns:minmax(0,1fr) auto auto','overflow-x:auto','@media(max-width:1040px)','.account-menu-panel','Koravik Design System v1 shell'] as $selector)$this->runner->assert(str_contains($appShellCss,$selector),"App shell visual system CSS is missing {$selector}.");
+            $appShellSource=(string)file_get_contents(KORAVIK_ROOT.'/src/Platform/UI/AppShell.php');
+            $visualSystemSource=(string)file_get_contents(KORAVIK_ROOT.'/src/Platform/UI/VisualSystem.php');
+            $frontController=(string)file_get_contents(KORAVIK_ROOT.'/public/index.php');
+            foreach(['brand-v1'] as $selector){$this->runner->assert(str_contains($appShellSource,$selector),"App shell source is missing {$selector}.");$this->runner->assert(str_contains($visualSystemSource,$selector),"Visual system source is missing {$selector}.");$this->runner->assert(str_contains($frontController,$selector),"Front controller asset rewrite is missing {$selector}.");}
+            $gatherParticipantCss=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/gather-participant.css');
+            foreach(['.participant-journey','.participant-slot-grid','.participant-checkin','forced-colors'] as $selector)$this->runner->assert(str_contains($gatherParticipantCss,$selector),"Gather participant CSS is missing {$selector}.");
+            $beaconBuilder=(string)file_get_contents(KORAVIK_ROOT.'/src/Districts/Beacon/BeaconController.php');
+            foreach(['Beacon page builder','Mobile preview','Before publishing','Revision history','beacon-public-shell','beacon-builder.css','Beacon Mission Control','beacon-domain-routing-console','beacon-campaign-pipeline','beacon-public-trust-layer','beacon-public-presence-layer','Beacon Command Overview','beacon-command-overview','beacon-creation-studio','beacon-builder-guidance','beacon-block-template-strip','beacon-public-source-boundary','Step-by-step Beacon builder','Link, Text, E-mail, Call, SMS, V-card, WhatsApp, WI-FI, PDF, App, Images, Video, Social Media, Event, or 2D Barcode','beacon-type-button','beacon-compact-list','editPageV2','beacon-drawer-scrim','beacon-type-drawer','beaconDrawerPanels','beaconDrawerScript','Step 3 ·','indexV2','beacon-home','beacon-file-table','beacon-file-row','createActionBeacon','/beacon/actions','Pick a type. Fill the drawer. Publish when it looks right.'] as $needle)$this->runner->assert(str_contains($beaconBuilder,$needle),"Beacon Page Builder is missing {$needle}.");
+            $beaconService=(string)file_get_contents(KORAVIK_ROOT.'/src/Districts/Beacon/BeaconService.php');
+            foreach(['ownedPage','updatePage','beacon_page_revisions','BEACON_ACTION_TYPES','email','call','sms','vcard','whatsapp','wifi','pdf','app','image','video','social_media','barcode_2d'] as $needle)$this->runner->assert(str_contains($beaconService,$needle),"Beacon page service is missing {$needle}.");
+            $beaconCss=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/beacon-builder.css');
+            foreach(['.beacon-builder','.beacon-phone-preview','.beacon-public-shell','.route-beacon .beacon-mission-control','.route-beacon article.surface','.beacon-command-overview','.beacon-pipeline-steps','.beacon-creation-studio','.beacon-block-template-strip','.beacon-public-source-boundary','.beacon-step-builder','.beacon-type-grid','.beacon-type-button','.beacon-compact-list','.beacon-row','.beacon-type-drawer','.beacon-drawer-scrim','.beacon-fallback-block-form','.beacon-home','.beacon-home-top','.beacon-create-flow','.beacon-file-table','.beacon-file-row','.beacon-file-header','.beacon-mini-row','forced-colors'] as $selector)$this->runner->assert(str_contains($beaconCss,$selector),"Beacon builder CSS is missing {$selector}.");
+            $journeyCss=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/journey.css');
+            foreach(['.route-journey .journey-card','.route-journey .conversation-panel','.route-journey .inline-actions','.route-journey .proposal-demo'] as $selector)$this->runner->assert(str_contains($journeyCss,$selector),"Journey route spacing CSS is missing {$selector}.");
             $worldCss=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/world.css');
             foreach(['.eastern-room-preview','.world-boundary-note','.refuge-choice-list','forced-colors'] as $selector)$this->runner->assert(str_contains($worldCss,$selector),"Epic Ordinary polish CSS is missing {$selector}.");
             $service->markReactionReviewed($account,$reaction);
@@ -299,6 +381,15 @@ final class ReleaseSuite
             $this->runner->assert($reviewed['reactions'][0]['reviewed_at']!==null,'World reaction review state did not persist.');
             try{$service->markReactionReviewed($account,$otherReaction);$denied=false;}catch(\RuntimeException){$denied=true;}
             $this->runner->assert($denied,'World reaction review crossed account ownership.');
+            $this->pdo->prepare('INSERT INTO world_choice_history (id,installation_id,scene_key,choice_key,choice_label,created_at) VALUES ("95000000-0000-4000-8000-000000000013",:installation,"eastern-room-purpose","rest","A room for rest",UTC_TIMESTAMP())')->execute(['installation'=>$installation]);
+            $chapterThree=new \Koravik\Worlds\EpicOrdinary\ChapterTwoService(\database());
+            $chapterThree->beginChapterThree($account);
+            $chapterThree->chooseListeningTruth($account,'possibility');
+            $chapterState=$chapterThree->home($account);
+            $this->runner->assert(($chapterState['current_chapter']??'')==='the-listening-wall'&&($chapterState['current_scene']??'')==='the-wall-remembers','Chapter Three did not advance durable World progress.');
+            $this->runner->assert(($chapterState['listening_choice']['choice_key']??'')==='possibility','Chapter Three did not preserve the chosen fictional truth.');
+            $chapterThree->chooseListeningTruth($account,'care');
+            $this->runner->assert(($chapterThree->home($account)['listening_choice']['choice_key']??'')==='possibility','Chapter Three choice was not idempotent.');
             $freshAccount='95000000-0000-4000-8000-000000000009';
             $this->account($freshAccount,'world-install@test.invalid');
             (new \Koravik\Worlds\WorldService(\database()))->install('epic-ordinary',$freshAccount);
@@ -759,6 +850,373 @@ final class ReleaseSuite
         foreach(['quest-polish-panel','Choose the next honest action.','Preserve meaning intentionally.','What Quests owns','chronicle-polish-panel','Preserve what matters, not everything.','chronicle-editor-trust','This creates Chronicle memory only when you choose Save.','What Chronicle owns','action-memory-polish.css'] as $needle)$this->runner->assert(str_contains($index,$needle),"Quest and Chronicle polish composition is missing {$needle}.");
         $css=(string)file_get_contents(KORAVIK_ROOT.'/public/assets/action-memory-polish.css');
         foreach(['.action-memory-loop','.quest-polish-panel','.chronicle-polish-panel','.ownership-bridge-strip','.reflection-bridge-panel','.chronicle-editor-trust','forced-colors'] as $selector)$this->runner->assert(str_contains($css,$selector),"Quest and Chronicle polish CSS is missing {$selector}.");
+    }
+
+    private function healthFoundation(): void
+    {
+        $account='9f300000-0000-4000-8000-000000000001';
+        try {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+            $this->account($account,'health-foundation@test.invalid');
+            $service=new HealthService(\database());
+            $checkin=$service->save($account,[
+                'observed_on'=>gmdate('Y-m-d'),
+                'energy_level'=>'2',
+                'feeling_word'=>'tired',
+                'private_note'=>'Private words that must never leave Health.',
+                'share_derived_fact'=>'1',
+            ]);
+            $saved=$service->get($account,$checkin);
+            $this->runner->assert($saved['private_note']==='Private words that must never leave Health.','Health did not retain its private note.');
+            $statement=$this->pdo->prepare('SELECT payload_json FROM platform_outbox WHERE account_id=:account AND event_name="Health.WellbeingCheckInRecorded" ORDER BY created_at DESC LIMIT 1');
+            $statement->execute(['account'=>$account]);
+            $payload=(string)$statement->fetchColumn();
+            $decoded=json_decode($payload,true);
+            $this->runner->assert(($decoded['energy_band']??'')==='low'&&($decoded['observed_on']??'')===gmdate('Y-m-d'),'Health did not publish the approved minimized fact.');
+            foreach(['Private words','tired','private_note','feeling_word'] as $excluded)$this->runner->assert(!str_contains($payload,$excluded),"Health event leaked {$excluded}.");
+            $service->save($account,['observed_on'=>gmdate('Y-m-d'),'energy_level'=>'4','feeling_word'=>'hopeful','private_note'=>'Corrected privately.'],$checkin);
+            $this->runner->assert((int)$service->get($account,$checkin)['energy_level']===4,'Health correction was not persisted.');
+            $service->delete($account,$checkin);
+            $this->runner->assert($service->history($account)===[],'Health deletion left an owned check-in behind.');
+            $statement=$this->pdo->prepare('SELECT COUNT(*) FROM health_checkin_revisions WHERE account_id=:account AND action="deleted" AND checkin_id IS NULL');
+            $statement->execute(['account'=>$account]);
+            $this->runner->assert((int)$statement->fetchColumn()===1,'Health deletion did not preserve its non-content lifecycle revision.');
+        } finally {
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+        }
+    }
+
+    private function discoveryTrustCampaignFollowup(): void
+    {
+        foreach([
+            'src/Platform/Search/SearchController.php'=>['Gather','Beacon','Health','Notes and feeling words are not exposed'],
+            'src/Platform/Notifications/NotificationService.php'=>['gather.followup','beacon.campaigns','health.private'],
+            'src/Platform/Privacy/PrivacyController.php'=>['Recipient status','Inspectable audit detail','Approval context'],
+            'src/Platform/Privacy/PrivacyService.php'=>['health.wellbeing_band','Companion context','beacon.campaign.updated','gather.followup.created'],
+            'src/Platform/Settings/SettingsController.php'=>['Account settings hub','Security and sessions','Data controls','Open full accessibility controls'],
+            'src/Worlds/WorldController.php'=>['World catalog','Permission preview','Requested subscriptions','data minimization'],
+            'src/Worlds/WorldLifecycleController.php'=>['installed-worlds-management','What these controls never touch','Health records','Beacon pages'],
+            'src/Districts/Beacon/BeaconController.php'=>['Create a Beacon campaign','Beacon campaign','privacy-aware engagement','never own RSVP','Beacon Mission Control','Beacon Public Trust Layer'],
+            'src/Districts/Beacon/BeaconService.php'=>['beacon_campaigns','createCampaign','updateCampaign'],
+            'src/Districts/Gather/GatherController.php'=>['Gather Host Operating System','Gather Event Lifecycle Map','gather-broad-stroke-presence'],
+            'src/Districts/Gather/GatherOperationsController.php'=>['Host Mission Control','gather-ops-presence-panel','gather-operations-presence'],
+            'src/Districts/Gather/GatherLifecycleController.php'=>['Personal Plan Layer','Front Desk Layer','Aftercare Proposal Layer'],
+            'src/Districts/Gather/GatherCloseoutController.php'=>['Draft post-event follow-up','gather_event_followups','created_chronicle_proposal','gather.followup.created'],
+            'src/Districts/Health/HealthController.php'=>['Private 30-day trend','Record detail and revision path','not diagnosis'],
+            'src/Districts/Health/HealthService.php'=>['trends','health_checkin_revisions'],
+        ] as $file=>$needles){
+            $source=(string)file_get_contents(KORAVIK_ROOT.'/'.$file);
+            foreach($needles as $needle)$this->runner->assert(str_contains($source,$needle),"{$file} is missing {$needle}.");
+        }
+        $handoff=(string)file_get_contents(KORAVIK_ROOT.'/docs/IMPLEMENTATION_HANDOFF.md');
+        foreach(['Gather + Beacon Massive Presence Pass','Gather Host Operating System','Beacon Mission Control','Beacon Public Presence Layer'] as $needle)$this->runner->assert(str_contains($handoff,$needle),"Implementation handoff is missing {$needle}.");
+        foreach(['GLOBAL_SEARCH_COMPLETION','NOTIFICATIONS_CENTER_COMPLETION','PRIVACY_CONSENT_CENTER','AUDIT_ACTIVITY_DETAIL','ACCOUNT_SETTINGS_HUB','WORLD_CATALOG_PERMISSION_PREVIEW','INSTALLED_WORLDS_MANAGEMENT_POLISH','BEACON_CAMPAIGNS','GATHER_HOST_FOLLOWUP','HEALTH_RECORD_DETAIL_TRENDS'] as $doc)$this->runner->assert(is_file(KORAVIK_ROOT.'/docs/features/'.$doc.'.md'),"Missing feature doc {$doc}.");
+    }
+
+    private function layoutRecurrenceMediaAdmin(): void
+    {
+        foreach([
+            'src/Platform/Hearth/HearthLayoutController.php'=>['hearth-customization-completion','Layout preview','Restore defaults'],
+            'src/Platform/Hearth/HearthLayoutService.php'=>['organizations','households','trust'],
+            'src/Districts/Quests/LivingQuestController.php'=>['Quest recurrence editor','Plain-language preview','/recurrence'],
+            'src/Districts/Quests/QuestService.php'=>['updateRecurrence','quest.recurrence.updated'],
+            'src/Application.php'=>['quest-completion-confirmation','World eligibility','bounded undo window'],
+            'src/Platform/Companion/CompanionContextController.php'=>['Companion memory controls','Correct memory','Disable future use'],
+            'src/Platform/Companion/CompanionContextService.php'=>['updateMemory','companion.memory.corrected'],
+            'src/Platform/Experience/ChronicleManagementController.php'=>['Proposed reflection review','Save intentionally to Chronicle','Dismiss proposal'],
+            'src/Platform/Experience/ChronicleManagementService.php'=>['chronicle_reflection_reviews','saveReflectionProposal','dismissReflectionProposal'],
+            'src/Districts/Gather/GatherController.php'=>['gather-calendar-list','gather-event-detail-completion','Calendar/list view'],
+            'src/Districts/Beacon/BeaconController.php'=>['Beacon public page blocks','Add block','beacon-public-block'],
+            'src/Districts/Beacon/BeaconService.php'=>['beacon_page_blocks','addBlock'],
+            'src/Platform/Media/MediaController.php'=>['media-foundation','Platform Media','Add media reference'],
+            'src/Platform/Admin/SystemHealthController.php'=>['system-health-admin','Build 217','No secrets'],
+            'public/index.php'=>['SystemHealthController','MediaController','durable-cross-module-drafts'],
+        ] as $file=>$needles){
+            $source=(string)file_get_contents(KORAVIK_ROOT.'/'.$file);
+            foreach($needles as $needle)$this->runner->assert(str_contains($source,$needle),"{$file} is missing {$needle}.");
+        }
+        foreach(['HEARTH_CUSTOMIZATION_COMPLETION','QUEST_RECURRENCE_EDITOR','QUEST_COMPLETION_CONFIRMATION_UNDO','COMPANION_MEMORY_CONTROLS','PROPOSED_REFLECTION_REVIEW','GATHER_EVENT_DETAIL_COMPLETION','GATHER_CALENDAR_LIST_VIEW','BEACON_PUBLIC_PAGE_BLOCKS','PLATFORM_MEDIA_FOUNDATION','SYSTEM_HEALTH_ADMINISTRATION'] as $doc)$this->runner->assert(is_file(KORAVIK_ROOT.'/docs/features/'.$doc.'.md'),"Missing feature doc {$doc}.");
+    }
+
+    private function builds138147(): void
+    {
+        foreach([
+            'database/migrations/102_runtime_schema_compatibility.sql'=>['gather_event_followups','beacon_campaigns','utf8mb4_0900_ai_ci'],
+            'src/Platform/Admin/SystemHealthController.php'=>['admin-release-readiness-console','Runtime schema compatibility','Collation / UUID Join Audit','Worker / Mail Queue Operations Console'],
+            'src/Platform/Hearth/HearthLayoutService.php'=>['hearth-source-aware-widget','Organizations','Households','Trust and recovery'],
+            'src/Platform/Notifications/NotificationController.php'=>['Open source','Why did I receive this?','Mark all read'],
+            'src/Platform/Media/MediaService.php'=>['Chronicle','Beacon','Gather','Health'],
+            'docs/IMPLEMENTATION_HANDOFF.md'=>['Builds 138–147','Build 147','102_runtime_schema_compatibility.sql'],
+        ] as $file=>$needles){
+            $source=(string)file_get_contents(KORAVIK_ROOT.'/'.$file);
+            foreach($needles as $needle)$this->runner->assert(str_contains($source,$needle),"{$file} is missing {$needle}.");
+        }
+        $doc=KORAVIK_ROOT.'/docs/features/BUILDS_138_147_RUNTIME_COHERENCE_FOUNDATION.md';
+        $this->runner->assert(is_file($doc),'Missing Builds 138–147 feature contract.');
+        $source=(string)file_get_contents($doc);
+        foreach(['Runtime Schema Compatibility Hardening','Hearth Source-Aware Widget Rendering','Admin Release Readiness Console','Notification Sync Safety Pass'] as $needle)$this->runner->assert(str_contains($source,$needle),"Builds 138–147 contract is missing {$needle}.");
+        $expected=[
+            'gather_event_followups.event_id'=>'utf8mb4_0900_ai_ci',
+            'beacon_campaigns.page_id'=>'utf8mb4_unicode_ci',
+            'beacon_campaigns.short_link_id'=>'utf8mb4_0900_ai_ci',
+        ];
+        foreach($expected as $column=>$collation){
+            [$table,$name]=explode('.',$column,2);
+            $s=$this->pdo->prepare('SELECT COLLATION_NAME FROM information_schema.COLUMNS WHERE table_schema=DATABASE() AND table_name=:table AND column_name=:column');
+            $s->execute(['table'=>$table,'column'=>$name]);
+            $this->runner->assert((string)$s->fetchColumn()===$collation,"{$column} is not aligned for runtime joins.");
+        }
+    }
+
+    private function builds148157(): void
+    {
+        foreach([
+            'database/migrations/103_core_loop_media_timeline.sql'=>['platform_media_links','quest_timeline_events'],
+            'src/Platform/Media/MediaController.php'=>['media-attachments-district-records','Attach media reference','Quests','Chronicle','Gather','Beacon','Health'],
+            'src/Platform/Media/MediaService.php'=>['platform_media_links','linksFor','Choose one of your media references'],
+            'src/Districts/Quests/QuestService.php'=>['Quest Recurrence Occurrence Rebuild','quest_timeline_events','timelineFor','Daily Focus + Quest Completion Loop Polish'],
+            'src/Districts/Quests/LivingQuestController.php'=>['/timeline','quest-detail-timeline','Creation, edits, recurrence changes, completions, reversals, pauses, resumes, and reflections'],
+            'src/Platform/Experience/ChronicleManagementController.php'=>['chronicle-reflection-proposal-sources','chronicle-entry-search-filters','Quest completion','Gather follow-up','Healing Home Journal'],
+            'src/Platform/Experience/ChronicleManagementService.php'=>['proposeFromSource','source_module','entry_type'],
+            'src/Platform/Companion/CompanionContextController.php'=>['companion-memory-provenance-detail','Open provenance detail','Usage boundary'],
+            'src/Platform/Companion/CompanionController.php'=>['companion-suggestion-action-review-polish','Exact destination','approval is version-specific'],
+            'src/Districts/Health/HealthService.php'=>['hearthSignal','No feeling words or private notes leave Health'],
+            'src/Platform/Hearth/HearthLayoutService.php'=>['health-to-hearth-private-signal-summary','Private Health summary'],
+            'src/Worlds/EpicOrdinary/WorldProgressController.php'=>['worlds-reaction-explanation-polish','Permission and review state'],
+            'src/Worlds/EpicOrdinary/WorldProgressService.php'=>['permission_state','review_state','world_reaction_reviews'],
+            'docs/IMPLEMENTATION_HANDOFF.md'=>['Builds 148–157','103_core_loop_media_timeline.sql','core-loop depth'],
+        ] as $file=>$needles){
+            $source=(string)file_get_contents(KORAVIK_ROOT.'/'.$file);
+            foreach($needles as $needle)$this->runner->assert(str_contains($source,$needle),"{$file} is missing {$needle}.");
+        }
+        $doc=KORAVIK_ROOT.'/docs/features/BUILDS_148_157_CORE_LOOP_DEPTH.md';
+        $this->runner->assert(is_file($doc),'Missing Builds 148–157 feature contract.');
+        $source=(string)file_get_contents($doc);
+        foreach(['Media Attachments in District Records','Quest Recurrence Occurrence Rebuild','Chronicle Entry Search + Filters','Worlds Reaction Explanation Polish'] as $needle)$this->runner->assert(str_contains($source,$needle),"Builds 148–157 contract is missing {$needle}.");
+    }
+
+    private function builds158167(): void
+    {
+        foreach([
+            'src/Platform/Notifications/NotificationController.php'=>['Open source','Why did I receive this?','Dismiss','Mark all read'],
+            'src/Districts/Beacon/BeaconController.php'=>['unified-public-preview-safety','Move up','Move down','Beacon page block reordering + publishing checks'],
+            'src/Districts/Beacon/BeaconService.php'=>['Publishing checks require','moveBlock','block_reordered'],
+            'src/Districts/Gather/GatherController.php'=>['gather-public-event-preview','Gather Public Event Preview','gather-participant-communication-preferences','Participant communication preferences'],
+            'src/Platform/AccountData/AccountDataController.php'=>['account-data-export-review','Account Data Export Review','account-closure-consequence-preview','Account Closure Consequence Preview'],
+            'src/Platform/AccountData/AccountDataService.php'=>['review','cancellation_window','source modules delete'],
+            'src/Platform/Admin/SystemHealthController.php'=>['admin-release-readiness-console','worker-mail-queue-operations-console','public preview safety'],
+            'src/Platform/Mail/MailOperationsController.php'=>['Platform Mail','Recover stale claims','redacted diagnostics'],
+            'docs/IMPLEMENTATION_HANDOFF.md'=>['Builds 158–167','public trust and admin polish','Build 167'],
+        ] as $file=>$needles){
+            $source=(string)file_get_contents(KORAVIK_ROOT.'/'.$file);
+            foreach($needles as $needle)$this->runner->assert(str_contains($source,$needle),"{$file} is missing {$needle}.");
+        }
+        $doc=KORAVIK_ROOT.'/docs/features/BUILDS_158_167_PUBLIC_TRUST_ADMIN_POLISH.md';
+        $this->runner->assert(is_file($doc),'Missing Builds 158–167 feature contract.');
+        $source=(string)file_get_contents($doc);
+        foreach(['Notification Inbox Actionability','Unified Public Preview Safety','Account Data Export Review','Cross-Surface Empty State Polish'] as $needle)$this->runner->assert(str_contains($source,$needle),"Builds 158–167 contract is missing {$needle}.");
+    }
+
+    private function builds168177(): void
+    {
+        foreach([
+            'src/Platform/Orientation/OrientationController.php'=>['first-run-guided-setup','Companion permissions','unified-empty-state-guide-cards'],
+            'src/Platform/ReturnExperience/ReturnController.php'=>['returning-user-orientation-upgrade','safe to ignore','one manageable next step'],
+            'public/index.php'=>['hearth-today-command-strip','Today’s Focus','pending reflection proposal','Unread notifications','everyday-coherence-navigation'],
+            'src/Platform/UI/VisualSystem.php'=>['cross-module-breadcrumbs','route-level-error-recovery-polish','Return to Hearth','appendClass','/gather','/beacon','/health'],
+            'src/Platform/UI/GuideController.php'=>['guide-help-center-completion','Act','Reflect','Share','Coordinate','Privacy','Troubleshooting','source-ownership-explainer'],
+            'src/Platform/Settings/SettingsController.php'=>['settings-navigation-polish','Profile','System and admin'],
+            'src/Platform/UI/AppShell.php'=>['mobile-navigation-pass','nav-toggle','shell-navigation" hidden'],
+            'src/Platform/Admin/SystemHealthController.php'=>['Build 217','durable-cross-module-drafts','route-level error recovery polish'],
+            'docs/IMPLEMENTATION_HANDOFF.md'=>['Builds 168–177','everyday-coherence-navigation','Build 177'],
+        ] as $file=>$needles){
+            $source=(string)file_get_contents(KORAVIK_ROOT.'/'.$file);
+            foreach($needles as $needle)$this->runner->assert(str_contains($source,$needle),"{$file} is missing {$needle}.");
+        }
+        $doc=KORAVIK_ROOT.'/docs/features/BUILDS_168_177_ONBOARDING_NAVIGATION_COHERENCE.md';
+        $this->runner->assert(is_file($doc),'Missing Builds 168–177 feature contract.');
+        $source=(string)file_get_contents($doc);
+        foreach(['First-Run Guided Setup','Hearth Today Command Strip','Source Ownership Explainer','Route-Level Error Recovery Polish'] as $needle)$this->runner->assert(str_contains($source,$needle),"Builds 168–177 contract is missing {$needle}.");
+    }
+
+    private function builds178187(): void
+    {
+        foreach([
+            'src/Platform/Journey/HealingHomeController.php'=>['healing-home-composition-depth','Health Garden','Gather Table','healing-home-source-matrix','Health Garden is a doorway','Gather Table does not publish','Companion room-note consent'],
+            'src/Platform/Search/SearchService.php'=>['home_notes','healing_home_rooms','note_text'],
+            'src/Platform/Search/SearchController.php'=>['healing-home-room-note-search','Healing Home room notes','Room notes stay in Healing Home'],
+            'src/Platform/Companion/CompanionContextService.php'=>['healing_home.room_notes','Healing Home'],
+            'src/Platform/Companion/CompanionContextController.php'=>['companion-healing-home-context-consent','Healing Home room notes','do not authorize background scanning'],
+            'src/Platform/Admin/SystemHealthController.php'=>['Build 217','durable-cross-module-drafts','Healing Home composition depth'],
+            'public/index.php'=>['197','healing-home-composition-depth'],
+            'docs/IMPLEMENTATION_HANDOFF.md'=>['Builds 178–187','healing-home-composition-depth','Build 187'],
+        ] as $file=>$needles){
+            $source=(string)file_get_contents(KORAVIK_ROOT.'/'.$file);
+            foreach($needles as $needle)$this->runner->assert(str_contains($source,$needle),"{$file} is missing {$needle}.");
+        }
+        $doc=KORAVIK_ROOT.'/docs/features/BUILDS_178_187_HEALING_HOME_COMPOSITION_DEPTH.md';
+        $this->runner->assert(is_file($doc),'Missing Builds 178–187 feature contract.');
+        $source=(string)file_get_contents($doc);
+        foreach(['Health Garden','Gather Table','Room Note Search','Companion Room-Note Consent'] as $needle)$this->runner->assert(str_contains($source,$needle),"Builds 178–187 contract is missing {$needle}.");
+    }
+
+    private function builds188197(): void
+    {
+        foreach([
+            'src/Platform/SourceReview/SourceReviewController.php'=>['hearth-source-inbox','source-draft-review-center','Decision Consequence Preview','healing-home-room-note-promotion','gather-followup-draft-bridge','What changes','What does not','Who owns the result'],
+            'src/Platform/SourceReview/SourceReviewService.php'=>['chronicle_reflection_reviews','companion_proposals','gather_outcome_proposals','gather_event_followups','healing_home_rooms','notifications'],
+            'src/Application.php'=>['quest-from-anywhere-draft-bridge','origin_type','origin_reference','Who owns the result'],
+            'src/Platform/Experience/ChronicleManagementController.php'=>['chronicle-from-anywhere-reflection-bridge','body=(string)','Who owns the result'],
+            'src/Platform/Companion/CompanionController.php'=>['companion-proposal-routing-upgrade','Open Source Inbox'],
+            'src/Districts/Gather/GatherCloseoutController.php'=>['Gather Follow-Up to Quest/Chronicle Drafts','Open Source Inbox'],
+            'public/index.php'=>['hearth-today-decision-strip-upgrade','Source Inbox','actionable-cross-module-flow'],
+            'src/Platform/Admin/SystemHealthController.php'=>['Build 217','durable-cross-module-drafts','Source Inbox maturity coverage'],
+            'docs/IMPLEMENTATION_HANDOFF.md'=>['Builds 188–197','actionable-cross-module-flow','Build 197'],
+        ] as $file=>$needles){
+            $source=(string)file_get_contents(KORAVIK_ROOT.'/'.$file);
+            foreach($needles as $needle)$this->runner->assert(str_contains($source,$needle),"{$file} is missing {$needle}.");
+        }
+        $doc=KORAVIK_ROOT.'/docs/features/BUILDS_188_197_ACTIONABLE_CROSS_MODULE_FLOW.md';
+        $this->runner->assert(is_file($doc),'Missing Builds 188–197 feature contract.');
+        $source=(string)file_get_contents($doc);
+        foreach(['Hearth Source Inbox','Quest-from-Anywhere Draft Bridge','Chronicle-from-Anywhere Reflection Bridge','Release Checkpoint + Audit Coverage'] as $needle)$this->runner->assert(str_contains($source,$needle),"Builds 188–197 contract is missing {$needle}.");
+    }
+
+    private function builds198207(): void
+    {
+        foreach([
+            'src/Platform/SourceReview/SourceReviewController.php'=>['source-inbox-maturity','source-inbox-summary-strip','source-inbox-filter-bar','source-inbox-top-priority','source-inbox-resume-later','source-inbox-empty-state','Resume token'],
+            'src/Platform/SourceReview/SourceReviewService.php'=>['summary','owner_key','resume_token','needs_decision','draft_paths','notices'],
+            'public/index.php'=>['source-inbox-hearth-badge','source-inbox-maturity','Gather decisions','Companion decisions'],
+            'src/Platform/Admin/SystemHealthController.php'=>['Build 217','durable-cross-module-drafts','filters, badges, resume-later affordances'],
+            'docs/IMPLEMENTATION_HANDOFF.md'=>['Builds 198–207','source-inbox-maturity','Build 207'],
+        ] as $file=>$needles){
+            $source=(string)file_get_contents(KORAVIK_ROOT.'/'.$file);
+            foreach($needles as $needle)$this->runner->assert(str_contains($source,$needle),"{$file} is missing {$needle}.");
+        }
+        $doc=KORAVIK_ROOT.'/docs/features/BUILDS_198_207_SOURCE_INBOX_MATURITY.md';
+        $this->runner->assert(is_file($doc),'Missing Builds 198–207 feature contract.');
+        $source=(string)file_get_contents($doc);
+        foreach(['Source Inbox Counts','Source Owner Filters','Top Priority Card','Resume Later Affordance','Hearth Source Inbox Badge'] as $needle)$this->runner->assert(str_contains($source,$needle),"Builds 198–207 contract is missing {$needle}.");
+    }
+
+    private function builds208217(): void
+    {
+        foreach([
+            'src/Platform/SourceReview/SourceReviewController.php'=>['Durable Cross-Module Draft','Save durable draft','source_review.room_note','source_review.gather_followup','draft-provenance-timeline','Resume destination review'],
+            'src/Platform/Settings/SettingsController.php'=>['moment-controls-preferences','Moment controls and preferences','one arrival at a time'],
+            'src/Platform/Experience/ChronicleManagementController.php'=>['chronicle-memory-weaving','Chronicle Memory Weaving','post-save navigation'],
+            'src/Districts/Quests/LivingQuestController.php'=>['Quest Momentum Dashboard','source-originated commitments','productivity pressure'],
+            'src/Districts/Gather/GatherCloseoutController.php'=>['gather-aftercare-loop','Gather Aftercare Loop','Moment preservation'],
+            'src/Platform/Companion/CompanionController.php'=>['companion-trust-boundaries-pass','Companion Trust and Boundaries Pass','what it did not use'],
+            'src/Worlds/WorldController.php'=>['world-progress-continuity-pass','World Progress Continuity Pass','room evidence'],
+            'src/Platform/ReturnExperience/ReturnController.php'=>['homecoming-return-experience-upgrade','Homecoming / Return Experience Upgrade','one gentle re-entry'],
+            'src/Platform/Privacy/PrivacyController.php'=>['cross-module-privacy-audit-surface','Cross-Module Privacy Audit Surface','What never crossed modules'],
+            'src/Platform/SourceReview/SourceReviewService.php'=>['platform_form_drafts','durable draft','expires_at','destination still requires explicit review'],
+            'src/Platform/Resilience/ResilienceService.php'=>['draft(string $accountId,string $id)','safePayload','expires_at>UTC_TIMESTAMP()'],
+            'src/Platform/Resilience/ResilienceController.php'=>['Resume Source Review draft','source_review.','Expires'],
+            'public/index.php'=>['217','durable-cross-module-drafts','previous_build'],
+            'src/Platform/Admin/SystemHealthController.php'=>['Build 217','durable-cross-module-drafts','draft provenance timeline'],
+            'docs/IMPLEMENTATION_HANDOFF.md'=>['Builds 208–217','durable-cross-module-drafts','Build 217','Continuity Controls Loop','Moment Controls and Preferences','Cross-Module Privacy Audit Surface'],
+        ] as $file=>$needles){
+            $source=(string)file_get_contents(KORAVIK_ROOT.'/'.$file);
+            foreach($needles as $needle)$this->runner->assert(str_contains($source,$needle),"{$file} is missing {$needle}.");
+        }
+        $doc=KORAVIK_ROOT.'/docs/features/BUILDS_208_217_DURABLE_CROSS_MODULE_DRAFTS.md';
+        $this->runner->assert(is_file($doc),'Missing Builds 208–217 feature contract.');
+        $source=(string)file_get_contents($doc);
+        foreach(['Durable Source Review Draft Save','Durable Source Review Draft Resume','Recovery Center Integration','Draft Provenance Timeline'] as $needle)$this->runner->assert(str_contains($source,$needle),"Builds 208–217 contract is missing {$needle}.");
+    }
+
+    private function epicOrdinaryReclamation(): void
+    {
+        foreach([
+            'src/Platform/Journey/JourneyService.php'=>['materializeEpicReclamation','Caretaker’s brass lantern','Quiet Hearth whispers','Evidence, not rewards','Nothing important happens off-screen'],
+            'src/Platform/Journey/HealingHomeController.php'=>['epic-ordinary-reclamation-sprint','/home/reclamation','/home/discoveries','/home/tiny-joys','/home/seasons','/home/moments','Chronicle integration'],
+            'docs/features/EPIC_ORDINARY_RECLAMATION_SPRINT.md'=>['Healing Home reclamation','Reuse ledger','/Applications/MAMP/htdocs/Epic-Ordinary','Tiny Joys','Moments Remembered'],
+            'docs/reclamation/EPIC_ORDINARY_RECLAMATION_AUDIT.md'=>['Reclamation audit','NORTH_STAR.md','CANON.md','THE_BOOK_OF_MOMENTS.md','MOMENT_ENGINE.md'],
+            'docs/IMPLEMENTATION_HANDOFF.md'=>['Epic Ordinary Reclamation Sprint','reclamation hearth','evidence, not rewards'],
+        ] as $file=>$needles){
+            $source=(string)file_get_contents(KORAVIK_ROOT.'/'.$file);
+            foreach($needles as $needle)$this->runner->assert(str_contains($source,$needle),"{$file} is missing {$needle}.");
+        }
+    }
+
+    private function momentEngineFoundation(): void
+    {
+        $account='af100000-0000-4000-8000-000000000001';$installation='af100000-0000-4000-8000-000000000002';$reaction='af100000-0000-4000-8000-000000000003';
+        try {
+            $this->pdo->prepare('DELETE FROM gather_outcome_proposals WHERE id="af100000-0000-4000-8000-000000000012" OR event_id="af100000-0000-4000-8000-000000000011"')->execute();
+            $this->pdo->prepare('DELETE FROM gather_events WHERE id="af100000-0000-4000-8000-000000000011"')->execute();
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+            $this->account($account,'moment-engine@test.invalid');
+            $this->pdo->prepare('INSERT INTO world_installations (id,account_id,world_key,status,installed_at) VALUES (:id,:account,"epic-ordinary","active",UTC_TIMESTAMP())')->execute(['id'=>$installation,'account'=>$account]);
+            $this->pdo->prepare('INSERT INTO world_reactions (id,installation_id,source_event_id,title,message,explanation,source_fact_key,source_fact_summary,rule_key,interpreted_at,created_at) VALUES (:id,:installation,"af100000-0000-4000-8000-000000000004","The kettle began to sing","Steam curled toward the window before anyone asked it to.","A minimized approved fact became a fictional arrival Moment.","quest.completed","A Quest occurrence was completed.","moment-engine-foundation",UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute(['id'=>$reaction,'installation'=>$installation]);
+            $moments=new \Koravik\Platform\Moments\MomentService(\database());
+            $next=$moments->next($account);
+            $this->runner->assert(($next['source_module']??'')==='Worlds'&&($next['visibility']??'')==='arrival'&&($next['status']??'')==='queued','Moment Engine did not queue one arrival scene from a World reaction.');
+            $this->runner->assert(str_contains((string)$next['excluded_summary'],'Quest notes')&&str_contains((string)$next['provenance_summary'],'Quest occurrence'),'Moment provenance did not preserve privacy boundaries.');
+            $moments->archive($account,(string)$next['id']);
+            $remembered=$moments->remembered($account);
+            $this->runner->assert(count($remembered)===1&&$remembered[0]['status']==='archived','Moment archive did not become replay-safe remembered state.');
+            $proposal=$moments->proposeChronicle($account,(string)$next['id']);
+            $statement=$this->pdo->prepare('SELECT source_module,source_reference,status,title,body FROM chronicle_reflection_reviews WHERE id=:id AND account_id=:account');
+            $statement->execute(['id'=>$proposal,'account'=>$account]);
+            $review=$statement->fetch();
+            $this->runner->assert(($review['source_module']??'')==='Moment Engine'&&($review['source_reference']??'')===$next['id']&&($review['status']??'')==='proposed','Moment did not create explicit Chronicle review.');
+            $this->runner->assert(str_contains((string)($review['body']??''),'Moment review context')&&str_contains((string)($review['body']??''),'Provenance:')&&str_contains((string)($review['title']??''),'Moment:'),'Moment Chronicle proposal did not include review context.');
+            $conversationId='af100000-0000-4000-8000-000000000005';
+            $keepsakeId='af100000-0000-4000-8000-000000000006';
+            $this->pdo->prepare('INSERT INTO relationship_conversations (id,account_id,character_key,conversation_type,prompt_key,player_choice,character_response,remembered_context,created_at) VALUES (:id,:account,"caretaker","check_in","moment-scene","quiet","The Caretaker sets the lantern by the door. There is no rush.","A bounded remembered context.",UTC_TIMESTAMP())')->execute(['id'=>$conversationId,'account'=>$account]);
+            $this->pdo->prepare('INSERT INTO healing_home_keepsakes (id,account_id,source_type,source_id,keepsake_key,name,meaning,room_key,displayed,created_at) VALUES (:id,:account,"epic_reclamation",:source,"lantern","Caretaker Lantern","A warm sign that the Home was ready before you arrived.","entry_hall",1,UTC_TIMESTAMP())')->execute(['id'=>$keepsakeId,'account'=>$account,'source'=>$installation]);
+            $all=$moments->all($account);
+            $templates=array_column($all,'scene_template');
+            $this->runner->assert(in_array('caretaker',$templates,true)&&in_array('memory',$templates,true)&&in_array('room',$templates,true),'Moment scene templates did not expand across Caretaker, memory, and room scenes.');
+            $caretaker=array_values(array_filter($all,static fn(array $m):bool=>(($m['source_type']??'')==='relationship_conversation')))[0]??[];
+            $this->runner->assert(($caretaker['speaker_label']??'')==='The Caretaker'&&($caretaker['primary_object']??'')==='brass lantern','Caretaker scene did not preserve speaker and primary object.');
+            $controller=new \Koravik\Platform\Journey\HealingHomeController(\database());
+            $detail=['id'=>$keepsakeId,'source_type'=>'epic_reclamation','source_id'=>$installation,'keepsake_key'=>'lantern','name'=>'Caretaker Lantern','meaning'=>'A warm sign that the Home was ready before you arrived.','room_key'=>'entry_hall','displayed'=>1,'created_at'=>gmdate('Y-m-d H:i:s')];
+            $renderKeepsake=(new \ReflectionClass($controller))->getMethod('renderKeepsake');$renderKeepsake->setAccessible(true);
+            $keepsakeHtml=(string)$renderKeepsake->invoke($controller,$detail);
+            foreach(['Prepare as memory Moment','Moment Engine presentation state only','Chronicle still requires explicit review'] as $needle)$this->runner->assert(str_contains($keepsakeHtml,$needle),"Keepsake Moment interaction is missing {$needle}.");
+            $this->pdo->prepare('INSERT INTO healing_home_keepsakes (id,account_id,source_type,source_id,keepsake_key,name,meaning,room_key,displayed,created_at) VALUES ("af100000-0000-4000-8000-000000000007",:account,"epic_reclamation",:source,"robin-feather","Robin feather on the sill","A visitor left a trace without becoming a chore.","garden",1,UTC_TIMESTAMP())')->execute(['account'=>$account,'source'=>$installation]);
+            $expanded=$moments->all($account);
+            $companion=array_values(array_filter($expanded,static fn(array $m):bool=>(($m['scene_template']??'')==='companion')&&(($m['source_id']??'')==='af100000-0000-4000-8000-000000000007')))[0]??[];
+            $companionObjectMatches=((string)($companion['primary_object']??''))==='Robin feather on the sill';
+            $companionDetailMatches=str_contains((string)($companion['ambient_detail']??''),'visitor trace');
+            $this->runner->assert($companionObjectMatches&&$companionDetailMatches,'Companion-ready visitor trace did not seed from a robin keepsake.');
+            $questId='af100000-0000-4000-8000-000000000008';$occurrenceId='af100000-0000-4000-8000-000000000009';$resolutionId='af100000-0000-4000-8000-000000000010';$gatherId='af100000-0000-4000-8000-000000000011';$gatherOutcomeId='af100000-0000-4000-8000-000000000012';$healthId='af100000-0000-4000-8000-000000000013';$draftId='af100000-0000-4000-8000-000000000014';$companionProposalId='af100000-0000-4000-8000-000000000015';
+            $this->pdo->prepare('INSERT INTO quests (id,account_id,title,description,purpose,quest_type,lifecycle_status,status,created_at,updated_at) VALUES (:id,:account,"Carry soup to a neighbor","A small ordinary kindness.","Keep the ordinary world porous.","action","active","active",UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute(['id'=>$questId,'account'=>$account]);
+            $this->pdo->prepare('INSERT INTO quest_occurrences (id,quest_id,account_id,scheduled_for,status,available_at,completed_at,created_at,updated_at) VALUES (:id,:quest,:account,CURDATE(),"completed",UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute(['id'=>$occurrenceId,'quest'=>$questId,'account'=>$account]);
+            $this->pdo->prepare('INSERT INTO quest_resolutions (id,quest_id,account_id,outcome,reflection,resolved_at,created_at) VALUES (:id,:quest,:account,"paused","The soup can wait without becoming failure.",UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute(['id'=>$resolutionId,'quest'=>$questId,'account'=>$account]);
+            $this->pdo->prepare('INSERT INTO gather_events (id,account_id,title,description,venue,starts_at,timezone,visibility,status,lifecycle_status,closed_at,closeout_note,created_at,updated_at) VALUES (:id,:account,"Porch supper","Neighbors brought chairs.","Front porch",UTC_TIMESTAMP(),"UTC","unlisted","completed","completed",UTC_TIMESTAMP(),"Everyone left fed.",UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute(['id'=>$gatherId,'account'=>$account]);
+            $this->pdo->prepare('INSERT INTO gather_outcome_proposals (id,event_id,account_id,outcome_type,summary,minimized_payload_json,status,application_status,created_at,updated_at) VALUES (:id,:event,:account,"chronicle_reflection","The porch felt less like a threshold.",JSON_OBJECT("event_id",:event_json),"proposed","not_ready",UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute(['id'=>$gatherOutcomeId,'event'=>$gatherId,'event_json'=>$gatherId,'account'=>$account]);
+            $this->pdo->prepare('INSERT INTO health_wellbeing_checkins (id,account_id,observed_on,energy_level,feeling_word,private_note,share_derived_fact,created_at,updated_at) VALUES (:id,:account,CURDATE(),3,"steady","private health text must stay private",1,UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute(['id'=>$healthId,'account'=>$account]);
+            $this->pdo->prepare('INSERT INTO platform_form_drafts (id,account_id,form_key,payload_json,expires_at,created_at,updated_at) VALUES (:id,:account,"source_review.loop",JSON_OBJECT("title","Review the porch supper"),DATE_ADD(UTC_TIMESTAMP(),INTERVAL 1 DAY),UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute(['id'=>$draftId,'account'=>$account]);
+            $this->pdo->prepare('INSERT INTO companion_proposals (id,account_id,proposal_type,status,version,request_text,title,proposed_payload_json,reasoning,source_context,owning_module,consequence,expires_at,created_at,updated_at) VALUES (:id,:account,"quest.create","awaiting_approval",1,"Help me begin gently.","A gentle beginning",JSON_OBJECT("title","A gentle beginning"),"A small first step can be reviewed.","Your request to Companion.","Quests","Nothing executes without approval.",DATE_ADD(UTC_TIMESTAMP(),INTERVAL 1 DAY),UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute(['id'=>$companionProposalId,'account'=>$account]);
+            $this->pdo->prepare('INSERT INTO world_narrative_progress (installation_id,current_arc,current_chapter,current_scene,updated_at) VALUES (:installation,"making-refuge","the-listening-wall","library-echo",UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE current_arc=VALUES(current_arc),current_chapter=VALUES(current_chapter),current_scene=VALUES(current_scene),updated_at=UTC_TIMESTAMP()')->execute(['installation'=>$installation]);
+            $looped=$moments->all($account);$modules=array_values(array_unique(array_column($looped,'source_module')));$types=array_column($looped,'source_type');
+            foreach(['Quests','Gather','Health','Source Review','Companion','Worlds'] as $module)$this->runner->assert(in_array($module,$modules,true),"Moment Expansion Loop did not seed {$module}.");
+            foreach(['quest_completion','quest_resolution','event_closeout','outcome_proposal','consented_derived_trend','durable_draft','proposal_trace','chapter_progress'] as $type)$this->runner->assert(in_array($type,$types,true),"Moment Expansion Loop is missing {$type}.");
+            foreach([
+                'database/migrations/104_moment_engine_foundation.sql'=>['platform_moments','queued','presented','archived','chronicle_proposal_id'],
+                'database/migrations/105_moment_scene_templates_source_expansion.sql'=>['scene_template','speaker_label','primary_object','ambient_detail','recommended_action_label'],
+                'src/Platform/Moments/MomentService.php'=>['submit(string $accountId, array $moment)','seedForAccount','one arrival Moment','proposeChronicle','Moment review context','companion-ready visitor trace Moment','seedQuestMoments','seedGatherMoments','seedHealthMoments','seedSourceReviewMoments','seedCompanionMoments','seedWorldProgressMoments','copyPack'],
+                'src/Platform/Moments/MomentController.php'=>['/moments/next','/moments/remembered','Moment Engine Foundation','Prepare Chronicle review','One arrival Moment at a time','Moment Scene Template','Caretaker scenes','Memory object','living-moment-presentation-polish','moment-scene-filter-nav','remembered-moment-actions','Moment Source Review Console','Moment Inbox / Tuning Controls','moment-library-polish','moments.css'],
+                'public/assets/moments.css'=>['.moment-stage','.moment-template-caretaker','.moment-template-companion','.moment-source-review-console','.moment-inbox-tuning-controls','prefers-reduced-motion','forced-colors'],
+                'public/index.php'=>['MomentController'],
+                'src/Platform/Journey/HealingHomeController.php'=>['/moments/next','/moments/remembered','Moment Engine Foundation','Prepare as memory Moment','keepsake-detail-memory-scene'],
+                'docs/features/MOMENT_ENGINE_FOUNDATION.md'=>['Moment Engine Foundation','arrival scenes','remembered moments','Chronicle preservation review','Scene Templates and Source Expansion Pass','Chronicle Preservation Polish','Living Moment Presentation Polish','Remembered Moment Actions and Companion-ready Trace Expansion','Moment Expansion Loop','Additional District Moment Submissions','Authored Scene Copy Packs','Moment Library Polish'],
+                'docs/IMPLEMENTATION_HANDOFF.md'=>['Moment Engine Foundation','platform_moments','one-at-a-time arrival scenes','Moment Scene Templates and Source Expansion','Living Moment Presentation Polish','Remembered Moment Actions and Companion-ready Trace Expansion','Moment Expansion Loop','Quest-to-Moment Loop','Gather-to-Moment Loop','Companion Presence Moment Layer'],
+            ] as $file=>$needles){
+                $source=(string)file_get_contents(KORAVIK_ROOT.'/'.$file);
+                foreach($needles as $needle)$this->runner->assert(str_contains($source,$needle),"{$file} is missing {$needle}.");
+            }
+        } finally {
+            $this->pdo->prepare('DELETE FROM gather_outcome_proposals WHERE id="af100000-0000-4000-8000-000000000012" OR event_id="af100000-0000-4000-8000-000000000011"')->execute();
+            $this->pdo->prepare('DELETE FROM gather_events WHERE id="af100000-0000-4000-8000-000000000011"')->execute();
+            $this->pdo->prepare('DELETE FROM platform_accounts WHERE id=:account')->execute(['account'=>$account]);
+        }
     }
 
     private function account(string $id,string $email):void{$this->pdo->prepare('INSERT INTO platform_accounts (id,email,display_name,role,status,created_at,updated_at) VALUES (:id,:email,"Test","user","active",UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute(['id'=>$id,'email'=>$email]);}

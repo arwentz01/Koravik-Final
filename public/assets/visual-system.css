@@ -1,1 +1,82 @@
-.koravik-ui{--space-1:.4rem;--space-2:.75rem;--space-3:1rem;--space-4:1.5rem;--space-5:2.25rem;--surface-strong:#fff;--surface-soft:#f4eee6}.koravik-ui .context-nav{display:flex;align-items:center;gap:.55rem;font-size:.9rem;color:var(--muted);margin:0 0 1.25rem}.koravik-ui .context-nav a{font-weight:800;text-decoration:none}.koravik-ui .page-header{padding-bottom:1.25rem;border-bottom:1px solid var(--line)}.koravik-ui .surface{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}.koravik-ui .surface-editor{max-width:760px}.koravik-ui .state-panel{border-radius:14px;padding:1rem 1.15rem}.koravik-ui .state-empty{border-style:dashed;box-shadow:none;background:var(--surface-soft)}.koravik-ui .state-error{border-left:5px solid #a2382b}.koravik-ui .state-success{border-left:5px solid #377343}.koravik-ui .provenance{display:flex;flex-wrap:wrap;gap:.5rem;color:var(--muted)}.koravik-ui .local-actions{display:flex;gap:.65rem;align-items:center;flex-wrap:wrap}.koravik-ui .trust-panel{border-left:5px solid var(--plum);padding:1.25rem;background:var(--surface)}.koravik-ui .metadata-list{display:grid;grid-template-columns:minmax(8rem,.5fr) minmax(0,1fr);gap:.6rem 1rem}.koravik-ui .metadata-list dt{font-weight:800}.koravik-ui .metadata-list dd{margin:0}.appearance-dark{--bg:#171512;--surface:#24211d;--surface-strong:#2c2823;--surface-soft:#1d1a17;--ink:#f5efe6;--muted:#c9bfb2;--line:#514940;--ember:#d47752;--ember-dark:#f1a17f;--plum:#b495b2;--focus:#78adff;background:var(--bg);color:var(--ink)}.appearance-dark body,.appearance-dark{background:var(--bg)}.appearance-dark input,.appearance-dark textarea,.appearance-dark select,.appearance-dark .choice-list button{background:#171512;color:var(--ink);border-color:var(--line)}.high-contrast{--ink:#000;--muted:#222;--line:#000;--ember:#8b2500;--ember-dark:#5e1800;--focus:#005fcc}.appearance-dark.high-contrast{--ink:#fff;--muted:#fff;--line:#fff;--ember:#ffb08d;--ember-dark:#ffd2bf;--focus:#7fc8ff}.high-contrast a{text-decoration:underline}.reduce-motion *,@media(prefers-reduced-motion:reduce){.koravik-ui *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}@media(max-width:700px){.koravik-ui .metadata-list{grid-template-columns:1fr}.koravik-ui .metadata-list dd{margin-bottom:.6rem}.koravik-ui .context-nav{overflow-wrap:anywhere}.koravik-ui .local-actions>*{flex:1 1 auto}}
+.koravik-ui{--space-1:.4rem;--space-2:.75rem;--space-3:1rem;--space-4:1.5rem;--space-5:2.25rem;--surface-strong:#fff;--surface-soft:#f4eee6;--control-border:#9d9388;--control-bg:#fff;--danger:#93412f}
+.koravik-ui .context-nav{display:flex;align-items:center;gap:.55rem;font-size:.9rem;color:var(--muted);margin:0 0 1.25rem}
+.koravik-ui .context-nav a{font-weight:800;text-decoration:none}
+.koravik-ui .page-header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:1rem 1.5rem;padding:clamp(1.25rem,3vw,2rem);margin-bottom:1.5rem;border:1px solid var(--line);border-radius:24px;background:linear-gradient(135deg,var(--surface),var(--surface-soft));box-shadow:0 12px 34px rgba(54,43,31,.06)}
+.koravik-ui .page-header>div{min-width:0}
+.koravik-ui .page-header>.local-actions{grid-column:1/-1;order:2}
+.koravik-ui .page-header h1,.koravik-ui .hero h1{font-size:clamp(1.9rem,4vw,2.85rem);line-height:1.06;max-width:20ch}
+.koravik-ui .page-header p{font-size:clamp(1rem,1.5vw,1.08rem)}
+.koravik-ui .surface{padding:clamp(1.15rem,2.5vw,1.65rem);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.koravik-ui .grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:clamp(1rem,2vw,1.35rem)}
+.koravik-ui .card,.koravik-ui .world-card,.koravik-ui .home-card,.koravik-ui article.surface{min-width:0}
+.koravik-ui .surface-editor{max-width:760px}
+.koravik-ui .state-panel{border-radius:14px;padding:1rem 1.15rem}
+.koravik-ui .state-empty{border-style:dashed;box-shadow:none;background:var(--surface-soft)}
+.koravik-ui .state-error{border-left:5px solid #a2382b}
+.koravik-ui .state-success{border-left:5px solid #377343}
+.koravik-ui .provenance{display:flex;flex-wrap:wrap;gap:.5rem;color:var(--muted)}
+.koravik-ui .local-actions{display:flex;gap:.65rem;align-items:center;flex-wrap:wrap}
+.koravik-ui .local-actions a,.koravik-ui .local-actions button{min-height:40px}
+.koravik-ui .trust-panel{border-left:5px solid var(--plum);padding:1.25rem;background:var(--surface)}
+.koravik-ui .metadata-list{display:grid;grid-template-columns:minmax(8rem,.5fr) minmax(0,1fr);gap:.6rem 1rem}
+.koravik-ui .metadata-list dt{font-weight:800}
+.koravik-ui .metadata-list dd{margin:0}
+
+/* Site-wide UI/UX cleanup: hierarchy, readable rhythm, and conflict containment. */
+.koravik-ui main.page{padding-top:clamp(1.25rem,4vw,3rem)}
+.koravik-ui h1,.koravik-ui h2,.koravik-ui h3{overflow-wrap:anywhere}
+.koravik-ui h1{letter-spacing:-.035em}
+.koravik-ui h2{letter-spacing:-.02em}
+.koravik-ui h2{font-size:clamp(1.3rem,2.2vw,1.65rem)}
+.koravik-ui h3{font-size:clamp(1.05rem,2vw,1.25rem)}
+.koravik-ui p{max-width:72ch}
+.koravik-ui .surface>h2:first-child,.koravik-ui article>h2:first-child,.koravik-ui section>h2:first-child{margin-top:0}
+.koravik-ui .section-heading{margin:2rem 0 1rem;padding-bottom:.6rem;border-bottom:1px solid color-mix(in srgb,var(--line) 74%,transparent)}
+.koravik-ui .section-heading span{display:inline-flex;align-items:center;min-height:32px;padding:.25rem .65rem;border-radius:999px;background:var(--surface-soft);color:var(--muted);font-weight:900}
+.koravik-ui hr{width:100%;border:0;border-top:1px solid var(--line);margin:1.25rem 0}
+
+/* Global visual reset: keep complex forms readable and controls proportional. */
+.koravik-ui .page{width:min(1180px,calc(100% - clamp(1rem,4vw,3rem)))}
+.koravik-ui .surface,.koravik-ui .settings-card,.koravik-ui .chronicle-entry,.koravik-ui .card,.koravik-ui .panel{overflow:hidden}
+.koravik-ui .surface>*:first-child{margin-top:0}
+.koravik-ui .surface>*:last-child{margin-bottom:0}
+.koravik-ui .surface form{margin-top:1rem}
+.koravik-ui .surface .local-actions{margin-top:1rem}
+.koravik-ui form{gap:1rem 1.2rem;min-width:0}
+.koravik-ui .form-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:1.1rem 1.25rem;align-items:start}
+.koravik-ui .form-grid .full,.koravik-ui label.full{grid-column:1/-1}
+.koravik-ui label{min-width:0}
+.koravik-ui input,.koravik-ui textarea,.koravik-ui select{width:100%;max-width:100%;border-color:var(--control-border);background:var(--control-bg);box-shadow:inset 0 1px 0 rgba(255,255,255,.65)}
+.koravik-ui textarea{line-height:1.45}
+.koravik-ui select{padding-right:2.4rem}
+.koravik-ui input[type="checkbox"],.koravik-ui input[type="radio"]{appearance:auto;width:1.15rem;height:1.15rem;min-width:1.15rem;min-height:1.15rem;margin:0;padding:0;border-radius:.25rem;box-shadow:none;accent-color:var(--ember)}
+.koravik-ui label:has(input[type="checkbox"]),.koravik-ui label:has(input[type="radio"]){display:flex;align-items:center;gap:.55rem;min-height:46px;padding:.45rem .55rem;border:1px solid color-mix(in srgb,var(--line) 72%,transparent);border-radius:12px;background:rgba(255,255,255,.55);font-weight:800}
+.koravik-ui label:has(input[type="checkbox"]) input,.koravik-ui label:has(input[type="radio"]) input{flex:0 0 auto}
+.koravik-ui button,.koravik-ui .button,.koravik-ui .quiet-button{max-width:100%}
+.koravik-ui form>.button,.koravik-ui form>button.button{align-self:end}
+.koravik-ui .table-wrap{overflow-x:auto}
+.koravik-ui table{width:100%;border-collapse:separate;border-spacing:0}
+.koravik-ui th,.koravik-ui td{padding:.8rem .9rem;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+.koravik-ui th{font-size:.86rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.koravik-ui tr:last-child td{border-bottom:0}
+.koravik-ui .quiet-button{color:var(--danger)}
+.koravik-ui .notice{max-width:none}
+
+.appearance-dark{--bg:#171512;--surface:#24211d;--surface-strong:#2c2823;--surface-soft:#1d1a17;--ink:#f5efe6;--muted:#c9bfb2;--line:#514940;--ember:#d47752;--ember-dark:#f1a17f;--plum:#b495b2;--focus:#78adff;background:var(--bg);color:var(--ink)}
+.appearance-dark body,.appearance-dark{background:var(--bg)}
+.appearance-dark{--control-bg:#171512;--control-border:var(--line)}
+.appearance-dark input,.appearance-dark textarea,.appearance-dark select,.appearance-dark .choice-list button{background:#171512;color:var(--ink);border-color:var(--line)}
+.high-contrast{--ink:#000;--muted:#222;--line:#000;--ember:#8b2500;--ember-dark:#5e1800;--focus:#005fcc}
+.appearance-dark.high-contrast{--ink:#fff;--muted:#fff;--line:#fff;--ember:#ffb08d;--ember-dark:#ffd2bf;--focus:#7fc8ff}
+.high-contrast a{text-decoration:underline}
+.reduce-motion *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+@media(prefers-reduced-motion:reduce){.koravik-ui *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+@media(max-width:760px){.koravik-ui .form-grid{grid-template-columns:1fr}.koravik-ui .page-header{grid-template-columns:1fr;border-radius:18px}.koravik-ui .app-header nav{gap:.85rem}.koravik-ui .app-header nav a{white-space:nowrap}}
+@media(max-width:700px){.koravik-ui .metadata-list{grid-template-columns:1fr}.koravik-ui .metadata-list dd{margin-bottom:.6rem}.koravik-ui .context-nav{overflow-wrap:anywhere}.koravik-ui .local-actions>*{flex:1 1 auto}}
+
+
+/* Koravik Design System v1: parchment surfaces, mountain-dark chrome, gold path cues. */
+.koravik-ui .page-header{position:relative;overflow:hidden;border-color:color-mix(in srgb,var(--koravik-gold,#D4A53A) 30%,var(--line));background:radial-gradient(circle at 96% 4%,rgba(212,165,58,.20),transparent 18rem),linear-gradient(135deg,#FFF9EA,#F2EBD9);box-shadow:0 18px 50px rgba(6,30,38,.10)}
+.koravik-ui .page-header::after{content:"";position:absolute;inset:auto 0 0;height:4px;background:linear-gradient(90deg,var(--koravik-forest,#0F4D3A),var(--koravik-gold,#D4A53A),transparent);opacity:.78}
+.koravik-ui .page-header h1,.koravik-ui .hero h1{font-family:Georgia,"Times New Roman",serif;color:#172018;text-wrap:balance}.koravik-ui .surface{background:linear-gradient(180deg,#FFF9EA,#F8F0DE);border-color:#D7C7A7;box-shadow:0 14px 34px rgba(6,30,38,.08)}
+.koravik-ui input,.koravik-ui textarea,.koravik-ui select{border-color:#B8A99E;background:#FFFDF5}.koravik-ui input[type="checkbox"],.koravik-ui input[type="radio"]{accent-color:var(--koravik-gold,#D4A53A)}.koravik-ui .section-heading span{background:#092832;color:#F8EBCD}

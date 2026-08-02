@@ -7,8 +7,11 @@ use Koravik\Districts\Beacon\BeaconController;
 use Koravik\Districts\Beacon\BeaconManagementController;
 use Koravik\Districts\Gather\GatherCompletionController;
 use Koravik\Districts\Gather\GatherController;
+use Koravik\Districts\Gather\GatherCloseoutController;
 use Koravik\Districts\Gather\GatherLifecycleController;
+use Koravik\Districts\Health\HealthController;
 use Koravik\Districts\Quests\LivingQuestController;
+use Koravik\Platform\Admin\SystemHealthController;
 use Koravik\Platform\AccountData\AccountDataController;
 use Koravik\Platform\Companion\CompanionContextController;
 use Koravik\Platform\Companion\CompanionController;
@@ -23,6 +26,8 @@ use Koravik\Platform\Households\HouseholdController;
 use Koravik\Platform\Journey\HealingHomeController;
 use Koravik\Platform\Journey\JourneyArcController;
 use Koravik\Platform\Mail\MailOperationsController;
+use Koravik\Platform\Media\MediaController;
+use Koravik\Platform\Moments\MomentController;
 use Koravik\Platform\Notifications\NotificationController;
 use Koravik\Platform\Organizations\OrganizationController;
 use Koravik\Platform\Orientation\OrientationController;
@@ -33,6 +38,8 @@ use Koravik\Platform\Security\AuthRecoveryController;
 use Koravik\Platform\Security\Security;
 use Koravik\Platform\Settings\AccessibilityController;
 use Koravik\Platform\Settings\SettingsController;
+use Koravik\Platform\SourceReview\SourceReviewController;
+use Koravik\Platform\SourceReview\SourceReviewService;
 use Koravik\Platform\UI\AppShell;
 use Koravik\Platform\UI\GuideController;
 use Koravik\Platform\UI\VisualSystem;
@@ -41,22 +48,28 @@ use Koravik\Worlds\EpicOrdinary\WorldProgressController;
 use Koravik\Worlds\WorldHomeController;
 use Koravik\Worlds\WorldLifecycleController;
 
-$method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');$path=app_request_path();
-if($method==='GET'&&$path==='/health'){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'117','slice'=>'worlds-epic-ordinary-polish'],JSON_THROW_ON_ERROR);return;}
-Security::startSession();ob_start();
-$handled=(new MailOperationsController(database()))->handle($method,$path);
+$method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');$path=app_request_path();Security::startSession();
+if($method==='GET'&&in_array($path,['/system/health','/health'],true)&&!Security::account()){header('Content-Type: application/json; charset=utf-8');echo json_encode(['status'=>'ok','build'=>'217','slice'=>'durable-cross-module-drafts','previous_build'=>'207','previous_slice'=>'source-inbox-maturity','previous_actionable_build'=>'197','previous_actionable_slice'=>'actionable-cross-module-flow','previous_healing_home_slice'=>'healing-home-composition-depth','previous_navigation_slice'=>'everyday-coherence-navigation'],JSON_THROW_ON_ERROR);return;}
+ob_start();
+$handled=(new SystemHealthController(database()))->handle($method,$path);
+if(!$handled)$handled=(new MailOperationsController(database()))->handle($method,$path);
 if(!$handled)$handled=(new BeaconManagementController(database()))->handle($method,$path);
 if(!$handled)$handled=(new BeaconController(database()))->handle($method,$path);
 if(!$handled)$handled=(new OrganizationController(database()))->handle($method,$path);
 if(!$handled)$handled=(new HouseholdController(database()))->handle($method,$path);
 if(!$handled)$handled=(new GatherCompletionController(database()))->handle($method,$path);
+if(!$handled)$handled=(new GatherCloseoutController(database()))->handle($method,$path);
 if(!$handled)$handled=(new GatherLifecycleController(database()))->handle($method,$path);
 if(!$handled)$handled=(new GatherController(database()))->handle($method,$path);
+if(!$handled)$handled=(new HealthController(database()))->handle($method,$path);
 if(!$handled)$handled=(new OrientationController(database()))->handle($method,$path);
 if(!$handled)$handled=(new GuideController())->handle($method,$path);
+if(!$handled)$handled=(new SourceReviewController(database()))->handle($method,$path);
 if(!$handled)$handled=(new AuthRecoveryController(database()))->handle($method,$path);
 if(!$handled)$handled=(new AccountDataController(database()))->handle($method,$path);
+if(!$handled)$handled=(new MediaController(database()))->handle($method,$path);
 if(!$handled)$handled=(new ChronicleManagementController(database()))->handle($method,$path);
+if(!$handled)$handled=(new MomentController(database()))->handle($method,$path);
 if(!$handled)$handled=(new CompanionContextController(database()))->handle($method,$path);
 if(!$handled)$handled=(new CompanionLifecycleController(database()))->handle($method,$path);
 if(!$handled)$handled=(new CompanionController(database()))->handle($method,$path);
@@ -95,6 +108,15 @@ if($account&&$method==='GET'&&$path==='/hearth'){
         $trust='<section class="hearth-trust-strip"><h2>What Hearth does</h2><p>Hearth is an orientation surface. It may link to source records, but it does not create Quests, Chronicle entries, Companion memory, World facts, or Healing Home state by itself.</p><p class="local-actions"><a class="button secondary" href="/home">Healing Home</a><a class="button secondary" href="/recovery-center">Recovery center</a><a class="button secondary" href="/settings/accessibility">Accessibility</a><a class="button secondary" href="/privacy">Privacy</a></p></section>';
         $html=str_replace('</main>',$trust.'</main>',$html);
     }
+    if(!str_contains($html,'hearth-today-command-strip')){
+        $commands='<section class="hearth-today-command-strip surface" aria-labelledby="hearth-today-command-title"><div><p class="eyebrow">Hearth Today Command Strip</p><h2 id="hearth-today-command-title">One useful doorway for today.</h2><p>Open today’s focus, the next Quest, the latest World reaction, a pending reflection proposal, or unread notifications without losing source ownership.</p></div><p class="local-actions"><a class="button secondary" href="/hearth/focus">Today’s Focus</a><a class="button secondary" href="/quests">Next Quest</a><a class="button secondary" href="/worlds/epic-ordinary/progress">Latest World reaction</a><a class="button secondary" href="/chronicle/proposals">Pending reflection proposal</a><a class="button secondary" href="/notifications">Unread notifications</a></p></section>';
+        $html=str_replace('</main>',$commands.'</main>',$html);
+    }
+    if(!str_contains($html,'hearth-today-decision-strip-upgrade')){
+        $sourceCounts=(new SourceReviewService(database()))->counts((string)$account['id']);
+        $decision='<section class="hearth-today-decision-strip-upgrade source-inbox-hearth-badge surface"><p class="eyebrow">Hearth Today Decision Strip Upgrade</p><h2>Review one source-owned decision.</h2><p>The Source Inbox has '.(int)$sourceCounts['total'].' waiting item(s), including '.(int)$sourceCounts['gather'].' Gather, '.(int)$sourceCounts['companion'].' Companion, '.(int)$sourceCounts['chronicle'].' Chronicle, and '.(int)$sourceCounts['healing_home'].' Healing Home item(s). Nothing is created from Hearth alone.</p><p class="local-actions"><a class="button" href="/source-review">Open Source Inbox</a><a class="button secondary" href="/source-review?owner=gather">Gather decisions</a><a class="button secondary" href="/source-review?owner=companion">Companion decisions</a><a class="button secondary" href="/chronicle/proposals">Reflection proposals</a></p></section>';
+        $html=str_replace('</main>',$decision.'</main>',$html);
+    }
     if(str_contains($html,'<p>One meaningful next step is enough.</p>')&&!str_contains($html,'class="hearth-hero-actions"')){
         $html=str_replace('<p>One meaningful next step is enough.</p>','<p>One meaningful next step is enough.</p><p class="hearth-hero-actions"><a class="button secondary" href="/home">Open Healing Home</a><a class="button secondary" href="/hearth/focus">Set today’s focus</a><a class="button secondary" href="/guide">Open guide</a></p>',$html);
     }
@@ -106,6 +128,12 @@ if($account&&$method==='GET'&&str_starts_with($path,'/quests')){
     if($path==='/quests'&&!str_contains($html,'quest-polish-panel')){
         $quests='<section class="action-memory-loop quest-polish-panel" aria-labelledby="quest-polish-title"><div><p class="eyebrow">Act</p><h2 id="quest-polish-title">Choose the next honest action.</h2><p>Quests are for real-life commitments, not performance. Keep the structure light, then preserve meaning in Chronicle only when you decide it is worth keeping.</p></div><div class="action-memory-cards"><article><h3>Begin small</h3><p>A single action is allowed to stay single. Projects and journeys can grow only when they need more shape.</p><a href="/quests/create">Create a Quest</a></article><article><h3>Reflect after action</h3><p>When a Quest changes you, move the meaning into Chronicle deliberately.</p><a href="/chronicle/new?context=quest_reflection&title=Quest%20reflection&tags=quest,reflection">Start a reflection</a></article><article><h3>See it in the house</h3><p>The Healing Home Quest Board can hold the current thread without turning it into a backlog.</p><a href="/home/rooms/quest_board">Open Quest Board</a></article></div></section>';
         $html=str_replace('</main>',$quests.'</main>',$html);
+    }
+    if($path==='/quests'&&!str_contains($html,'href="/quests/manage"'))$html=str_replace('</main>','<p class="local-actions"><a class="button secondary" href="/quests/manage">Manage active, paused, and archived Quests</a></p></main>',$html);
+    if(preg_match('#^/quests/([a-f0-9-]{36})$#',$path,$questManageMatch)&&!str_contains($html,'quest-detail-management')){
+        $managedQuestId=htmlspecialchars($questManageMatch[1],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
+        $management='<section class="quest-detail-management panel"><p class="eyebrow">Manage this Quest</p><h2>Edit, schedule, and history</h2><p class="local-actions"><a href="/quests/'.$managedQuestId.'/edit">Edit details</a><a href="/quests/'.$managedQuestId.'/history">View occurrence history</a></p><form method="post" action="/quests/'.$managedQuestId.'/reschedule">'.'<input type="hidden" name="csrf" value="'.htmlspecialchars(Security::csrfToken(),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8').'">'.'<label>Move the next occurrence<input type="date" name="scheduled_for" required></label><button class="button secondary" type="submit">Reschedule next occurrence</button></form></section>';
+        $html=str_replace('</main>',$management.'</main>',$html);
     }
     if(preg_match('#^/quests/([a-f0-9-]{36})$#',$path,$m)&&!str_contains($html,'reflection-bridge-panel')){
         $questId=htmlspecialchars($m[1],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
@@ -140,4 +168,6 @@ if($account&&$method==='GET'&&$path==='/worlds/epic-ordinary'&&str_contains($htm
 if($method==='GET'&&preg_match('#^/gather/events/([a-f0-9-]{36})$#',$path,$m)&&!str_contains($html,'/agenda')){$id=htmlspecialchars($m[1],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');$actions='<section class="surface"><h2>Event tools</h2><p class="local-actions"><a class="button" href="/gather/events/'.$id.'/agenda">Agenda</a>'.($account?'<a class="button secondary" href="/gather/events/'.$id.'/day-of">Day-of</a><a class="button secondary" href="/gather/events/'.$id.'/scan">Scan QR</a><a class="button secondary" href="/gather/events/'.$id.'/reflect">Reflect</a>':'').'</p></section>';$html=str_replace('</main>',$actions.'</main>',$html);}
 $html=(new AppShell())->apply($html,$account,$path);
 $html=(new VisualSystem())->apply($html,$account,$path);
+$html=str_replace(['/assets/app.css"','/assets/app.css?'],['/assets/app.css?v=brand-v1"','/assets/app.css?v=brand-v1&'],$html);
+$html=str_replace(['/assets/app-shell.css?v=ui-system-2','/assets/visual-system.css?v=ui-system-2'],['/assets/app-shell.css?v=brand-v1','/assets/visual-system.css?v=brand-v1'],$html);
 echo app_rewrite_html_paths($html);

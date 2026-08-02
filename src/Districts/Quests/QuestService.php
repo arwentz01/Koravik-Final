@@ -80,6 +80,53 @@ final class QuestService
         return $statement->fetchAll();
     }
 
+    public function management(string $accountId): array
+    {
+        $statement=$this->database->pdo()->prepare('SELECT q.id,q.title,q.description,q.quest_type,q.lifecycle_status,q.created_at,q.updated_at,q.archived_at,r.frequency,r.interval_count,MIN(CASE WHEN qo.status IN ("available","scheduled") THEN qo.scheduled_for END) next_scheduled_for,SUM(qo.status="completed") completion_count FROM quests q LEFT JOIN quest_recurrence_rules r ON r.quest_id=q.id LEFT JOIN quest_occurrences qo ON qo.quest_id=q.id AND qo.account_id=:occurrence_account WHERE q.account_id=:quest_account GROUP BY q.id,q.title,q.description,q.quest_type,q.lifecycle_status,q.created_at,q.updated_at,q.archived_at,r.frequency,r.interval_count ORDER BY FIELD(q.lifecycle_status,"active","paused","archived"),q.updated_at DESC');
+        $statement->execute(['occurrence_account'=>$accountId,'quest_account'=>$accountId]);$groups=['active'=>[],'paused'=>[],'archived'=>[]];foreach($statement->fetchAll() as $row)$groups[$row['lifecycle_status']][]=$row;return $groups;
+    }
+
+    public function history(string $questId,string $accountId): array
+    {
+        $owned=$this->getForAccount($questId,$accountId);if(!$owned)throw new RuntimeException('Quest not found or unavailable.');
+        $s=$this->database->pdo()->prepare('SELECT id,scheduled_for,status,completed_at,skipped_at,dismissed_at,rescheduled_from,updated_at FROM quest_occurrences WHERE quest_id=:quest_id AND account_id=:account_id ORDER BY scheduled_for DESC,updated_at DESC LIMIT 100');$s->execute(['quest_id'=>$questId,'account_id'=>$accountId]);return ['quest'=>$owned,'occurrences'=>$s->fetchAll()];
+    }
+
+    public function updateDetails(string $questId,string $accountId,array $input): void
+    {
+        if(!$this->getForAccount($questId,$accountId))throw new RuntimeException('Quest not found or unavailable.');
+        $title=trim((string)($input['title']??''));$description=trim((string)($input['description']??''));$purpose=trim((string)($input['purpose']??''));$next=trim((string)($input['next_step']??''));
+        if($title===''||mb_strlen($title)>180)throw new RuntimeException('Use a Quest title between 1 and 180 characters.');if(mb_strlen($description)>4000)throw new RuntimeException('Quest notes must be 4,000 characters or fewer.');if(mb_strlen($purpose)>2000)throw new RuntimeException('Why this matters must be 2,000 characters or fewer.');if(mb_strlen($next)>180)throw new RuntimeException('The next step must be 180 characters or fewer.');
+        $this->database->transaction(function(PDO $pdo)use($questId,$accountId,$title,$description,$purpose,$next):void{$s=$pdo->prepare('UPDATE quests SET title=:title,description=:description,purpose=:purpose,next_step=:next_step,updated_at=UTC_TIMESTAMP() WHERE id=:id AND account_id=:account_id');$s->execute(['title'=>$title,'description'=>$description,'purpose'=>$purpose?:null,'next_step'=>$next?:null,'id'=>$questId,'account_id'=>$accountId]);$this->audit($pdo,$accountId,'quest.updated',$questId,gmdate('Y-m-d H:i:s'));});
+    }
+
+    public function updateRecurrence(string $questId,string $accountId,array $input): void
+    {
+        if(!$this->getForAccount($questId,$accountId))throw new RuntimeException('Quest not found or unavailable.');
+        $frequency=strtolower((string)($input['frequency']??'none'));
+        $this->database->transaction(function(PDO $pdo)use($questId,$accountId,$input,$frequency):void{
+            $pdo->prepare('DELETE FROM quest_recurrence_weekdays WHERE quest_id=:quest_id')->execute(['quest_id'=>$questId]);
+            $pdo->prepare('DELETE FROM quest_recurrence_rules WHERE quest_id=:quest_id')->execute(['quest_id'=>$questId]);
+            $removed=$pdo->prepare('DELETE FROM quest_occurrences WHERE quest_id=:quest_id AND account_id=:account_id AND status IN ("available","scheduled") AND completed_at IS NULL AND skipped_at IS NULL AND dismissed_at IS NULL');
+            $removed->execute(['quest_id'=>$questId,'account_id'=>$accountId]);
+            if($frequency==='none'){
+                $date=trim((string)($input['starts_on']??gmdate('Y-m-d')));
+                $parsed=\DateTimeImmutable::createFromFormat('!Y-m-d',$date);if(!$parsed||$parsed->format('Y-m-d')!==$date)throw new RuntimeException('Choose a valid start date.');
+                $pdo->prepare('INSERT INTO quest_occurrences (id,quest_id,account_id,scheduled_for,status,available_at,created_at,updated_at) VALUES (:id,:quest_id,:account_id,:date,:status,:available,UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute(['id'=>self::uuid(),'quest_id'=>$questId,'account_id'=>$accountId,'date'=>$date,'status'=>$date<=gmdate('Y-m-d')?'available':'scheduled','available'=>$date.' 00:00:00']);
+            }else{
+                (new RecurrenceService($this->database))->saveRule($pdo,$questId,$input,$accountId);
+            }
+            $this->audit($pdo,$accountId,'quest.recurrence.updated',$questId,gmdate('Y-m-d H:i:s'));
+            $this->timeline($pdo,$accountId,$questId,'recurrence_rebuilt','Quest Recurrence Occurrence Rebuild preserved completed history and regenerated future occurrences. Removed '.$removed->rowCount().' pending future occurrence(s).','quest',$questId);
+        });
+    }
+
+    public function rescheduleNext(string $questId,string $accountId,string $date): void
+    {
+        $parsed=\DateTimeImmutable::createFromFormat('!Y-m-d',$date);if(!$parsed||$parsed->format('Y-m-d')!==$date)throw new RuntimeException('Choose a valid date.');
+        $this->database->transaction(function(PDO $pdo)use($questId,$accountId,$date):void{$s=$pdo->prepare('SELECT id,scheduled_for FROM quest_occurrences WHERE quest_id=:quest_id AND account_id=:account_id AND status IN ("available","scheduled") ORDER BY scheduled_for LIMIT 1 FOR UPDATE');$s->execute(['quest_id'=>$questId,'account_id'=>$accountId]);$row=$s->fetch();if(!$row)throw new RuntimeException('There is no available occurrence to reschedule.');$pdo->prepare('UPDATE quest_occurrences SET rescheduled_from=scheduled_for,scheduled_for=:date,status=:status,available_at=:available_at,updated_at=UTC_TIMESTAMP() WHERE id=:id')->execute(['date'=>$date,'status'=>$date<=gmdate('Y-m-d')?'available':'scheduled','available_at'=>$date.' 00:00:00','id'=>$row['id']]);$this->audit($pdo,$accountId,'quest.occurrence.rescheduled',(string)$row['id'],gmdate('Y-m-d H:i:s'));});
+    }
+
     public function updateFocus(string $questId, string $accountId, string $purpose, string $nextStep): void
     {
         $purpose = trim($purpose);
@@ -164,8 +211,21 @@ final class QuestService
             $payload = json_encode(['quest_id'=>$questId,'occurrence_id'=>(string)$occurrence['id'],'scheduled_date'=>(string)$occurrence['scheduled_for'],'recurring'=>(bool)$quest['recurring'],'title'=>(string)$quest['title'],'quest_type'=>(string)$quest['quest_type']], JSON_THROW_ON_ERROR);
             $pdo->prepare('INSERT INTO platform_outbox (id, event_name, event_version, account_id, payload_json, status, attempts, available_at, occurred_at, created_at) VALUES (:id, "Quests.QuestCompleted", 1, :account_id, :payload_json, "pending", 0, :available_at, :occurred_at, :created_at)')->execute(['id'=>$eventId,'account_id'=>$accountId,'payload_json'=>$payload,'available_at'=>$now,'occurred_at'=>$now,'created_at'=>$now]);
             $this->audit($pdo, $accountId, 'quest.occurrence.completed', (string)$occurrence['id'], $now);
+            $this->timeline($pdo,$accountId,$questId,'completed','Daily Focus + Quest Completion Loop Polish: occurrence completed with optional reflection and World eligibility next steps.','quest_occurrence',(string)$occurrence['id']);
             return $eventId;
         });
+    }
+
+    public function timelineFor(string $questId,string $accountId): array
+    {
+        $quest=$this->getForAccount($questId,$accountId);if(!$quest)throw new RuntimeException('Quest not found or unavailable.');
+        $events=$this->database->pdo()->prepare('SELECT event_type,summary,source_type,source_id,occurred_at FROM quest_timeline_events WHERE quest_id=:quest_id AND account_id=:account_id ORDER BY occurred_at DESC LIMIT 100');
+        $events->execute(['quest_id'=>$questId,'account_id'=>$accountId]);
+        $occ=$this->database->pdo()->prepare('SELECT status,scheduled_for,completed_at,skipped_at,dismissed_at,rescheduled_from,updated_at FROM quest_occurrences WHERE quest_id=:quest_id AND account_id=:account_id ORDER BY updated_at DESC LIMIT 50');
+        $occ->execute(['quest_id'=>$questId,'account_id'=>$accountId]);
+        $audit=$this->database->pdo()->prepare('SELECT action,subject_type,subject_id,occurred_at FROM audit_log WHERE account_id=:account_id AND subject_id IN (:quest_id) ORDER BY occurred_at DESC LIMIT 50');
+        $audit->execute(['account_id'=>$accountId,'quest_id'=>$questId]);
+        return ['quest'=>$quest,'events'=>$events->fetchAll(),'occurrences'=>$occ->fetchAll(),'audit'=>$audit->fetchAll()];
     }
 
     public function setLifecycle(string $questId, string $accountId, string $status): void
@@ -242,6 +302,10 @@ final class QuestService
     private function audit(PDO $pdo, string $accountId, string $action, string $subjectId, string $occurredAt): void
     {
         $pdo->prepare('INSERT INTO audit_log (id, account_id, action, subject_type, subject_id, occurred_at) VALUES (:id, :account_id, :action, "quest", :subject_id, :occurred_at)')->execute(['id'=>self::uuid(),'account_id'=>$accountId,'action'=>$action,'subject_id'=>$subjectId,'occurred_at'=>$occurredAt]);
+    }
+    private function timeline(PDO $pdo,string $accountId,string $questId,string $type,string $summary,string $sourceType,string $sourceId): void
+    {
+        $pdo->prepare('INSERT INTO quest_timeline_events (id,account_id,quest_id,event_type,summary,source_type,source_id,occurred_at) VALUES (:id,:account_id,:quest_id,:type,:summary,:source_type,:source_id,UTC_TIMESTAMP())')->execute(['id'=>self::uuid(),'account_id'=>$accountId,'quest_id'=>$questId,'type'=>$type,'summary'=>$summary,'source_type'=>$sourceType,'source_id'=>$sourceId]);
     }
 
     private static function uuid(): string

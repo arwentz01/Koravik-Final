@@ -1255,6 +1255,93 @@
     min-height: 52px;
 }
 
+.route-journey .page-header {
+    margin-bottom: clamp(1.25rem, 3vw, 2rem);
+}
+
+.route-journey .page > section:not(.page-header) {
+    margin-top: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+.route-journey .page > section:not(.page-header) > h2 {
+    margin: 0 0 1rem;
+}
+
+.route-journey .grid {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.route-journey .journey-card,
+.route-journey .conversation-panel,
+.route-journey .keepsake-shelf,
+.route-journey .proposal-demo {
+    display: grid;
+    gap: .85rem;
+}
+
+.route-journey .journey-card h2,
+.route-journey .conversation-panel h2,
+.route-journey .keepsake-shelf h2 {
+    margin: 0;
+}
+
+.route-journey .journey-card p,
+.route-journey .conversation-panel p,
+.route-journey .keepsake-shelf p {
+    margin: 0;
+}
+
+.route-journey .inline-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .7rem;
+    margin-top: .35rem;
+}
+
+.route-journey .inline-actions form {
+    margin: 0;
+}
+
+.route-journey .proposal-demo {
+    margin-top: 1rem;
+}
+
+.route-journey .proposal-demo summary {
+    cursor: pointer;
+    font-weight: 900;
+}
+
+.route-journey .keepsake-shelf ul {
+    display: grid;
+    gap: .65rem;
+    margin: 0;
+    padding-left: 1.1rem;
+}
+
+@media (max-width: 560px) {
+    .route-journey .page-header {
+        gap: 1rem;
+    }
+
+    .route-journey .page-header .button {
+        width: 100%;
+    }
+
+    .route-journey .inline-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .route-journey .inline-actions form:first-child {
+        grid-column: 1 / -1;
+    }
+
+    .route-journey .inline-actions button {
+        width: 100%;
+    }
+}
+
 @media (max-width: 840px) {
     .healing-home-hero,
     .healing-home-grid,

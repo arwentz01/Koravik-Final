@@ -1,8 +1,8 @@
 # Koravik-Final Implementation Handoff
 
-**Status:** Worlds and Epic Ordinary Polish vertical product slice in the current working tree
-**Version:** 2.42
-**Baseline date:** July 30, 2026
+**Status:** Moment Engine Foundation in the current working tree
+**Version:** 2.59
+**Baseline date:** August 1, 2026
 **Authoritative branch:** `main`
 
 ## Repository authority
@@ -130,6 +130,102 @@ See `docs/features/HEARTH_DAILY_FOCUS.md`.
   browser verification.
 
 See `docs/features/WORLDS_HOME_AND_REACTION_REVIEW.md`.
+
+### Epic Ordinary Reclamation Sprint — implemented major reclamation pass
+
+- Audited Koravik-Final authority and the approved legacy Epic-Ordinary source at `/Applications/MAMP/htdocs/Epic-Ordinary`;
+- reclaimed Healing Home as the flagship emotional center using “evidence, not rewards” and “nothing important happens off-screen” as implementation rules;
+- added source-aligned evidence objects, Quiet Hearth whispers, Caretaker lantern continuity, discoveries, tiny joys, seasonal life, and Moments Remembered surfaces;
+- added player routes `/home/reclamation`, `/home/discoveries`, `/home/tiny-joys`, `/home/seasons`, and `/home/moments`;
+- keeps the `/home/reclamation` reclamation hearth as the source-aware doorway into recovered Epic Ordinary identity;
+- kept Chronicle integration explicit through player-chosen Chronicle links rather than automatic writes;
+- reused existing Koravik-Final Healing Home, keepsake, and relationship-memory tables without importing legacy schemas or routes.
+
+See `docs/features/EPIC_ORDINARY_RECLAMATION_SPRINT.md` and `docs/reclamation/EPIC_ORDINARY_RECLAMATION_AUDIT.md`.
+
+### Moment Engine Foundation — implemented broad runtime foundation
+
+- Adds `platform_moments` for source-aware Moment candidates, arrival/read state, remembered state, and Chronicle proposal linkage;
+- adds `MomentService` and `MomentController`;
+- adds `/moments`, `/moments/next`, `/moments/remembered`, and `/moments/{id}`;
+- seeds initial candidates from Epic Ordinary World reactions and Healing Home visible changes;
+- supports one-at-a-time arrival scenes, replay-safe remembered moments, archive/dismiss state, and Chronicle preservation review;
+- keeps source ownership explicit: source modules own original changes, Moment Engine owns presentation state, and Chronicle owns saved prose only after explicit review.
+
+See `docs/features/MOMENT_ENGINE_FOUNDATION.md`.
+
+### Moment Scene Templates and Source Expansion — implemented broad-stroke continuation
+
+- Adds additive scene-template fields to `platform_moments`;
+- supports Caretaker, room, silent, memory, and companion templates;
+- adds speaker label, primary object, ambient detail, and recommended action label;
+- expands source seeding to Caretaker conversations and displayed Healing Home keepsakes;
+- upgrades remembered Moments to group by scene type while preserving one-at-a-time arrival scenes and explicit Chronicle preservation review.
+
+### Artifact and Room Interaction Layer — implemented broad-stroke continuation
+
+- Displayed Healing Home keepsakes expose “Prepare as memory Moment” from the keepsake detail page;
+- the interaction creates Moment Engine presentation state using the memory scene template;
+- Chronicle preservation still routes through explicit review rather than automatic save;
+- the interaction does not create Quests, Companion memory, or real-life achievement state.
+
+### Chronicle Moment Preservation Polish — implemented broad-stroke continuation
+
+- Moment-to-Chronicle proposals include scene template, room, source, provenance, and excluded-data context;
+- Chronicle still owns saved prose only after explicit review and save;
+- Moment Engine remains presentation/read-state owner, not the source-of-truth owner.
+
+### Living Moment Presentation Polish — implemented milestone
+
+- Adds `public/assets/moments.css`;
+- renders `/moments/next` and Moment detail as fuller scene stages with template-specific atmosphere;
+- moves provenance into a quieter secondary panel while keeping it visible before Chronicle review;
+- includes reduced-motion and forced-colors safeguards.
+
+### Remembered Moment Actions and Companion-ready Trace Expansion — implemented milestone
+
+- Remembered Moment library includes scene-type anchors and card-level Chronicle review actions;
+- displayed visitor-trace keepsakes such as robin feathers seed companion-ready Moment templates;
+- library cards show source, room, object, status, and Chronicle handoff controls.
+
+### Moment Expansion Loop — implemented 10-milestone pass
+
+- Additional District Moment Submissions: Quests, Gather, Health, Source Review, Chronicle, Companion, and World progress now seed minimized Moment candidates through `MomentService`;
+- Authored Scene Copy Packs: caretaker, room, silent, memory, and companion templates use authored copy helpers for warmer scene language;
+- Moment Source Review Console: `/moments` summarizes contributing source modules without exposing private payloads;
+- Moment Inbox / Tuning Controls: the library names source grouping, quiet defaults, and the one-arrival rule;
+- Healing Home Living Rooms Pass: new candidates carry room keys, primary objects, and ambience hooks;
+- Quest-to-Moment Loop: completions and resolutions become review-safe memory/silent scenes;
+- Gather-to-Moment Loop: closeouts and outcome proposals become social Moments while guest/contact data stays in Gather;
+- World Chapter Moment Layer: narrative progress can appear as quiet room-state ambience;
+- Companion Presence Moment Layer: proposal state appears as companion-ready trace metadata, not private Companion memory;
+- Moment Library Polish: scene grouping, source counts, direct Chronicle review, and clear empty states are now part of the Moment library surface.
+
+### Continuity Controls Loop — implemented 10 broad-stroke pass
+
+- Moment Controls and Preferences: Settings now names quiet Moment intensity, source grouping, arrival limits, and Chronicle suggestion boundaries;
+- Living Room Reaction Layer: Moment room/object/ambient hooks are tied back to Healing Home room evidence and return paths;
+- Source Review Decision Hub Polish: `/source-review` is framed as the central “what wants my decision?” surface across Companion, Gather, Chronicle, Quests, Healing Home, and Moments;
+- Chronicle Memory Weaving: reflection proposals now name improved titles, tags, source context, post-save navigation, and explicit review before saved prose;
+- Quest Momentum Dashboard: Quest management frames active, paused, completed, and source-originated commitments without productivity pressure;
+- Gather Aftercare Loop: closeout now names optional follow-up, reflection, Quest creation, Moment preservation, and Source Inbox review;
+- Companion Trust and Boundaries Pass: Companion explains what it used, what it did not use, what approval changes, and how dismissal/revalidation works;
+- World Progress Continuity Pass: World detail connects chapters, approved facts, room changes, and Moments while preserving World ownership;
+- Homecoming / Return Experience Upgrade: return now composes Moments, Quests, Worlds, Gather, Health-derived signals, drafts, and notices into one gentle re-entry;
+- Cross-Module Privacy Audit Surface: Privacy now summarizes source owners, data boundaries, consented facts, and what never crosses modules.
+
+### Gather + Beacon Massive Presence Pass — implemented broad-stroke round
+
+- Gather Host Operating System: `/gather` now frames the full event lifecycle from planning through aftercare;
+- Gather Event Lifecycle Map: event detail exposes agenda, day-of operations, closeout, Beacon sharing, and source ownership;
+- Gather Command Mission Control: command center now names settings, capacity, RSVPs, waitlists, signups, check-in, announcements, delivery history, closeout, and aftercare in one host surface;
+- Gather Agenda Presence: agenda pages now present personal planning, favorites, reminders, and event-management communication boundaries;
+- Gather Day-of Operations Layer: day-of pages name front-desk lookup, manual fallback, Beacon/QR handoff, walk-ins, and Gather-owned attendance truth;
+- Gather Aftercare Proposal Layer: event reflection/closeout now names optional Chronicle, Quest, Journey, World, Moment, and Source Review handoffs without automatic promotion;
+- Beacon Mission Control: `/beacon` now frames short links, public pages, QR/action blocks, campaigns, domain routing, publishing safety, revisions, and privacy-aware engagement as one public toolkit;
+- Beacon Domain Routing Console: Beacon dashboard names host-aware routing and stable verified-domain behavior;
+- Beacon Public Trust Layer: campaign and page publishing surfaces now state what Beacon can expose and what remains source-owned;
+- Beacon Public Presence Layer: public pages now name Beacon presentation ownership while keeping referenced event, RSVP, signup, attendance, and follow-up truth in source modules.
 
 ### Healing Home Visual Foundation — implemented vertical slice
 
@@ -437,6 +533,213 @@ See `docs/features/QUEST_CHRONICLE_POLISH.md`.
 
 See `docs/features/WORLDS_EPIC_ORDINARY_POLISH.md`.
 
+### Epic Ordinary Chapter Three — implemented vertical slice
+
+- Chapter Three, **The Listening Wall**, begins only after the Eastern Room purpose is chosen;
+- the player chooses which authored fictional truth the house should keep, with exact consequences shown before commitment;
+- the choice durably completes a World objective, creates a fictional keepsake and story-history entry, and changes Caretaker trust with a visible reason;
+- Healing Home composes the result as an account-scoped, source-labeled Library echo without creating or changing real-life records;
+- begin and choice actions are CSRF-protected and idempotent, and the chapter has no productivity, streak, or approved-fact gate.
+
+See `docs/product/EPIC_ORDINARY_CHAPTER_THREE.md`.
+
+### Companion Help and Proposal Center — implemented vertical slice
+
+- `/companion` now presents one coherent ask, review, approval, and execution workflow;
+- visible state counts distinguish decisions needed, approved-but-unexecuted proposals, and source-owned records;
+- the interface explains version-specific approval, dismissal without penalty, and destination revalidation;
+- proposal cards expose destination, type, status, and version while retaining Quest and Chronicle execution boundaries;
+- responsive and forced-color presentation is provided by `companion-center.css`.
+
+See `docs/features/COMPANION_HELP_PROPOSAL_CENTER.md`.
+
+### Welcome-Back Experience — implemented vertical slice
+
+- `/return` now composes one optional continuation across active World state, secure drafts, unread notices, and Quest-owned occurrences;
+- the page leads with “You do not have to catch up” and an immediate route to Hearth;
+- older intentions retain resume, skip, dismiss, and reschedule controls while review is explicitly optional;
+- source modules retain ownership and the return surface performs no silent source-record mutation;
+- responsive and forced-color presentation is provided by `return-experience.css`.
+
+See `docs/features/WELCOME_BACK_EXPERIENCE.md`.
+
+### Complete Quest Management — implemented vertical slice
+
+- `/quests/manage` groups active, paused, and archived commitments with direct edit and history paths;
+- Quest details can be edited without rewriting occurrence history;
+- the next available occurrence can be rescheduled through an account-scoped, CSRF-protected action;
+- `/quests/{id}/history` exposes read-only scheduling, completion, skip, dismissal, and reschedule evidence;
+- existing lifecycle, recurrence, step, milestone, resolution, and completion behavior remains source-owned by Quests.
+
+See `docs/features/COMPLETE_QUEST_MANAGEMENT.md`.
+
+### Complete Chronicle Entry Lifecycle — implemented vertical slice
+
+- entry detail now composes editable content, tags, provenance, privacy boundaries, status, and lifecycle actions;
+- editable entries support bounded correction, reversible archive/restore, and explicitly confirmed deletion;
+- generated historical entries remain read-only and identify their source-ownership correction path;
+- creation, update, archive, restore, and deletion actions produce account-scoped audit evidence;
+- responsive and forced-color presentation is provided by `chronicle-management.css`.
+
+See `docs/features/COMPLETE_CHRONICLE_LIFECYCLE.md`.
+
+### Organization Operating Dashboard — implemented vertical slice
+
+- the Organization home now opens with role-aware operating counts and an explicit capability summary;
+- Gather events, Beacon links, membership, invitations, proposals, and activity are composed into one responsive workspace;
+- source-owner labels make event and public-link ownership visible at the point of use;
+- Owner, Admin, Creator, and Member controls remain capability-filtered and Organization-local;
+- responsive and forced-color presentation is provided by `organization-dashboard.css`.
+
+See `docs/features/ORGANIZATION_OPERATING_DASHBOARD.md`.
+
+### Household Home Dashboard — implemented vertical slice
+
+- the private Household home now opens with members, events, resources, and decision-needed counts;
+- a role panel explains contextual Household capabilities and consent-first responsibility ownership;
+- private Gather events, resources, proposals, invitations, members, activity, preferences, and recovery share one coherent workspace;
+- Household coordination remains optional, private by default, and separate from personal Platform authority;
+- responsive and forced-color presentation is provided by `household-dashboard.css`.
+
+See `docs/features/HOUSEHOLD_HOME_DASHBOARD.md`.
+
+### Gather Participant Journey — implemented vertical slice
+
+- secure RSVP links now compose RSVP, signup, waitlist, attendance, and follow-up into one participant path;
+- participants may claim or release signup commitments and see active or waitlisted state;
+- RSVP cancellation releases related commitments and uses existing capacity/waitlist rules;
+- check-in remains host-recorded Gather truth and post-event Chronicle reflection remains optional;
+- responsive and forced-color presentation is provided by `gather-participant.css`.
+
+See `docs/features/GATHER_PARTICIPANT_JOURNEY.md`.
+
+### Beacon Page Builder and Public Experience — implemented vertical slice
+
+- new Beacon pages begin as private drafts and route directly into edit and preview;
+- the builder exposes bounded content, mobile preview, explicit visibility, and a sensitive-information publication warning;
+- every page update creates durable, account-attributed revision evidence;
+- unlisted and public pages render through a polished mobile-first public shell while private drafts fail closed;
+- migration `097_beacon_page_revisions.sql` adds page revision history.
+
+See `docs/features/BEACON_PAGE_BUILDER_PUBLIC_EXPERIENCE.md`.
+
+### Discovery and Trust Completion — implemented vertical slices
+
+- Global Search now groups authorized Quests, Chronicle, Worlds, Gather, Beacon, and Health results by source owner;
+- Notifications now includes follow-up, campaign, and private Health categories with explicit preferences;
+- Privacy and Consent now composes World grants, Companion context boundaries, and Health derived-sharing state;
+- Audit activity exposes inspectable immutable context for consequential actions;
+- Settings now acts as the account hub for preferences, accessibility, security, sessions, privacy, audit, and data controls.
+
+See `docs/features/GLOBAL_SEARCH_COMPLETION.md`, `docs/features/NOTIFICATIONS_CENTER_COMPLETION.md`, `docs/features/PRIVACY_CONSENT_CENTER.md`, `docs/features/AUDIT_ACTIVITY_DETAIL.md`, and `docs/features/ACCOUNT_SETTINGS_HUB.md`.
+
+### Worlds, Beacon, Gather, and Health Completion — implemented vertical slices
+
+- World catalog/detail now shows requested subscriptions, content notices, data minimization, and permission consequences;
+- Installed Worlds management now names what restart, uninstall, and delete-state actions do and do not touch;
+- Beacon campaigns provide draft/active/paused/archived public call-to-action management without owning Gather truth;
+- Gather closeout now supports host follow-up drafts and optional future Quest/Chronicle proposal flags;
+- Health now includes a private 30-day trend summary and per-record revision history.
+
+See `docs/features/WORLD_CATALOG_PERMISSION_PREVIEW.md`, `docs/features/INSTALLED_WORLDS_MANAGEMENT_POLISH.md`, `docs/features/BEACON_CAMPAIGNS.md`, `docs/features/GATHER_HOST_FOLLOWUP.md`, and `docs/features/HEALTH_RECORD_DETAIL_TRENDS.md`.
+
+### Layout, Recurrence, Media, and Administration Completion — implemented vertical slices
+
+- Hearth customization now has bounded widget ordering, visibility controls, restore defaults, and a source-owner preview;
+- Quests now exposes a recurrence editor and clearer completion confirmation with bounded undo and World eligibility language;
+- Companion memories can be corrected, disabled for future use, removed, and audited;
+- Chronicle now has an explicit proposed-reflection review queue;
+- Gather event detail and calendar/list views compose schedule, RSVP, signup, attendance, follow-up, privacy, and source ownership;
+- Beacon pages now support bounded public blocks for text, links, contact, event, and QR/action content;
+- Platform Media owns private metadata references without becoming District content ownership;
+- authorized System Health administration reports migrations, checkpoint, worker/outbox state, failed jobs, and storage status without secrets.
+
+See `docs/features/HEARTH_CUSTOMIZATION_COMPLETION.md`, `docs/features/QUEST_RECURRENCE_EDITOR.md`, `docs/features/QUEST_COMPLETION_CONFIRMATION_UNDO.md`, `docs/features/COMPANION_MEMORY_CONTROLS.md`, `docs/features/PROPOSED_REFLECTION_REVIEW.md`, `docs/features/GATHER_EVENT_DETAIL_COMPLETION.md`, `docs/features/GATHER_CALENDAR_LIST_VIEW.md`, `docs/features/BEACON_PUBLIC_PAGE_BLOCKS.md`, `docs/features/PLATFORM_MEDIA_FOUNDATION.md`, and `docs/features/SYSTEM_HEALTH_ADMINISTRATION.md`.
+
+### Builds 138–147 — runtime coherence foundation
+
+- runtime schema compatibility hardens mixed-collation UUID seams for Gather follow-ups and Beacon campaigns;
+- System Health now includes Runtime Schema Compatibility, Collation / UUID Join Audit, Admin Release Readiness Console, and Worker / Mail Queue Operations Console surfaces;
+- Hearth source-aware widgets render Organization, Household, and Trust summaries rather than only exposing customization controls;
+- Notification sync, Beacon campaign joins, and Gather follow-up joins are covered by schema-level compatibility rather than emergency query casts;
+- Build 147 is the current unauthenticated health checkpoint.
+
+See `docs/features/BUILDS_138_147_RUNTIME_COHERENCE_FOUNDATION.md`.
+
+### Builds 148–157 — core loop depth
+
+- Platform Media can attach references to District-owned records without taking ownership;
+- Quest recurrence updates rebuild future occurrences while preserving completed history;
+- Quest detail timeline, Chronicle search/filtering, and source-created reflection proposals make action-to-memory paths inspectable;
+- Companion memory provenance detail and proposal review polish show exact source, destination, consequence, editability, and approval version;
+- Hearth can show a private non-diagnostic Health signal summary, and World reaction details now name permission and review state.
+
+See `docs/features/BUILDS_148_157_CORE_LOOP_DEPTH.md`.
+
+### Builds 158–167 — public trust and admin polish
+
+- Notifications remain actionable with source links, read/unread/dismiss controls, and explanation details;
+- Beacon pages now include public-preview safety, block reordering controls, and publishing checks before leaving private draft;
+- Gather public event and participant management surfaces name what is public, what Gather owns, and which event communications are expected;
+- Data controls now show Account Data Export Review and Account Closure Consequence Preview before export or closure actions;
+- System Health identifies Build 167 and frames release readiness, worker/mail queue operations, storage, migrations, and runtime diagnostics without payload bodies or secrets.
+
+See `docs/features/BUILDS_158_167_PUBLIC_TRUST_ADMIN_POLISH.md`.
+
+### Builds 168–177 — onboarding, navigation, and everyday coherence
+
+- first-run onboarding now explains the core loop, optional Health privacy review, Companion permissions, and Epic Ordinary as an optional story doorway;
+- returning-user orientation names what changed, what may be stale, what is safe to ignore, and one manageable next step;
+- Hearth now exposes a Today Command Strip for focus, next Quest, latest World reaction, pending reflection proposal, and unread notifications;
+- cross-module breadcrumbs, unified guide/empty-state cards, and route-level error recovery make safe exits visible;
+- Guide and Settings now organize capability areas by action, reflection, sharing, coordination, privacy, troubleshooting, and consequence;
+- System Health identifies Build 177 and the `everyday-coherence-navigation` checkpoint.
+
+See `docs/features/BUILDS_168_177_ONBOARDING_NAVIGATION_COHERENCE.md`.
+
+### Builds 178–187 — Healing Home composition depth
+
+- Healing Home now includes source-aware Health Garden and Gather Table rooms that link back to their owning modules without copying private payloads;
+- the Home command center exposes source-aware rooms, room-note search, and Companion room-note consent;
+- the Source Glossary now includes Health, Gather, Companion room-note consent, and explicit exclusions;
+- global search can find account-owned Healing Home room notes while labeling them as private room-note results;
+- Companion permissions now include `healing_home.room_notes`, and selected Healing Home context maps to that permission;
+- System Health identifies Build 187 and the `healing-home-composition-depth` checkpoint.
+
+See `docs/features/BUILDS_178_187_HEALING_HOME_COMPOSITION_DEPTH.md`.
+
+### Builds 188–197 — actionable cross-module flow
+
+- `/source-review` now provides a Hearth Source Inbox and Source Draft Review Center for Chronicle proposals, Companion proposals, Gather outcome/follow-up records, Healing Home room-note promotions, and unread source notifications;
+- `/quests/create` can be opened as a Quest-from-Anywhere Draft Bridge with prefilled source context and persisted Quest provenance;
+- `/chronicle/new` can be opened as a Chronicle-from-Anywhere Reflection Bridge with prefilled reflection body and consequence preview;
+- Hearth now includes a Today Decision Strip upgrade that routes to the Source Inbox;
+- Companion and Gather closeout surfaces now point into the same cross-module review flow;
+- Healing Home room notes and Gather follow-ups can intentionally start Quest or Chronicle drafts without automatic promotion;
+- System Health identifies Build 197 and the `actionable-cross-module-flow` checkpoint.
+
+See `docs/features/BUILDS_188_197_ACTIONABLE_CROSS_MODULE_FLOW.md`.
+
+### Builds 198–207 — Source Inbox maturity
+
+- `/source-review` now includes total counts, bucket counts, source-owner filters, top-priority review, stable resume tokens, and read-only resume-later behavior;
+- filtered empty states explain that no approval, dismissal, execution, publication, or read-state mutation occurred;
+- Source Inbox cards include source-owner classes and safer review metadata;
+- Hearth now displays Source Inbox count badges by Chronicle, Companion, Gather, and Healing Home ownership;
+- System Health identifies Build 207 and the `source-inbox-maturity` checkpoint.
+
+See `docs/features/BUILDS_198_207_SOURCE_INBOX_MATURITY.md`.
+
+### Builds 208–217 — durable cross-module drafts
+
+- Source Review room-note and Gather follow-up draft paths can now save durable `source_review.*` drafts through the existing secure `platform_form_drafts` mechanism;
+- `/source-review/drafts/{id}/resume` shows a draft provenance timeline, source owner, source reference, expiry, and destination resume link;
+- Recovery Center now gives Source Review drafts a direct resume action while retaining existing deletion controls;
+- Source Inbox now includes durable draft items alongside live source-owned decisions;
+- System Health identifies Build 217 and the `durable-cross-module-drafts` checkpoint.
+
+See `docs/features/BUILDS_208_217_DURABLE_CROSS_MODULE_DRAFTS.md`.
+
 ## Current migrations
 
 Production deployment must apply every file in `database/migrations`, including:
@@ -454,6 +757,13 @@ Production deployment must apply every file in `database/migrations`, including:
 094_hearth_daily_focus_lifecycle.sql
 095_world_reaction_reviews.sql
 096_healing_home_room_notes.sql
+097_beacon_page_revisions.sql
+098_health_wellbeing_checkins.sql
+099_discovery_trust_campaign_followup.sql
+100_layout_recurrence_media_admin.sql
+101_hearth_layout_widget_expansion.sql
+102_runtime_schema_compatibility.sql
+103_core_loop_media_timeline.sql
 ```
 
 Run:
@@ -544,8 +854,24 @@ php tools/worker.php 10
 - Organization-owned Beacon records keep stable UUID identity and a platform fallback.
 - DNS and certificate provisioning remain hosting responsibilities.
 
+## Health domain rules
+
+- Wellbeing observations are private by default and non-diagnostic.
+- Health owns the observation, its private note, and its correction/deletion lifecycle.
+- Derived sharing requires explicit consent and excludes feeling words and private notes.
+- Health uses no streaks, rewards, shame, or medical recommendations.
+- Account export and closure include Health-owned observations.
+
 ## Explicit current boundaries
 
+- Gather public event pages now carry Organization branding when an event is Organization-linked, including public name, summary, contact email, and brand color.
+- Gather signups are category-aware across food/potluck, shifts, equipment, supplies, setup, cleanup, transportation, childcare, accessibility support, and custom roles rather than a flat signup list.
+- Gather signup slots persist organizer instructions, per-claim quantity caps, waitlist rules, overlap rules, and whether an attending RSVP is required before claiming.
+- Gather participant management links show signup categories, descriptions, waitlist state, RSVP requirements, and quantity caps so guests can self-manage commitments without a Koravik account.
+- Gather moderators with contextual manage capability can edit previously-created event details, modify signup needs, assign active RSVPs into signup commitments, and delete signup needs from the command center.
+- Gather now has a dedicated `gather.css` visual layer for public event pages, command surfaces, signup categories, moderator forms, metrics, and responsive/forced-color states so new Gather features share one visual language.
+- The site-wide Visual System now applies global UI/UX cleanup across authenticated pages: responsive app shell navigation, normalized page headers, cards, forms, checkboxes/radios, grids, tables, action groups, dark/high-contrast controls, and route-aware breadcrumbs.
+- Gather’s public signup board is intentionally broader than SignupGenius-style sheets: RSVP truth, guest management, public preview, waitlists, commitments, day-of check-in, closeout, and aftercare all stay attached to the same event record.
 - Organization-owned Gather management is capability-based; participant self-service and personal outcome consent remain separate.
 - Organization invitations depend on configured Platform Mail workers and never expose stored raw tokens.
 - Archive and suspension are recoverable; destructive Organization deletion is intentionally not implemented.
@@ -559,11 +885,11 @@ php tools/worker.php 10
 
 ## Validation
 
-The single workflow at `.github/workflows/validate.yml` must lint PHP, migrate an isolated MySQL database, start the application, and run `php tools/test.php`. The release suite verifies migration inventory, critical schema, security primitives, Organization and Household capabilities, Gather authorization boundaries, subdirectory routing, accessibility preferences, Platform Mail operations, workflow recovery, duplicate protection, session revocation, bounded workers, the Build 117 checkpoint, Hearth Daily Focus, Worlds Home ownership, reaction review, rendering, first-install initialization, Healing Home owned-room continuity, Healing Home room detail ownership, explicit Healing Home room presence, and private Healing Home room notes.
+The single workflow at `.github/workflows/validate.yml` must lint PHP, migrate an isolated MySQL database, start the application, and run `php tools/test.php`. The release suite verifies migration inventory, critical schema, security primitives, Organization and Household capabilities, Gather authorization boundaries, subdirectory routing, accessibility preferences, Platform Mail operations, workflow recovery, duplicate protection, session revocation, bounded workers, the Build 217 checkpoint, Hearth Daily Focus, Worlds Home ownership, reaction review, rendering, first-install initialization, Healing Home owned-room continuity, Healing Home room detail ownership, explicit Healing Home room presence, private Healing Home room notes, Health privacy, discovery/trust/campaign/follow-up contracts, layout/recurrence/media/administration completion contracts, Builds 138–147 runtime-coherence contracts, Builds 148–157 core-loop depth contracts, Builds 158–167 public trust/admin polish contracts, Builds 168–177 onboarding/navigation coherence contracts, Builds 178–187 Healing Home composition-depth contracts, Builds 188–197 actionable cross-module flow contracts, Builds 198–207 Source Inbox maturity contracts, and Builds 208–217 durable cross-module draft contracts.
 
 ## Next build
 
-Continue the forward-facing product phase with another complete vertical slice. Prioritize cohesive District screens, Organization or Household dashboards, Epic Ordinary continuation, and responsive interaction polish; add backend work only when the selected visible workflow requires it.
+Continue by wiring additional District source submissions into Moment Engine and adding richer authored scene copy packs. Preserve evidence, not rewards; keep one-at-a-time arrival scenes; and keep Chronicle preservation review explicit.
 
 ## Build workflow
 

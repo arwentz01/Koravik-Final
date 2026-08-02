@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Koravik\Platform\Journey;
 
 use Koravik\Platform\Database\Database;
+use Koravik\Platform\Moments\MomentService;
 use Koravik\Platform\Security\Security;
 use Koravik\Worlds\WorldHomeService;
 
@@ -21,6 +22,18 @@ final class HealingHomeController
             $journey = (new JourneyService($this->database))->homeForAccount((string) $account['id']);
             echo $this->renderHome($account, $journey);
 
+            return true;
+        }
+
+        if ($method === 'GET' && $path === '/home/rooms/health_garden') {
+            Security::requireAccount();
+            echo $this->renderHealthGardenRoom();
+            return true;
+        }
+
+        if ($method === 'GET' && $path === '/home/rooms/gather_table') {
+            Security::requireAccount();
+            echo $this->renderGatherTableRoom();
             return true;
         }
 
@@ -134,6 +147,36 @@ final class HealingHomeController
             return true;
         }
 
+        if ($method === 'GET' && $path === '/home/reclamation') {
+            $account = Security::requireAccount();
+            echo $this->renderReclamation((new JourneyService($this->database))->reclamationForAccount((string) $account['id']));
+            return true;
+        }
+
+        if ($method === 'GET' && $path === '/home/discoveries') {
+            $account = Security::requireAccount();
+            echo $this->renderDiscoveries((new JourneyService($this->database))->reclamationForAccount((string) $account['id']));
+            return true;
+        }
+
+        if ($method === 'GET' && $path === '/home/tiny-joys') {
+            $account = Security::requireAccount();
+            echo $this->renderTinyJoys((new JourneyService($this->database))->reclamationForAccount((string) $account['id']));
+            return true;
+        }
+
+        if ($method === 'GET' && $path === '/home/seasons') {
+            $account = Security::requireAccount();
+            echo $this->renderSeasons((new JourneyService($this->database))->reclamationForAccount((string) $account['id']));
+            return true;
+        }
+
+        if ($method === 'GET' && $path === '/home/moments') {
+            $account = Security::requireAccount();
+            echo $this->renderMomentsRemembered((new JourneyService($this->database))->reclamationForAccount((string) $account['id']));
+            return true;
+        }
+
         if ($method === 'GET' && preg_match('#^/home/keepsakes/([a-f0-9-]{36})$#', $path, $matches)) {
             $account = Security::requireAccount();
             $keepsake = (new JourneyService($this->database))->keepsakeForAccount((string) $account['id'], $matches[1]);
@@ -148,6 +191,41 @@ final class HealingHomeController
             }
 
             echo $this->renderKeepsake($keepsake);
+            return true;
+        }
+
+        if ($method === 'POST' && preg_match('#^/home/keepsakes/([a-f0-9-]{36})/moment$#', $path, $matches)) {
+            $account = Security::requireAccount();
+            if (!Security::verifyCsrf(isset($_POST['csrf']) ? (string) $_POST['csrf'] : null)) {
+                $_SESSION['flash'] = 'Your session changed. Please try again.';
+                header('Location: /home/keepsakes/' . $matches[1], true, 303);
+                return true;
+            }
+            $keepsake = (new JourneyService($this->database))->keepsakeForAccount((string) $account['id'], $matches[1]);
+            if (!$keepsake) {
+                http_response_code(404);
+                echo $this->document('Keepsake unavailable', '<section class="panel"><h1>This keepsake is unavailable.</h1><a class="button" href="/home/keepsakes">Return to keepsakes</a></section>');
+                return true;
+            }
+            $momentId = (new MomentService($this->database))->submit((string) $account['id'], [
+                'source_module' => 'Healing Home',
+                'source_type' => 'keepsake_manual',
+                'source_id' => (string) $keepsake['id'],
+                'moment_key' => 'keepsake-detail-memory-scene',
+                'scene_template' => 'memory',
+                'primary_object' => (string) $keepsake['name'],
+                'ambient_detail' => 'The object waits on the shelf as evidence, not reward.',
+                'recommended_action_label' => 'Stay with the object',
+                'title' => (string) $keepsake['name'],
+                'body' => (string) $keepsake['meaning'],
+                'room_key' => (string) $keepsake['room_key'],
+                'visibility' => 'chronicle',
+                'priority' => 'low',
+                'provenance_summary' => 'You chose to prepare this displayed Healing Home keepsake as a memory-object Moment.',
+                'excluded_summary' => 'Preparing this Moment did not read private room notes, Chronicle prose, Companion memory, Health records, or unrelated data.',
+            ]);
+            $_SESSION['flash'] = 'Keepsake prepared as a memory Moment.';
+            header('Location: /moments/' . $momentId, true, 303);
             return true;
         }
 
@@ -309,6 +387,18 @@ final class HealingHomeController
         return false;
     }
 
+    private function renderHealthGardenRoom(): string
+    {
+        $body = '<section class="room-detail-hero healing-home-health-garden-room" aria-labelledby="room-title"><p class="eyebrow">Health Garden</p><h1 id="room-title"><span class="room-title-symbol" aria-hidden="true">❧</span>Health Garden</h1><p>A composed room for care patterns. Health owns observations, notes, revisions, and derived sharing consent; Healing Home only points toward private records and consent-safe summaries.</p><div class="hero-actions"><a class="button" href="/health">Open Health</a><a class="button secondary" href="/home">Return home</a></div></section><section class="room-detail-grid"><article class="room-detail-panel"><p class="eyebrow">What this room can show</p><h2>Care without diagnosis.</h2><p>The garden may show that a private Health surface exists and can link you back to it. It does not read feeling words, expose notes, or infer diagnosis.</p><p class="local-actions"><a class="button secondary" href="/health/checkins">Review check-ins</a><a class="button secondary" href="/privacy">Review consent</a></p></article><aside class="room-detail-panel room-context-panel"><p class="eyebrow">Boundary</p><h2>What stays in Health</h2><ul class="room-memory-list"><li><strong>Health source owner</strong><span>Observed date, private note, revision history, and sharing flags.</span></li><li><strong>Healing Home display</strong><span>Orientation language and a safe doorway back to Health.</span></li><li><strong>Never hidden scoring</strong><span>No diagnosis, no streak pressure, and no background emotional assessment.</span></li></ul></aside></section>';
+        return $this->document('Health Garden', $body);
+    }
+
+    private function renderGatherTableRoom(): string
+    {
+        $body = '<section class="room-detail-hero healing-home-gather-table-room" aria-labelledby="room-title"><p class="eyebrow">Gather Table</p><h1 id="room-title"><span class="room-title-symbol" aria-hidden="true">◇</span>Gather Table</h1><p>A composed room for invitations and event continuity. Gather owns events, RSVP truth, signup commitments, attendance, communication preferences, and follow-up records.</p><div class="hero-actions"><a class="button" href="/gather">Open Gather</a><a class="button secondary" href="/home">Return home</a></div></section><section class="room-detail-grid"><article class="room-detail-panel"><p class="eyebrow">What this room can show</p><h2>Coordination without taking over.</h2><p>The table may orient you toward upcoming or recent gatherings, but event truth remains in Gather and public details remain behind Gather public preview safety.</p><p class="local-actions"><a class="button secondary" href="/gather">Open Gather dashboard</a><a class="button secondary" href="/home/boundaries">Review house boundaries</a></p></article><aside class="room-detail-panel room-context-panel"><p class="eyebrow">Boundary</p><h2>What stays in Gather</h2><ul class="room-memory-list"><li><strong>Gather source owner</strong><span>RSVP, signup, attendance, reminders, participant preferences, and follow-up.</span></li><li><strong>Healing Home display</strong><span>A calm table metaphor and safe links back to Gather.</span></li><li><strong>Never silently shared</strong><span>Beacon pages, public attendance, and guest communication require their own source-owned review.</span></li></ul></aside></section>';
+        return $this->document('Gather Table', $body);
+    }
+
     private function renderHome(array $account, array $journey): string
     {
         $focus = $journey['focus_quest'];
@@ -363,7 +453,7 @@ final class HealingHomeController
         $arrival = '<section class="home-arrival-scene" aria-labelledby="home-arrival-title"><div><p class="eyebrow">Arrival scene</p><h2 id="home-arrival-title">What changed since you were gone</h2><p>' . self::e($this->atmosphereDescription((string) ($journey['state']['atmosphere'] ?? 'quiet_morning'))) . '</p></div><ul class="arrival-list">' . $sinceGone . '<li><strong>Open rooms</strong><span>' . $openRooms . ' rooms are available; waiting doors stay visible without pressure.</span></li><li><strong>Next threshold</strong><span>Choose a room by meaning, not by obligation.</span></li></ul></section>';
         $pulse = '<section class="home-pulse-panel" aria-labelledby="home-pulse-title"><p class="eyebrow">House pulse</p><h2 id="home-pulse-title">' . self::e($this->housePulseLabel((string) ($journey['state']['atmosphere'] ?? 'quiet_morning'))) . '</h2><p>' . self::e($this->housePulseCopy((string) ($journey['state']['atmosphere'] ?? 'quiet_morning'))) . '</p><p class="meta">This is atmospheric presentation, not diagnosis, productivity scoring, or hidden emotional assessment.</p></section>';
         $routes = '<section class="home-resonance-routes" aria-labelledby="home-resonance-title"><div><p class="eyebrow">House resonance</p><h2 id="home-resonance-title">Choose a path by the kind of care you want.</h2><p>These are invitations, not assigned work. Each path keeps the source owner visible.</p></div><ol><li><strong>Understand what changed</strong><span>Fireplace → Library → Source thread</span><a href="/home/rooms/fireplace">Follow the echoes</a></li><li><strong>Make without proving</strong><span>Eastern Room → Workshop → Chronicle only if chosen</span><a href="/home/rooms/workshop">Enter the Workshop</a></li><li><strong>Recover gently</strong><span>Caretaker → Garden → Room note</span><a href="/home/rooms/garden">Visit the Garden</a></li></ol><p><a class="button secondary" href="/home/guide">Open the house guide</a></p></section>';
-        $living = '<section class="home-living-house home-command-center" aria-labelledby="home-living-title"><div><p class="eyebrow">Living house</p><h2 id="home-living-title">The house offers invitations, not assignments.</h2><p>Use these grouped shelves when you want a different doorway into the same source-aware home. Healing Home is ready to move sections after this polish pass.</p></div><div class="home-command-grid"><article><h3>Start here</h3><p>Daily orientation and direct room access.</p><p class="local-actions"><a class="button secondary" href="/home/today">Today in the house</a><a class="button secondary" href="/home/rooms">Room directory</a><a class="button secondary" href="/home/guide">Open the house guide</a></p></article><article><h3>Living house</h3><p>Invitations, thresholds, and the authored map of the house.</p><p class="local-actions"><a class="button secondary" href="/home/invitations">House invitations</a><a class="button secondary" href="/home/thresholds">Thresholds</a><a class="button secondary" href="/home/atlas">House atlas</a><a class="button secondary" href="/home/lore">Room lore</a><a class="button secondary" href="/home/constellations">House constellations</a></p></article><article><h3>Trust and meaning</h3><p>Boundaries, provenance, and consent stay visible.</p><p class="local-actions"><a class="button secondary" href="/home/sources">Source glossary</a><a class="button secondary" href="/home/boundaries">Boundary ledger</a><a class="button secondary" href="/home/consent-map">Consent map</a><a class="button secondary" href="/home/privacy">What the house knows</a></p></article><article><h3>Compass</h3><p>Choose by need, mood, or orientation.</p><p class="local-actions"><a class="button secondary" href="/home/wayfinding">Wayfinding</a><a class="button secondary" href="/home/compass">House compass</a><a class="button secondary" href="/home/moods">Moods</a><a class="button secondary" href="/home/by-need">Rooms by need</a><a class="button secondary" href="/home/changelog">House changelog</a></p></article></div></section>';
+        $living = '<section class="home-living-house home-command-center healing-home-composition-depth epic-ordinary-reclamation-sprint" aria-labelledby="home-living-title"><div><p class="eyebrow">Epic Ordinary Reclamation Sprint</p><h2 id="home-living-title">The house offers invitations, not assignments.</h2><p>Recovered Epic-Ordinary charm now has visible places: evidence objects, Quiet Hearth whispers, tiny joys, seasonal ambience, remembered Moments, and source-aware discoveries. Healing Home is ready to move sections, and Health and Gather can appear as composed rooms without giving Healing Home ownership of their records. Reclaimed moods still include Green Dusk, quiet morning, and workshop lamplight as presentation language.</p></div><div class="home-command-grid"><article><h3>Start here</h3><p>Daily orientation and direct room access.</p><p class="local-actions"><a class="button secondary" href="/home/today">Today in the house</a><a class="button secondary" href="/home/rooms">Room directory</a><a class="button secondary" href="/home/guide">Open the house guide</a></p></article><article><h3>Reclaimed wonder</h3><p>Epic-Ordinary identity restored as player-facing exploration.</p><p class="local-actions"><a class="button secondary" href="/home/reclamation">Reclamation hearth</a><a class="button secondary" href="/home/discoveries">Discoveries</a><a class="button secondary" href="/home/tiny-joys">Tiny joys</a><a class="button secondary" href="/home/seasons">Seasonal life</a><a class="button secondary" href="/home/moments">Moments remembered</a></p></article><article><h3>Living house</h3><p>Invitations, thresholds, and the authored map of the house.</p><p class="local-actions"><a class="button secondary" href="/home/invitations">House invitations</a><a class="button secondary" href="/home/thresholds">Thresholds</a><a class="button secondary" href="/home/atlas">House atlas</a><a class="button secondary" href="/home/lore">Room lore</a><a class="button secondary" href="/home/constellations">House constellations</a></p></article><article><h3>Source-aware rooms</h3><p>Composed rooms point toward source modules without copying private payloads.</p><p class="local-actions"><a class="button secondary" href="/home/rooms/health_garden">Health Garden</a><a class="button secondary" href="/home/rooms/gather_table">Gather Table</a><a class="button secondary" href="/search">Search room notes</a><a class="button secondary" href="/companion/context">Companion room-note consent</a></p></article><article><h3>Trust and meaning</h3><p>Boundaries, provenance, and consent stay visible.</p><p class="local-actions"><a class="button secondary" href="/home/sources">Source glossary</a><a class="button secondary" href="/home/boundaries">Boundary ledger</a><a class="button secondary" href="/home/consent-map">Consent map</a><a class="button secondary" href="/home/privacy">What the house knows</a></p></article><article><h3>Compass</h3><p>Choose by need, mood, or orientation.</p><p class="local-actions"><a class="button secondary" href="/home/wayfinding">Wayfinding</a><a class="button secondary" href="/home/compass">House compass</a><a class="button secondary" href="/home/moods">Moods</a><a class="button secondary" href="/home/by-need">Rooms by need</a><a class="button secondary" href="/home/changelog">House changelog</a></p></article></div></section>';
 
         $body = '<section class="healing-home-hero home-atmosphere-' . self::e((string) ($journey['state']['atmosphere'] ?? 'quiet_morning')) . '" aria-labelledby="healing-home-title"><div class="home-sky" aria-hidden="true"><span></span><span></span><span></span></div><div class="healing-home-copy"><p class="eyebrow">Healing Home - ' . self::e(ucwords($atmosphere)) . '</p><h1 id="healing-home-title">Welcome home, ' . self::e((string) $account['display_name']) . '.</h1><p>You do not have to carry everything at once. One honest next step is enough.</p>' . $returned . '<div class="hero-actions"><a class="button" href="#home-room-scene">Step inside</a><a class="button secondary" href="/home/today">Today in the house</a><a class="button secondary" href="/home/rooms">Room directory</a><a class="button secondary" href="/home/sources">Source glossary</a><a class="button secondary" href="/home/privacy">What the house knows</a></div></div><figure class="home-illustration" aria-label="A warm cutaway room with a lit fireplace, quest board, journal table, companion chair, and unopened doors."><div class="roof" aria-hidden="true"></div><div class="room-window" aria-hidden="true"></div><div class="room-fire" aria-hidden="true"></div><div class="room-board" aria-hidden="true"></div><div class="room-table" aria-hidden="true"></div><div class="room-chair" aria-hidden="true"></div><div class="room-door" aria-hidden="true"></div></figure></section>' . $arrival . $pulse . $routes . $living . '<section id="home-room-scene" class="healing-home-grid" aria-label="Healing Home rooms">' . $focusHtml . $changeHtml . $memoryHtml . $keepsakeHtml . $relationshipHtml . '<article class="home-place room-card room-companion-chair"><p class="eyebrow">Companion Chair</p><h2>A place for thoughtful help.</h2><p>The Companion may help you clarify, reflect, or draft, but never choose for you.</p><p class="local-actions"><a href="/companion">Visit Companion</a><a href="/home/rooms/companion_chair">Open room</a></p></article></section><section class="home-rooms home-room-map home-blueprint-map" aria-labelledby="home-room-map-title"><div class="section-heading"><div><p class="eyebrow">Room map</p><h2 id="home-room-map-title">Familiar places and unopened doors</h2><p>Every room names what it holds, whether it is open, and where you are resting now. Each room also has a symbolic marker and a doorway you can choose without pressure.</p></div></div><ul>' . $rooms . '</ul></section>';
 
@@ -595,6 +685,7 @@ final class HealingHomeController
         return match ($atmosphere) {
             'green_dusk' => 'Green dusk gathers around the Garden. The house feels tended, quiet, and a little more alive.',
             'workshop_lamplight' => 'Workshop lamplight is on. The house is making space for repair, sketches, and unfinished things.',
+            'reclaimed_warmth' => 'Reclaimed warmth moves through the rooms. The Caretaker’s lantern, Quiet Hearth whispers, and remembered objects make return visible.',
             default => 'Quiet morning holds the rooms steady. Nothing urgent is waiting behind the door.',
         };
     }
@@ -627,6 +718,7 @@ final class HealingHomeController
         return match ($atmosphere) {
             'green_dusk' => 'Tended and listening',
             'workshop_lamplight' => 'Lit for making',
+            'reclaimed_warmth' => 'Reclaimed and welcoming',
             default => 'Quiet and steady',
         };
     }
@@ -636,6 +728,7 @@ final class HealingHomeController
         return match ($atmosphere) {
             'green_dusk' => 'The Garden has been touched recently, so the house carries a green dusk mood.',
             'workshop_lamplight' => 'The Workshop is awake; unfinished things are allowed to stay unfinished.',
+            'reclaimed_warmth' => 'Epic Ordinary’s older warmth has been reclaimed as evidence objects, soft room life, and source-aware Moments.',
             default => 'The home is holding its shape without asking you to perform.',
         };
     }
@@ -765,6 +858,65 @@ final class HealingHomeController
         return $this->document((string) $relationship['character_name'], $body);
     }
 
+    private function renderReclamation(array $reclamation): string
+    {
+        $changes = '';
+        foreach ($reclamation['changes'] as $change) {
+            $changes .= '<li><strong>' . self::e((string) $change['title']) . '</strong><span>' . self::e((string) $change['description']) . '</span><small>' . self::e(ucwords(str_replace('_', ' ', (string) $change['room_key']))) . '</small></li>';
+        }
+        $artifacts = '';
+        foreach ($reclamation['keepsakes'] as $keepsake) {
+            $artifacts .= '<li><strong>' . self::e((string) $keepsake['name']) . '</strong><span>' . self::e((string) $keepsake['meaning']) . '</span><a href="/home/keepsakes/' . self::e((string) $keepsake['id']) . '">Inspect artifact</a></li>';
+        }
+        $body = '<section class="relationship-hero epic-reclamation-hero"><p class="eyebrow">Epic Ordinary Reclamation Sprint</p><h1>The ordinary is allowed to glow again.</h1><p>Recovered from the legacy Epic-Ordinary canon: the Healing Home is the flagship place, objects are evidence rather than rewards, nothing important happens off-screen, and the Caretaker notices without taking authority.</p><p class="local-actions"><a class="button secondary" href="/home">Return home</a><a class="button secondary" href="/home/discoveries">Discoveries</a><a class="button secondary" href="/home/tiny-joys">Tiny joys</a><a class="button secondary" href="/home/seasons">Seasonal life</a><a class="button secondary" href="/home/moments">Moments remembered</a></p></section><section class="house-threshold-columns"><article><h2>Reclaimed visible changes</h2>' . ($changes ? '<ol class="room-memory-list">' . $changes . '</ol>' : '<p>The reclamation materializer is waiting for Epic Ordinary to be installed for this account.</p>') . '</article><article><h2>Recovered evidence objects</h2>' . ($artifacts ? '<ol class="room-memory-list">' . $artifacts . '</ol>' : '<p>No reclaimed objects are displayed yet.</p>') . '</article></section><section class="room-trust-panel"><p class="eyebrow">Boundaries</p><h2>Reclaimed does not mean copied authority.</h2><p>These are fictional World/Journey surfaces. They do not import legacy schemas, admin tools, reward economies, streaks, household assumptions, or private source payloads. Chronicle entries still require an explicit Chronicle action.</p><p class="local-actions"><a class="button" href="/chronicle/new?context=epic_ordinary_reclamation&title=Epic%20Ordinary%20reclamation%20reflection&tags=epic-ordinary,healing-home,reclamation">Reflect in Chronicle</a><a class="button secondary" href="/home/privacy">What the house knows</a></p></section>';
+
+        return $this->document('Epic Ordinary Reclamation', $body);
+    }
+
+    private function renderDiscoveries(array $reclamation): string
+    {
+        $cards = '';
+        foreach ($reclamation['discoveries'] as $discovery) {
+            $cards .= '<article><h2>' . self::e((string) $discovery['title']) . '</h2><p>' . self::e((string) $discovery['body']) . '</p></article>';
+        }
+        $body = '<section class="relationship-hero"><p class="eyebrow">Exploration and discovery</p><h1>Recovered discoveries</h1><p>Discoveries are source-aware pieces of world identity, not checklist goals.</p><p class="local-actions"><a class="button secondary" href="/home/reclamation">Reclamation hearth</a><a class="button secondary" href="/home">Return home</a></p></section><section class="source-glossary-grid">' . $cards . '</section>';
+
+        return $this->document('Recovered discoveries', $body);
+    }
+
+    private function renderTinyJoys(array $reclamation): string
+    {
+        $cards = '';
+        foreach ($reclamation['tiny_joys'] as $joy) {
+            $cards .= '<article><p class="eyebrow">' . self::e((string) $joy['room']) . '</p><h2>' . self::e((string) $joy['title']) . '</h2><p>' . self::e((string) $joy['body']) . '</p><a href="/chronicle/new?context=epic_ordinary_tiny_joy&title=' . rawurlencode((string) $joy['title']) . '&tags=epic-ordinary,tiny-joy">Remember only if you choose</a></article>';
+        }
+        $body = '<section class="relationship-hero"><p class="eyebrow">Tiny joys</p><h1>Small interactions, no score attached.</h1><p>Recovered from Epic-Ordinary Tiny Joys and ambient props: noticing something small is already enough. No points, no progression credit, no obligation.</p><p class="local-actions"><a class="button secondary" href="/home/reclamation">Reclamation hearth</a><a class="button secondary" href="/home">Return home</a></p></section><section class="house-invitations-grid">' . $cards . '</section>';
+
+        return $this->document('Tiny joys', $body);
+    }
+
+    private function renderSeasons(array $reclamation): string
+    {
+        $cards = '';
+        foreach ($reclamation['seasons'] as $season) {
+            $cards .= '<article><p class="eyebrow">' . self::e((string) $season['room']) . '</p><h2>' . self::e((string) $season['season']) . '</h2><p>' . self::e((string) $season['meaning']) . '</p></article>';
+        }
+        $body = '<section class="relationship-hero"><p class="eyebrow">Seasonal and ambient life</p><h1>Time passes softly.</h1><p>Seasonal storytelling makes the house feel alive without turning weather, absence, or mood into diagnosis or punishment.</p><p class="local-actions"><a class="button secondary" href="/home/reclamation">Reclamation hearth</a><a class="button secondary" href="/home">Return home</a></p></section><section class="house-moods-grid">' . $cards . '</section>';
+
+        return $this->document('Seasonal life', $body);
+    }
+
+    private function renderMomentsRemembered(array $reclamation): string
+    {
+        $memories = '';
+        foreach ($reclamation['memories'] as $memory) {
+            $memories .= '<li><strong>' . self::e(ucwords(str_replace('_', ' ', (string) $memory['memory_kind']))) . '</strong><span>' . self::e((string) $memory['summary']) . '</span><small>' . self::e((string) $memory['created_at']) . ' UTC</small></li>';
+        }
+        $body = '<section class="relationship-hero"><p class="eyebrow">Moments remembered</p><h1>Nothing important happens off-screen.</h1><p>This page reclaims the legacy Moments Remembered idea as a replay-safe library of visible house continuity. It now hands off to the Moment Engine Foundation for queued arrival scenes, remembered moments, and Chronicle preservation review.</p><p class="local-actions"><a class="button" href="/moments">Open Moment Engine</a><a class="button secondary" href="/moments/next">Next arrival Moment</a><a class="button secondary" href="/moments/remembered">Remembered Moments</a><a class="button secondary" href="/home/reclamation">Reclamation hearth</a><a class="button secondary" href="/chronicle">Open Chronicle</a></p></section><section class="room-detail-panel"><h2>Remembered Caretaker continuity</h2>' . ($memories ? '<ol class="room-memory-list">' . $memories . '</ol>' : '<p>No reclaimed memories are available yet.</p>') . '</section><section class="room-trust-panel"><h2>Chronicle integration</h2><p>Meaningful Moments can be preserved in Chronicle, but Koravik-Final keeps that as an explicit player action.</p><a class="button" href="/chronicle/new?context=epic_ordinary_moment&title=Moment%20remembered&tags=epic-ordinary,moment">Preserve a Moment</a></section>';
+
+        return $this->document('Moments remembered', $body);
+    }
+
     private function renderKeepsakes(array $keepsakes): string
     {
         $items = '';
@@ -779,7 +931,7 @@ final class HealingHomeController
 
     private function renderKeepsake(array $keepsake): string
     {
-        $body = '<section class="relationship-hero keepsake-shelf-hero"><p class="eyebrow">Keepsake · ' . self::e($this->sourceLabel((string) $keepsake['source_type'])) . '</p><h1>' . self::e((string) $keepsake['name']) . '</h1><p>' . self::e((string) $keepsake['meaning']) . '</p><div class="hero-actions"><a class="button secondary" href="/home/keepsakes">Return to shelf</a><a class="button" href="/home/rooms/' . self::e((string) $keepsake['room_key']) . '">Open room</a></div></section><section class="room-trust-panel"><p class="eyebrow">Provenance</p><h2>Where this came from</h2><dl class="reaction-explain-list"><div><dt>Source owner</dt><dd>' . self::e($this->sourceLabel((string) $keepsake['source_type'])) . '</dd></div><div><dt>Room</dt><dd>' . self::e(ucwords(str_replace('_', ' ', (string) $keepsake['room_key']))) . '</dd></div><div><dt>Created</dt><dd>' . self::e((string) $keepsake['created_at']) . ' UTC</dd></div><div><dt>Boundary</dt><dd>Healing Home displays this keepsake. It does not create a Quest, Chronicle entry, Companion memory, or real-life achievement score.</dd></div></dl></section>';
+        $body = '<section class="relationship-hero keepsake-shelf-hero"><p class="eyebrow">Keepsake · ' . self::e($this->sourceLabel((string) $keepsake['source_type'])) . '</p><h1>' . self::e((string) $keepsake['name']) . '</h1><p>' . self::e((string) $keepsake['meaning']) . '</p><div class="hero-actions"><a class="button secondary" href="/home/keepsakes">Return to shelf</a><a class="button" href="/home/rooms/' . self::e((string) $keepsake['room_key']) . '">Open room</a><form method="post" action="/home/keepsakes/' . self::e((string) $keepsake['id']) . '/moment"><input type="hidden" name="csrf" value="' . self::e(Security::csrfToken()) . '"><button class="button secondary" type="submit">Prepare as memory Moment</button></form></div></section><section class="room-trust-panel"><p class="eyebrow">Provenance</p><h2>Where this came from</h2><dl class="reaction-explain-list"><div><dt>Source owner</dt><dd>' . self::e($this->sourceLabel((string) $keepsake['source_type'])) . '</dd></div><div><dt>Room</dt><dd>' . self::e(ucwords(str_replace('_', ' ', (string) $keepsake['room_key']))) . '</dd></div><div><dt>Created</dt><dd>' . self::e((string) $keepsake['created_at']) . ' UTC</dd></div><div><dt>Moment interaction</dt><dd>Prepare as memory Moment creates Moment Engine presentation state only. Chronicle still requires explicit review.</dd></div><div><dt>Boundary</dt><dd>Healing Home displays this keepsake. It does not create a Quest, Chronicle entry, Companion memory, or real-life achievement score.</dd></div></dl></section>';
 
         return $this->document((string) $keepsake['name'], $body);
     }
@@ -834,7 +986,7 @@ final class HealingHomeController
 
     private function renderSourceGlossary(): string
     {
-        $body = '<section class="relationship-hero source-glossary-hero"><p class="eyebrow">Healing Home</p><h1>Source glossary</h1><p>What the house can reference, who owns it, and what stays private.</p><a class="button secondary" href="/home">Return home</a></section><section class="source-glossary-grid"><article><h2>Quests</h2><p>Owns commitments, steps, recurrence, and completion. Healing Home may show a title or next step.</p></article><article><h2>Chronicle</h2><p>Owns saved reflections. Healing Home can suggest a starting context, but does not save prose for you.</p></article><article><h2>Worlds</h2><p>Owns fictional reactions, choices, and keepsakes. The house displays explainable fictional continuity.</p></article><article><h2>Journey relationships</h2><p>Owns Caretaker continuity and conversations. It is not affection scoring.</p></article><article><h2>Deliberately excluded</h2><p>Health records, Companion memory, Gather communication, Beacon attendance, account secrets, and other accounts’ data are not used for hidden scoring.</p></article></section>';
+        $body = '<section class="relationship-hero source-glossary-hero healing-home-source-matrix"><p class="eyebrow">Healing Home source matrix</p><h1>Source glossary</h1><p>What the house can reference, who owns it, and what stays private.</p><a class="button secondary" href="/home">Return home</a></section><section class="source-glossary-grid"><article><h2>Quests</h2><p>Owns commitments, steps, recurrence, and completion. Healing Home may show a title or next step.</p></article><article><h2>Chronicle</h2><p>Owns saved reflections. Healing Home can suggest a starting context, but does not save prose for you.</p></article><article><h2>Worlds</h2><p>Owns fictional reactions, choices, and keepsakes. The house displays explainable fictional continuity.</p></article><article><h2>Health</h2><p>Owns check-ins, notes, revision history, and sharing consent. Health Garden is a doorway, not a diagnostic engine.</p></article><article><h2>Gather</h2><p>Owns events, RSVPs, signups, attendance, communication preferences, and follow-up truth. Gather Table does not publish or invite.</p></article><article><h2>Journey relationships</h2><p>Owns Caretaker continuity and conversations. It is not affection scoring.</p></article><article><h2>Companion</h2><p>May use Healing Home room notes only when the dedicated room-note permission is enabled.</p></article><article><h2>Deliberately excluded</h2><p>Health notes, Gather communication, Beacon attendance, account secrets, and other accounts’ data are not used for hidden scoring.</p></article></section>';
 
         return $this->document('Source glossary', $body);
     }

@@ -14,6 +14,9 @@ final class NotificationService
         'world.reactions' => 'World reactions',
         'platform.return' => 'Welcome-back summaries',
         'household.coordination' => 'Household coordination',
+        'gather.followup' => 'Gather follow-up',
+        'beacon.campaigns' => 'Beacon campaigns',
+        'health.private' => 'Health reminders',
     ];
 
     public function __construct(private readonly Database $database) {}
@@ -38,6 +41,14 @@ final class NotificationService
             $days=max(7,(int)($payload['days_away']??7));
             $this->create($accountId,'Koravik','platform.return','Your welcome-back review is ready','A calm summary is available after about '.$days.' days away.','/return','Sent because Koravik detected a meaningful absence of at least seven days.',(string)$row['id']);
         }
+
+        $followups=$this->database->pdo()->prepare('SELECT f.id,f.title,e.title event_title FROM gather_event_followups f JOIN gather_events e ON e.id=f.event_id WHERE f.author_account_id=:account_id AND f.status="draft" AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.account_id=:notification_account AND n.source_event_id=f.id AND n.category="gather.followup") ORDER BY f.created_at ASC LIMIT 20');
+        $followups->execute(['account_id'=>$accountId,'notification_account'=>$accountId]);
+        foreach($followups->fetchAll() as $row) $this->create($accountId,'Gather','gather.followup','Follow-up draft waiting: '.(string)$row['title'],'A post-event follow-up is drafted for '.(string)$row['event_title'].'.','/gather/outcomes/'.(string)$row['id'].'/review','Sent because a Gather-owned follow-up is waiting for explicit review before anything crosses boundaries.',(string)$row['id']);
+
+        $campaigns=$this->database->pdo()->prepare('SELECT id,title,status FROM beacon_campaigns WHERE account_id=:account_id AND status IN ("draft","paused") AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.account_id=:notification_account AND n.source_event_id=beacon_campaigns.id AND n.category="beacon.campaigns") ORDER BY updated_at ASC LIMIT 20');
+        $campaigns->execute(['account_id'=>$accountId,'notification_account'=>$accountId]);
+        foreach($campaigns->fetchAll() as $row) $this->create($accountId,'Beacon','beacon.campaigns','Campaign needs review: '.(string)$row['title'],'This Beacon campaign is '.(string)$row['status'].' and can be opened from Beacon.','/beacon/campaigns/'.(string)$row['id'],'Sent because Beacon owns a public-facing campaign that is not active.',(string)$row['id']);
     }
 
     public function enabled(string $accountId,string $category): bool

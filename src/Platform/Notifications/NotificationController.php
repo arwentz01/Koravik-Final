@@ -52,7 +52,15 @@ final class NotificationController
     private function preferences(NotificationService $service,string $accountId): void
     {
         $values=$service->preferences($accountId);$rows='';
-        foreach(NotificationService::CATEGORIES as $category=>$label) $rows.='<label class="preference-row"><span><strong>'.self::e($label).'</strong><small>'.self::e($category==='world.reactions'?'Show a notice when an installed World responds to an approved fact.':'Show a notice when a welcome-back review is prepared after a meaningful absence.').'</small></span><input type="checkbox" name="categories[]" value="'.self::e($category).'"'.(!empty($values[$category])?' checked':'').'></label>';
+        $descriptions=[
+            'world.reactions'=>'Show a notice when an installed World responds to an approved fact.',
+            'platform.return'=>'Show a notice when a welcome-back review is prepared after a meaningful absence.',
+            'household.coordination'=>'Show private Household coordination notices without changing personal records.',
+            'gather.followup'=>'Show post-event follow-up drafts that still need explicit review.',
+            'beacon.campaigns'=>'Show draft or paused public campaign work owned by Beacon.',
+            'health.private'=>'Reserve this category for private Health reminders; it never sends notes or feeling words.',
+        ];
+        foreach(NotificationService::CATEGORIES as $category=>$label) $rows.='<label class="preference-row"><span><strong>'.self::e($label).'</strong><small>'.self::e($descriptions[$category]??'Source-owned updates that deserve attention.').'</small></span><input type="checkbox" name="categories[]" value="'.self::e($category).'"'.(!empty($values[$category])?' checked':'').'></label>';
         $body=$this->flash().'<section class="form-panel"><p class="eyebrow">Notification preferences</p><h1>Choose which changes enter the center.</h1><p>Turning a category off stops future notifications. It does not alter source records, World permissions, or past history.</p><form method="post" action="/notifications/preferences">'.$this->csrfField().'<div class="preference-list">'.$rows.'</div><div class="form-actions"><button class="button" type="submit">Save preferences</button><a class="button secondary" href="/notifications">Back to notifications</a></div></form></section>';
         $this->render('Notification preferences',$body,$service->unreadCount($accountId));
     }

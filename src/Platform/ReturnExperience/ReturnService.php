@@ -58,7 +58,10 @@ final class ReturnService
         $upcoming=$pdo->prepare($base.' AND q.lifecycle_status="active" AND qo.status IN ("available","scheduled") AND qo.scheduled_for>CURRENT_DATE() ORDER BY qo.scheduled_for ASC LIMIT 6');$upcoming->execute(['account_id'=>$accountId]);
         $completed=$pdo->prepare($base.' AND qo.status="completed" ORDER BY qo.completed_at DESC LIMIT 6');$completed->execute(['account_id'=>$accountId]);
         $archived=$pdo->prepare('SELECT id AS quest_id,title,quest_type,lifecycle_status FROM quests WHERE account_id=:account_id AND lifecycle_status="archived" ORDER BY archived_at DESC LIMIT 6');$archived->execute(['account_id'=>$accountId]);
-        return ['stale'=>$stale->fetchAll(),'relevant'=>$relevant->fetchAll(),'upcoming'=>$upcoming->fetchAll(),'completed'=>$completed->fetchAll(),'archived'=>$archived->fetchAll()];
+        $world=$pdo->prepare('SELECT wi.world_key,wc.name,np.current_chapter,np.current_scene FROM world_installations wi JOIN world_catalog wc ON wc.world_key=wi.world_key LEFT JOIN world_narrative_progress np ON np.installation_id=wi.id WHERE wi.account_id=:account_id AND wi.status="active" LIMIT 1');$world->execute(['account_id'=>$accountId]);
+        $notifications=$pdo->prepare('SELECT id,title,body,source_module,target_url,created_at FROM notifications WHERE account_id=:account_id AND read_at IS NULL AND dismissed_at IS NULL ORDER BY created_at DESC LIMIT 5');$notifications->execute(['account_id'=>$accountId]);
+        $drafts=$pdo->prepare('SELECT id,form_key,updated_at FROM platform_form_drafts WHERE account_id=:account_id AND expires_at>UTC_TIMESTAMP() ORDER BY updated_at DESC LIMIT 5');$drafts->execute(['account_id'=>$accountId]);
+        return ['stale'=>$stale->fetchAll(),'relevant'=>$relevant->fetchAll(),'upcoming'=>$upcoming->fetchAll(),'completed'=>$completed->fetchAll(),'archived'=>$archived->fetchAll(),'world'=>$world->fetch()?:null,'notifications'=>$notifications->fetchAll(),'drafts'=>$drafts->fetchAll()];
     }
 
     public function decide(string $accountId,string $occurrenceId,string $action,?string $newDate=null): void

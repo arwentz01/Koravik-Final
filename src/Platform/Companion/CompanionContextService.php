@@ -9,7 +9,7 @@ use RuntimeException;
 
 final class CompanionContextService
 {
-    public const PERMISSIONS=['quest.selected','chronicle.selected','pillars.summary','accessibility.preferences','companion.memory'];
+    public const PERMISSIONS=['quest.selected','chronicle.selected','pillars.summary','accessibility.preferences','companion.memory','healing_home.room_notes'];
     public function __construct(private readonly Database $database) {}
 
     public function permissions(string $accountId): array
@@ -27,10 +27,17 @@ final class CompanionContextService
         $id=self::uuid();$this->database->transaction(function(PDO $pdo) use($id,$accountId,$text,$provenance): void {$pdo->prepare('INSERT INTO companion_memories (id,account_id,memory_text,provenance,status,created_at,updated_at) VALUES (:id,:account_id,:text,:provenance,"active",UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute(['id'=>$id,'account_id'=>$accountId,'text'=>$text,'provenance'=>$provenance?:'Approved directly by the player.']);$this->audit($pdo,$accountId,'companion.memory.approved',$id);});return $id;
     }
     public function memories(string $accountId): array {$s=$this->database->pdo()->prepare('SELECT * FROM companion_memories WHERE account_id=:account_id ORDER BY created_at DESC');$s->execute(['account_id'=>$accountId]);return $s->fetchAll();}
-    public function setMemoryStatus(string $accountId,string $id,string $status): void {if(!in_array($status,['active','disabled','deleted'],true)) throw new RuntimeException('Choose a valid memory state.');$s=$this->database->pdo()->prepare('UPDATE companion_memories SET status=:status,updated_at=UTC_TIMESTAMP() WHERE id=:id AND account_id=:account_id');$s->execute(['status'=>$status,'id'=>$id,'account_id'=>$accountId]);if($s->rowCount()!==1) throw new RuntimeException('Memory not found.');}
+    public function memory(string $accountId,string $id): array {$s=$this->database->pdo()->prepare('SELECT * FROM companion_memories WHERE id=:id AND account_id=:account_id LIMIT 1');$s->execute(['id'=>$id,'account_id'=>$accountId]);$row=$s->fetch();if(!$row)throw new RuntimeException('Memory not found.');$a=$this->database->pdo()->prepare('SELECT action,occurred_at FROM audit_log WHERE account_id=:account_id AND subject_id=:id AND subject_type="companion" ORDER BY occurred_at DESC LIMIT 20');$a->execute(['account_id'=>$accountId,'id'=>$id]);$row['history']=$a->fetchAll();return $row;}
+    public function updateMemory(string $accountId,string $id,array $input): void
+    {
+        $text=trim((string)($input['memory_text']??''));$provenance=trim((string)($input['provenance']??''));
+        if($text===''||mb_strlen($text)>500)throw new RuntimeException('Memory must be 1 to 500 characters.');
+        $this->database->transaction(function(PDO $pdo)use($accountId,$id,$text,$provenance):void{$s=$pdo->prepare('UPDATE companion_memories SET memory_text=:text,provenance=:provenance,updated_at=UTC_TIMESTAMP() WHERE id=:id AND account_id=:account_id AND status<>"deleted"');$s->execute(['text'=>$text,'provenance'=>$provenance?:'Corrected directly by the player.','id'=>$id,'account_id'=>$accountId]);if($s->rowCount()!==1)throw new RuntimeException('Memory not found.');$this->audit($pdo,$accountId,'companion.memory.corrected',$id);});
+    }
+    public function setMemoryStatus(string $accountId,string $id,string $status): void {if(!in_array($status,['active','disabled','deleted'],true)) throw new RuntimeException('Choose a valid memory state.');$this->database->transaction(function(PDO $pdo)use($accountId,$id,$status):void{$s=$pdo->prepare('UPDATE companion_memories SET status=:status,updated_at=UTC_TIMESTAMP() WHERE id=:id AND account_id=:account_id');$s->execute(['status'=>$status,'id'=>$id,'account_id'=>$accountId]);if($s->rowCount()!==1) throw new RuntimeException('Memory not found.');$this->audit($pdo,$accountId,'companion.memory.'.$status,$id);});}
     public function recordSelectedContext(string $accountId,string $module,string $type,?string $sourceId,string $summary): string
     {
-        $key=$module==='Quests'?'quest.selected':($module==='Chronicle'?'chronicle.selected':'pillars.summary');if(!$this->allowed($accountId,$key)) throw new RuntimeException('That Companion context permission is not enabled.');
+        $key=$module==='Quests'?'quest.selected':($module==='Chronicle'?'chronicle.selected':($module==='Healing Home'?'healing_home.room_notes':'pillars.summary'));if(!$this->allowed($accountId,$key)) throw new RuntimeException('That Companion context permission is not enabled.');
         $summary=trim($summary);if($summary===''||mb_strlen($summary)>1000) throw new RuntimeException('Context summary must be 1 to 1000 characters.');$id=self::uuid();$this->database->pdo()->prepare('INSERT INTO companion_context_uses (id,account_id,source_module,source_type,source_id,minimized_summary,use_scope,created_at) VALUES (:id,:account_id,:module,:type,:source_id,:summary,"once",UTC_TIMESTAMP())')->execute(['id'=>$id,'account_id'=>$accountId,'module'=>$module,'type'=>$type,'source_id'=>$sourceId,'summary'=>$summary]);return $id;
     }
     private function allowed(string $accountId,string $key): bool {$this->ensure($accountId);$s=$this->database->pdo()->prepare('SELECT allowed FROM companion_context_permissions WHERE account_id=:account_id AND context_key=:key');$s->execute(['account_id'=>$accountId,'key'=>$key]);return (bool)$s->fetchColumn();}

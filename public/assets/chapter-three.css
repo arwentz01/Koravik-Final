@@ -1,0 +1,31 @@
+.chapter-three-threshold {
+    margin-top: 2rem;
+    padding: 1.25rem;
+    border: 1px solid color-mix(in srgb, var(--plum) 45%, var(--line));
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgb(74 55 94 / 8%), rgb(93 128 123 / 12%));
+}
+
+.chapter-three-threshold h2 { margin-top: .2rem; }
+
+.listening-choice-list button {
+    border-color: color-mix(in srgb, var(--plum) 35%, var(--line));
+    background: linear-gradient(145deg, var(--surface), color-mix(in srgb, var(--surface) 92%, #718e8b 8%));
+}
+
+.listening-choice-list button::after {
+    content: "Fictional truth · visible in World State";
+    display: block;
+    margin-top: .35rem;
+    color: var(--muted);
+    font-size: .8rem;
+    font-weight: 600;
+}
+
+@media (forced-colors: active) {
+    .chapter-three-threshold,
+    .listening-choice-list button {
+        border: 1px solid CanvasText;
+        background: Canvas;
+    }
+}

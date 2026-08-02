@@ -13,6 +13,7 @@ final class PrivacyService
     private const FACTS = [
         'quest.completed' => ['label'=>'Quest occurrence completed','purpose'=>'Allows Epic Ordinary to notice a completed occurrence and update its fictional relationship and story state.','source'=>'Quests'],
         'player.returned' => ['label'=>'Player returned after an absence','purpose'=>'Allows Epic Ordinary to acknowledge a return without receiving Quest titles, notes, or stale-item details.','source'=>'Platform'],
+        'health.wellbeing_band' => ['label'=>'Health derived energy band','purpose'=>'Allows a recipient to receive only low, steady, or full plus a date when Health sharing is explicitly enabled. Feeling words and notes stay private.','source'=>'Health'],
     ];
 
     public function __construct(private readonly Database $database) {}
@@ -23,6 +24,40 @@ final class PrivacyService
         $statement->execute(['account_id'=>$accountId]);
         $rows=[];
         foreach($statement->fetchAll() as $row){$meta=self::FACTS[(string)$row['fact_key']]??['label'=>(string)$row['fact_key'],'purpose'=>(string)$row['explanation'],'source'=>'Platform'];$row['label']=$meta['label'];$row['purpose']=$meta['purpose'];$row['source']=$meta['source'];$rows[]=$row;}
+        $companion=$this->database->pdo()->prepare('SELECT context_key,allowed,updated_at FROM companion_context_permissions WHERE account_id=:account_id ORDER BY context_key');
+        $companion->execute(['account_id'=>$accountId]);
+        foreach($companion->fetchAll() as $row)$rows[]=[
+            'installation_id'=>$accountId,
+            'installation_status'=>'active',
+            'recipient'=>'Companion',
+            'fact_key'=>(string)$row['context_key'],
+            'granted'=>(bool)$row['allowed'],
+            'explanation'=>'Companion may use this approved context only inside proposal and help workflows.',
+            'granted_at'=>(string)$row['updated_at'],
+            'revoked_at'=>(bool)$row['allowed']?null:(string)$row['updated_at'],
+            'last_used_at'=>'Controlled by Companion approval history',
+            'label'=>'Companion context: '.ucwords(str_replace(['_','.'],' ',(string)$row['context_key'])),
+            'purpose'=>'Controls whether Companion may reference this context while preparing help or proposals. Consequential actions still require approval.',
+            'source'=>'Companion Memory / Consent',
+            'readonly'=>true,
+        ];
+        $health=$this->database->pdo()->prepare('SELECT MAX(updated_at) last_changed,COUNT(*) shared_count FROM health_wellbeing_checkins WHERE account_id=:account_id AND share_derived_fact=1');
+        $health->execute(['account_id'=>$accountId]);$healthRow=$health->fetch();
+        $rows[]=[
+            'installation_id'=>$accountId,
+            'installation_status'=>'active',
+            'recipient'=>'Approved event consumers',
+            'fact_key'=>'health.wellbeing_band',
+            'granted'=>((int)($healthRow['shared_count']??0)>0),
+            'explanation'=>self::FACTS['health.wellbeing_band']['purpose'],
+            'granted_at'=>(string)($healthRow['last_changed']??''),
+            'revoked_at'=>null,
+            'last_used_at'=>(string)($healthRow['last_changed']??'Never'),
+            'label'=>self::FACTS['health.wellbeing_band']['label'],
+            'purpose'=>self::FACTS['health.wellbeing_band']['purpose'],
+            'source'=>'Health',
+            'readonly'=>true,
+        ];
         return $rows;
     }
 
@@ -57,6 +92,8 @@ final class PrivacyService
             'consent.revoked','world.permission.revoked'=>'Permission was revoked for future fact delivery.',
             'world.installed'=>'A World was installed.','world.active'=>'A World was resumed.','world.suspended'=>'A World was suspended.','world.uninstalled'=>'A World was uninstalled while retaining its state.',
             'quest.occurrence.completed'=>'A Quest occurrence was completed.','quest.occurrence.completion_reversed'=>'A Quest completion was reversed.','platform.player.returned'=>'A meaningful return after absence was detected.',
+            'health.checkin.created'=>'A private Health observation was created.','health.checkin.corrected'=>'A private Health observation was corrected.','health.checkin.deleted'=>'A private Health observation was deleted.',
+            'beacon.campaign.created'=>'A Beacon campaign was created.','beacon.campaign.updated'=>'A Beacon campaign was updated.','gather.followup.created'=>'A Gather follow-up draft was created.',
             default=>ucfirst(str_replace(['.','_'],' ',$action)).'.',
         };
     }
@@ -66,6 +103,9 @@ final class PrivacyService
         if(str_starts_with($action,'world.')||str_starts_with($action,'consent.')) return 'Worlds / Consent';
         if(str_starts_with($action,'quest')) return 'Quests';
         if(str_starts_with($action,'platform')) return 'Platform';
+        if(str_starts_with($action,'health')) return 'Health';
+        if(str_starts_with($action,'beacon')) return 'Beacon';
+        if(str_starts_with($action,'gather')) return 'Gather';
         return ucfirst($subjectType?:'Platform');
     }
 

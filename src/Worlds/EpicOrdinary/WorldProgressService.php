@@ -30,11 +30,13 @@ final class WorldProgressService
 
     public function reaction(string $accountId,string $reactionId): array
     {
-        $q=$this->database->pdo()->prepare('SELECT r.id,r.title,r.message,r.explanation,r.source_fact_key,r.source_fact_summary,r.rule_key,COALESCE(r.interpreted_at,r.created_at) interpreted_at,r.created_at FROM world_reactions r JOIN world_installations wi ON wi.id=r.installation_id WHERE r.id=:id AND wi.account_id=:account_id AND wi.world_key="epic-ordinary" LIMIT 1');
+        $q=$this->database->pdo()->prepare('SELECT r.id,r.title,r.message,r.explanation,r.source_fact_key,r.source_fact_summary,r.rule_key,COALESCE(r.interpreted_at,r.created_at) interpreted_at,r.created_at,p.granted permission_granted,rv.reviewed_at FROM world_reactions r JOIN world_installations wi ON wi.id=r.installation_id LEFT JOIN world_fact_permissions p ON p.installation_id=wi.id AND p.fact_key=r.source_fact_key LEFT JOIN world_reaction_reviews rv ON rv.reaction_id=r.id AND rv.account_id=wi.account_id WHERE r.id=:id AND wi.account_id=:account_id AND wi.world_key="epic-ordinary" LIMIT 1');
         $q->execute(['id'=>$reactionId,'account_id'=>$accountId]);$reaction=$q->fetch();
         if(!$reaction) throw new RuntimeException('That World reaction is unavailable.');
         $reaction['received']=$reaction['source_fact_summary']?:'A minimized approved event fact. No Quest notes or Chronicle text were received.';
         $reaction['excluded']='Quest notes, Chronicle prose, Companion memory, account secrets, and unrelated private records.';
+        $reaction['permission_state']=((int)($reaction['permission_granted']??0)===1)?'Permission was granted for this minimized source fact.':'Permission is not currently granted for this fact.';
+        $reaction['review_state']=$reaction['reviewed_at']?'Reviewed at '.$reaction['reviewed_at'].' UTC.':'Not yet marked reviewed.';
         return $reaction;
     }
 }
