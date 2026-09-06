@@ -14,7 +14,6 @@ final class NotificationService
         'world.reactions' => 'World reactions',
         'platform.return' => 'Welcome-back summaries',
         'household.coordination' => 'Household coordination',
-        'gather.activity' => 'Gather event activity',
         'gather.followup' => 'Gather follow-up',
         'beacon.campaigns' => 'Beacon campaigns',
         'health.private' => 'Health reminders',
@@ -43,8 +42,6 @@ final class NotificationService
             $this->create($accountId,'Koravik','platform.return','Your welcome-back review is ready','A calm summary is available after about '.$days.' days away.','/return','Sent because Koravik detected a meaningful absence of at least seven days.',(string)$row['id']);
         }
 
-        $this->synchronizeGatherActivity($accountId);
-
         $followups=$this->database->pdo()->prepare('SELECT f.id,f.title,e.title event_title FROM gather_event_followups f JOIN gather_events e ON e.id=f.event_id WHERE f.author_account_id=:account_id AND f.status="draft" AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.account_id=:notification_account AND n.source_event_id=f.id AND n.category="gather.followup") ORDER BY f.created_at ASC LIMIT 20');
         $followups->execute(['account_id'=>$accountId,'notification_account'=>$accountId]);
         foreach($followups->fetchAll() as $row) $this->create($accountId,'Gather','gather.followup','Follow-up draft waiting: '.(string)$row['title'],'A post-event follow-up is drafted for '.(string)$row['event_title'].'.','/gather/outcomes/'.(string)$row['id'].'/review','Sent because a Gather-owned follow-up is waiting for explicit review before anything crosses boundaries.',(string)$row['id']);
@@ -52,76 +49,6 @@ final class NotificationService
         $campaigns=$this->database->pdo()->prepare('SELECT id,title,status FROM beacon_campaigns WHERE account_id=:account_id AND status IN ("draft","paused") AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.account_id=:notification_account AND n.source_event_id=beacon_campaigns.id AND n.category="beacon.campaigns") ORDER BY updated_at ASC LIMIT 20');
         $campaigns->execute(['account_id'=>$accountId,'notification_account'=>$accountId]);
         foreach($campaigns->fetchAll() as $row) $this->create($accountId,'Beacon','beacon.campaigns','Campaign needs review: '.(string)$row['title'],'This Beacon campaign is '.(string)$row['status'].' and can be opened from Beacon.','/beacon/campaigns/'.(string)$row['id'],'Sent because Beacon owns a public-facing campaign that is not active.',(string)$row['id']);
-    }
-
-    private function synchronizeGatherActivity(string $accountId): void
-    {
-        if(!$this->enabled($accountId,'gather.activity')) return;
-        $pdo=$this->database->pdo();
-        $access='((e.owner_type="account" AND e.account_id=:account_owner) OR (e.owner_type="organization" AND EXISTS (SELECT 1 FROM organization_memberships om WHERE om.organization_id=e.organization_id AND om.account_id=:org_account AND om.status="active" AND om.role IN ("owner","admin","creator"))) OR (e.owner_type="household" AND EXISTS (SELECT 1 FROM household_memberships hm WHERE hm.household_id=e.household_id AND hm.account_id=:household_account AND hm.status="active" AND hm.role IN ("owner","admin","member"))))';
-        $params=['account_owner'=>$accountId,'org_account'=>$accountId,'household_account'=>$accountId];
-
-        $rsvps=$pdo->prepare('SELECT r.id,r.guest_name,r.response,r.party_size,r.status,r.created_at,r.updated_at,e.id event_id,e.title event_title,e.owner_type,o.name organization_name,h.name household_name FROM gather_rsvps r JOIN gather_events e ON e.id=r.event_id LEFT JOIN organizations o ON o.id=e.organization_id LEFT JOIN households h ON h.id=e.household_id WHERE '.$access.' AND r.updated_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 90 DAY) ORDER BY r.updated_at ASC LIMIT 100');
-        $rsvps->execute($params);
-        foreach($rsvps->fetchAll() as $row) {
-            $isNew=((string)$row['created_at']===(string)$row['updated_at']);
-            $context=$this->gatherContext($row);
-            $party=max(1,(int)$row['party_size']);
-            $name=trim((string)$row['guest_name'])?:'A guest';
-            $response=strtolower((string)$row['response']);
-            $status=strtolower((string)($row['status']??''));
-            if($status==='cancelled' || $response==='no') {
-                $title='RSVP cancelled · '.$context;
-                $body=$name.' is no longer attending '.$row['event_title'].'.';
-            } elseif($isNew) {
-                $title='New RSVP · '.$context;
-                $body=$name.' RSVP’d '.ucfirst($response?:'yes').($party>1?' for '.$party.' people':'').' to '.$row['event_title'].'.';
-            } else {
-                $title='RSVP updated · '.$context;
-                $body=$name.' changed their RSVP to '.ucfirst($response?:$status?:'updated').($party>1?' for '.$party.' people':'').' for '.$row['event_title'].'.';
-            }
-            $source=$this->activitySourceId('rsvp',(string)$row['id'],(string)$row['updated_at']);
-            $this->create($accountId,'Gather','gather.activity',$title,$body,'/gather/events/'.(string)$row['event_id'].'/command','Shown because you can manage this event. Koravik includes activity from every organization and household you manage, not only the currently selected context.',$source);
-        }
-
-        $commitments=$pdo->prepare('SELECT c.id,c.participant_name,c.participant_email,c.quantity,c.status,c.created_at,c.updated_at,s.title slot_title,e.id event_id,e.title event_title,e.owner_type,o.name organization_name,h.name household_name FROM gather_signup_commitments c JOIN gather_signup_slots s ON s.id=c.slot_id JOIN gather_events e ON e.id=s.event_id LEFT JOIN organizations o ON o.id=e.organization_id LEFT JOIN households h ON h.id=e.household_id WHERE '.$access.' AND c.updated_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 90 DAY) ORDER BY c.updated_at ASC LIMIT 100');
-        $commitments->execute($params);
-        foreach($commitments->fetchAll() as $row) {
-            $isNew=((string)$row['created_at']===(string)$row['updated_at']);
-            $context=$this->gatherContext($row);
-            $name=trim((string)$row['participant_name']);
-            if($name==='') $name=trim((string)$row['participant_email'])?:'A participant';
-            $quantity=max(1,(int)$row['quantity']);
-            $status=strtolower((string)$row['status']);
-            if($status==='cancelled') {
-                $title='Signup cancelled · '.$context;
-                $body=$name.' released '.$row['slot_title'].' for '.$row['event_title'].'.';
-            } elseif($status==='waitlist') {
-                $title=($isNew?'Signup waitlist':'Signup updated').' · '.$context;
-                $body=$name.' is waitlisted for '.$row['slot_title'].' at '.$row['event_title'].'.';
-            } elseif($isNew) {
-                $title='New signup · '.$context;
-                $body=$name.' claimed '.$row['slot_title'].($quantity>1?' × '.$quantity:'').' for '.$row['event_title'].'.';
-            } else {
-                $title='Signup updated · '.$context;
-                $body=$name.' updated '.$row['slot_title'].' for '.$row['event_title'].'.';
-            }
-            $source=$this->activitySourceId('signup',(string)$row['id'],(string)$row['updated_at']);
-            $this->create($accountId,'Gather','gather.activity',$title,$body,'/gather/events/'.(string)$row['event_id'].'/command','Shown because you can manage this event. Koravik includes activity from every organization and household you manage, not only the currently selected context.',$source);
-        }
-    }
-
-    private function gatherContext(array $row): string
-    {
-        if((string)($row['owner_type']??'account')==='organization') return trim((string)($row['organization_name']??''))?:'Organization event';
-        if((string)($row['owner_type']??'account')==='household') return trim((string)($row['household_name']??''))?:'Household event';
-        return 'Personal event';
-    }
-
-    private function activitySourceId(string $type,string $id,string $updatedAt): string
-    {
-        $hex=md5($type.'|'.$id.'|'.$updatedAt);
-        return substr($hex,0,8).'-'.substr($hex,8,4).'-4'.substr($hex,13,3).'-8'.substr($hex,17,3).'-'.substr($hex,20,12);
     }
 
     public function enabled(string $accountId,string $category): bool
