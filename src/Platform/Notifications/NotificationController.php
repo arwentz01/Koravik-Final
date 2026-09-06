@@ -42,10 +42,10 @@ final class NotificationController
             if($isUnread) $unread.=$card; else $read.=$card;
         }
         $flash=$this->flash();
-        $body=$flash.'<section class="page-heading"><div><p class="eyebrow">Notifications</p><h1>What changed that deserves attention?</h1><p>Updates from your Koravik account, including events across the organizations and households you manage.</p></div><a class="button secondary" href="/notifications/preferences">Preferences</a></section>';
+        $body=$flash.'<section class="page-heading"><div><p class="eyebrow">Notifications</p><h1>What changed that deserves attention?</h1><p>Source-owned updates, kept bounded and explainable.</p></div><a class="button secondary" href="/notifications/preferences">Preferences</a></section>';
         if($unread!=='') $body.='<section><div class="section-heading"><h2>Unread</h2><form method="post" action="/notifications/read-all">'.$this->csrfField().'<button class="quiet-button" type="submit">Mark all read</button></form></div><div class="notification-list">'.$unread.'</div></section>';
         if($read!=='') $body.='<section><h2>Earlier</h2><div class="notification-list">'.$read.'</div></section>';
-        if($unread==='' && $read==='') $body.='<section class="empty-state"><h2>Nothing needs your attention.</h2><p>Koravik will keep this space quiet until something meaningful changes across your account, events, organizations, or other connected spaces.</p></section>';
+        if($unread==='' && $read==='') $body.='<section class="empty-state"><h2>Nothing needs your attention.</h2><p>Koravik will keep this space quiet unless a registered source has something meaningful to show.</p></section>';
         $this->render('Notifications',$body,$service->unreadCount($accountId));
     }
 
@@ -56,7 +56,6 @@ final class NotificationController
             'world.reactions'=>'Show a notice when an installed World responds to an approved fact.',
             'platform.return'=>'Show a notice when a welcome-back review is prepared after a meaningful absence.',
             'household.coordination'=>'Show private Household coordination notices without changing personal records.',
-            'gather.activity'=>'Show RSVP, signup, waitlist, update, and cancellation activity for personal events and every organization or household event you can manage.',
             'gather.followup'=>'Show post-event follow-up drafts that still need explicit review.',
             'beacon.campaigns'=>'Show draft or paused public campaign work owned by Beacon.',
             'health.private'=>'Reserve this category for private Health reminders; it never sends notes or feeling words.',
